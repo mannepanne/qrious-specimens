@@ -10,6 +10,9 @@ directory = "./dist"
 html_handling = "auto-trailing-slash"
 not_found_handling = "single-page-application"
 
+[observability]
+enabled = true
+
 [[r2_buckets]]
 binding = "IMAGES"
 bucket_name = "qrious-specimens-images"
