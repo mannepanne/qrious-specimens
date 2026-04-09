@@ -161,3 +161,4 @@ downloads-claude-ship/
 dist/
 vite.config.d.ts
 vite.config.js
+package-lock.json
