@@ -1,0 +1,15 @@
+# ABOUT: Cloudflare Workers configuration
+# ABOUT: Serves the Vite SPA as static assets; Worker handles SPA routing fallback
+
+name = "qrious-specimens"
+compatibility_date = "2025-01-01"
+main = "src/worker.ts"
+
+[assets]
+directory = "./dist"
+html_handling = "auto-trailing-slash"
+not_found_handling = "single-page-application"
+
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "qrious-specimens-images"

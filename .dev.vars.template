@@ -1,0 +1,16 @@
+# QRious Specimens — local development environment
+# Copy this file to .dev.vars and fill in your actual values
+# NEVER commit .dev.vars to git
+
+# Supabase (public — safe in browser bundle)
+VITE_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+# Supabase (secret — Cloudflare Workers only, never in frontend)
+SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_JWT_SECRET=your-jwt-secret-here
+
+# AI APIs (secret — Cloudflare Workers only)
+GEMINI_API_KEY=AIza...
+ANTHROPIC_API_KEY=sk-ant-...

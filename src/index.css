@@ -1,0 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 36 33% 94%;
+    --foreground: 30 25% 14%;
+    --card: 38 35% 96%;
+    --card-foreground: 30 25% 14%;
+    --popover: 38 35% 96%;
+    --popover-foreground: 30 25% 14%;
+    --primary: 30 25% 14%;
+    --primary-foreground: 36 33% 94%;
+    --secondary: 34 20% 88%;
+    --secondary-foreground: 30 25% 14%;
+    --muted: 34 20% 88%;
+    --muted-foreground: 30 15% 48%;
+    --accent: 34 20% 88%;
+    --accent-foreground: 30 25% 14%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 36 33% 94%;
+    --border: 32 22% 78%;
+    --input: 32 22% 78%;
+    --ring: 30 25% 14%;
+    --radius: 0.25rem;
+  }
+
+  .dark {
+    --background: 30 20% 8%;
+    --foreground: 34 25% 88%;
+    --card: 30 18% 11%;
+    --card-foreground: 34 25% 88%;
+    --popover: 30 18% 11%;
+    --popover-foreground: 34 25% 88%;
+    --primary: 34 25% 88%;
+    --primary-foreground: 30 20% 8%;
+    --secondary: 30 15% 16%;
+    --secondary-foreground: 34 25% 88%;
+    --muted: 30 15% 16%;
+    --muted-foreground: 30 12% 55%;
+    --accent: 30 15% 16%;
+    --accent-foreground: 34 25% 88%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 34 25% 88%;
+    --border: 30 12% 20%;
+    --input: 30 12% 20%;
+    --ring: 34 20% 75%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-serif;
+  }
+}

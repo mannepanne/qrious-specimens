@@ -158,3 +158,6 @@ service-account*.json
 # Project-specific
 # Downloaded reference material from original app builder — imported to Supabase/R2 in Phase 1
 downloads-claude-ship/
+dist/
+vite.config.d.ts
+vite.config.js
