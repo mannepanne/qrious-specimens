@@ -16,7 +16,13 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ## Active technical debt
 
-*(No items yet - will be added as the project is built)*
+### TD-001: Phase 1 committed directly to main
+- **Location:** Git history — all Phase 1 commits
+- **Issue:** The bootstrapping work (infrastructure setup, Supabase schema, Vite scaffold, first deployment) was committed directly to `main` with no feature branches or PRs. This violated the project's core workflow rule.
+- **Why accepted:** Pragmatic exception for initial project bootstrapping — there was no established `main` to branch from, no collaborators, and the work was foundational rather than incremental. Reviewed post-hoc via `/review-pr`.
+- **Risk:** Low — the code has been reviewed. The risk is habit-setting: this must not become a pattern.
+- **Future fix:** No code change needed. From Phase 2 onwards, all work uses feature branches + PRs without exception. Zero exceptions.
+- **Phase introduced:** Phase 1
 
 ---
 

@@ -47,6 +47,8 @@ export default {
         },
       },
       fontFamily: {
+        // sans maps to serif stack — Victorian aesthetic throughout; no generic UI sans-serif
+        sans: ['EB Garamond', 'Georgia', 'serif'],
         serif: ['EB Garamond', 'Georgia', 'serif'],
         mono: ['JetBrains Mono', 'monospace'],
       },

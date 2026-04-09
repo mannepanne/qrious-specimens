@@ -8,17 +8,18 @@ import boto3
 from botocore.exceptions import ClientError
 from pathlib import Path
 
-# R2 config
-ACCOUNT_ID = "2b4fcedde3e95b7166a81ddaee086085"
+# R2 config — all values from environment variables
+ACCOUNT_ID = os.environ.get("R2_ACCOUNT_ID")
 BUCKET_NAME = "qrious-specimens-images"
-ENDPOINT_URL = f"https://{ACCOUNT_ID}.r2.cloudflarestorage.com"
-
 ACCESS_KEY_ID = os.environ.get("R2_ACCESS_KEY_ID")
 SECRET_ACCESS_KEY = os.environ.get("R2_SECRET_ACCESS_KEY")
 
-if not ACCESS_KEY_ID or not SECRET_ACCESS_KEY:
-    print("Error: set R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY environment variables")
+if not ACCOUNT_ID or not ACCESS_KEY_ID or not SECRET_ACCESS_KEY:
+    print("Error: set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, and R2_SECRET_ACCESS_KEY environment variables")
+    print("  R2_ACCOUNT_ID is found in the Cloudflare dashboard → R2 → bucket Settings → S3 API URL")
     sys.exit(1)
+
+ENDPOINT_URL = f"https://{ACCOUNT_ID}.r2.cloudflarestorage.com"
 
 # Image source directory
 SCRIPT_DIR = Path(__file__).parent
