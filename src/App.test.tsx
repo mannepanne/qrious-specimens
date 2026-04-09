@@ -172,6 +172,11 @@ describe('App', () => {
     expect(screen.getByText(/species catalogue/i)).toBeInTheDocument()
   })
 
+  // NOTE: the overlayNeedsAuth branch (App.tsx:65) cannot be triggered via Phase 2 UI —
+  // there are no overlay-opening actions yet. Phase 3 adds the scanner CTA that sets
+  // nav.overlay = 'scanner'. Add a test here when that trigger lands:
+  //   it('unauthenticated user opening scanner overlay sees AuthPage', ...)
+
   it('tab bar is visible when no overlay is open', async () => {
     setupAuthenticated()
     render(<App />)

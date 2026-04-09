@@ -12,8 +12,8 @@ import { CataloguePage } from '@/pages/CataloguePage'
 import { GazettePage } from '@/pages/GazettePage'
 import { CabinetPage } from '@/pages/CabinetPage'
 
-// Destinations that require an active session. Phase 5 removes 'catalogue' and 'gazette'
-// from this set when public browse is enabled.
+// Cabinet requires an active session. Catalogue and Gazette are intentionally omitted —
+// they are publicly browsable by design. Phase 5 enables real content on those tabs.
 const AUTH_REQUIRED_TABS: Tab[] = ['cabinet']
 const AUTH_REQUIRED_OVERLAYS: Overlay[] = ['scanner', 'hatching', 'specimen']
 

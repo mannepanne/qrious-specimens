@@ -66,7 +66,11 @@ beforeEach(() => {
 
 describe('useAuth', () => {
   it('starts in loading state', () => {
-    setupNoSession()
+    // Never resolves — holds the hook in loading state so we can assert it
+    mockAuth.getSession.mockImplementation(() => new Promise(() => {}))
+    mockAuth.onAuthStateChange.mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    })
     const { result } = renderHook(() => useAuth())
     expect(result.current.authState.status).toBe('loading')
   })
