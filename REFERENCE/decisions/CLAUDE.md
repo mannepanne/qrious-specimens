@@ -131,7 +131,8 @@ grep -r "authentication" REFERENCE/decisions/
 
 **Format:** Listed chronologically (newest first)
 
-*(No ADRs yet - this section will be updated as decisions are recorded)*
+- [2026-04-09 — Layered navigation model](./2026-04-09-layered-navigation-model.md) — Tab/overlay/subpage state, why no URL router, auth gate per destination
+- [2026-04-09 — CSP before Phase 4](./2026-04-09-csp-before-phase-4.md) — CSP delivery via Cloudflare Worker, report-only in Phase 3, enforce before Phase 4 merges
 
 ---
 

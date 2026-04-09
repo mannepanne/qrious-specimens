@@ -1,10 +1,9 @@
 // ABOUT: Tests for magic link authentication hook
-// ABOUT: Verifies auth state transitions, sendMagicLink, and signOut behaviour
+// ABOUT: Verifies auth state transitions, error handling, URL cleanup, sendMagicLink, and signOut
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useAuth } from './useAuth'
 
-// Mock the supabase module so tests don't hit real network
 vi.mock('@/lib/supabase', () => {
   const mockGetSession = vi.fn()
   const mockOnAuthStateChange = vi.fn()
@@ -42,14 +41,14 @@ const fakeSession = {
 }
 
 function setupNoSession() {
-  mockAuth.getSession.mockResolvedValue({ data: { session: null } })
+  mockAuth.getSession.mockResolvedValue({ data: { session: null }, error: null })
   mockAuth.onAuthStateChange.mockReturnValue({
     data: { subscription: { unsubscribe: vi.fn() } },
   })
 }
 
 function setupWithSession() {
-  mockAuth.getSession.mockResolvedValue({ data: { session: fakeSession } })
+  mockAuth.getSession.mockResolvedValue({ data: { session: fakeSession }, error: null })
   mockAuth.onAuthStateChange.mockReturnValue({
     data: { subscription: { unsubscribe: vi.fn() } },
   })
@@ -57,11 +56,21 @@ function setupWithSession() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  // Reset location for URL cleanup tests
+  Object.defineProperty(window, 'location', {
+    value: { hash: '', search: '', pathname: '/', origin: 'http://localhost:5173' },
+    writable: true,
+  })
+  vi.spyOn(window.history, 'replaceState').mockImplementation(() => {})
 })
 
 describe('useAuth', () => {
   it('starts in loading state', () => {
-    setupNoSession()
+    // Never resolves — holds the hook in loading state so we can assert it
+    mockAuth.getSession.mockImplementation(() => new Promise(() => {}))
+    mockAuth.onAuthStateChange.mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    })
     const { result } = renderHook(() => useAuth())
     expect(result.current.authState.status).toBe('loading')
   })
@@ -83,6 +92,82 @@ describe('useAuth', () => {
     if (result.current.authState.status === 'authenticated') {
       expect(result.current.authState.session).toBe(fakeSession)
     }
+  })
+
+  it('transitions to error state when getSession returns an error', async () => {
+    mockAuth.getSession.mockResolvedValue({
+      data: { session: null },
+      error: { message: 'JWT expired' },
+    })
+    mockAuth.onAuthStateChange.mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    })
+
+    const { result } = renderHook(() => useAuth())
+    await waitFor(() => {
+      expect(result.current.authState.status).toBe('error')
+    })
+    if (result.current.authState.status === 'error') {
+      expect(result.current.authState.message).toBe('JWT expired')
+    }
+  })
+
+  it('falls back to unauthenticated when getSession throws (network failure)', async () => {
+    mockAuth.getSession.mockRejectedValue(new Error('network error'))
+    mockAuth.onAuthStateChange.mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    })
+
+    const { result } = renderHook(() => useAuth())
+    await waitFor(() => {
+      expect(result.current.authState.status).toBe('unauthenticated')
+    })
+  })
+
+  it('cleans URL fragment after magic link exchange', async () => {
+    Object.defineProperty(window, 'location', {
+      value: { hash: '#access_token=abc123', search: '', pathname: '/' },
+      writable: true,
+    })
+
+    let capturedCallback: ((event: string, session: unknown) => void) | null = null
+    mockAuth.getSession.mockResolvedValue({ data: { session: null }, error: null })
+    mockAuth.onAuthStateChange.mockImplementation((cb) => {
+      capturedCallback = cb
+      return { data: { subscription: { unsubscribe: vi.fn() } } }
+    })
+
+    renderHook(() => useAuth())
+    await waitFor(() => expect(capturedCallback).not.toBeNull())
+
+    act(() => {
+      capturedCallback!('SIGNED_IN', fakeSession)
+    })
+
+    expect(window.history.replaceState).toHaveBeenCalledWith(null, '', '/')
+  })
+
+  it('cleans PKCE code param after magic link exchange', async () => {
+    Object.defineProperty(window, 'location', {
+      value: { hash: '', search: '?code=xyz789', pathname: '/' },
+      writable: true,
+    })
+
+    let capturedCallback: ((event: string, session: unknown) => void) | null = null
+    mockAuth.getSession.mockResolvedValue({ data: { session: null }, error: null })
+    mockAuth.onAuthStateChange.mockImplementation((cb) => {
+      capturedCallback = cb
+      return { data: { subscription: { unsubscribe: vi.fn() } } }
+    })
+
+    renderHook(() => useAuth())
+    await waitFor(() => expect(capturedCallback).not.toBeNull())
+
+    act(() => {
+      capturedCallback!('SIGNED_IN', fakeSession)
+    })
+
+    expect(window.history.replaceState).toHaveBeenCalledWith(null, '', '/')
   })
 
   it('sendMagicLink returns null error on success', async () => {
@@ -137,7 +222,7 @@ describe('useAuth', () => {
 
   it('unsubscribes from auth state changes on unmount', async () => {
     const unsubscribe = vi.fn()
-    mockAuth.getSession.mockResolvedValue({ data: { session: null } })
+    mockAuth.getSession.mockResolvedValue({ data: { session: null }, error: null })
     mockAuth.onAuthStateChange.mockReturnValue({
       data: { subscription: { unsubscribe } },
     })
