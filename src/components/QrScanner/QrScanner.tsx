@@ -170,6 +170,7 @@ export default function QrScanner({ onScan, onClose }: Props) {
                 onChange={(e) => setManualInput(e.target.value)}
                 placeholder="https://example.com or any text..."
                 className="font-mono text-sm"
+                maxLength={4096}
                 autoFocus
               />
             </div>
@@ -177,7 +178,7 @@ export default function QrScanner({ onScan, onClose }: Props) {
               Any text will produce a unique creature. The same text always yields the same specimen.
             </p>
             <Button type="submit" className="w-full font-serif" disabled={!manualInput.trim()}>
-              Resurrect Specimen
+              Excavate Specimen
             </Button>
           </form>
         )}

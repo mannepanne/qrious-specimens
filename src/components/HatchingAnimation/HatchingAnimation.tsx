@@ -134,6 +134,10 @@ export default function HatchingAnimation({ dna, onComplete }: Props) {
   const { style: creatureStyle } = useCreatureStyle()
   const isSketch = creatureStyle !== 'dark-scifi'
   const completedRef = useRef(false)
+  // Store onComplete in a ref so the effect never needs it as a dep —
+  // avoids restarting the animation when the parent re-renders mid-sequence
+  const onCompleteRef = useRef(onComplete)
+  onCompleteRef.current = onComplete
 
   const glowColor = isSketch
     ? 'hsl(var(--foreground))'
@@ -171,7 +175,7 @@ export default function HatchingAnimation({ dna, onComplete }: Props) {
         if (!completedRef.current) {
           completedRef.current = true
           setTimeout(() => {
-            if (!cancelled) onComplete()
+            if (!cancelled) onCompleteRef.current()
           }, 800)
         }
         return
@@ -185,7 +189,7 @@ export default function HatchingAnimation({ dna, onComplete }: Props) {
       cancelled = true
       cancelAnimationFrame(frame)
     }
-  }, [onComplete])
+  }, [])
 
   const phaseInfo = PHASES[Math.min(phase, PHASES.length - 1)]
   const isRevealed = phase >= 2

@@ -10,6 +10,7 @@ import { useDiscoveryCounts } from '@/hooks/useCreatures'
 import { getRarityFromCount, getRarityLabel, getRarityColor } from '@/lib/rarity'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import TypewriterText from '@/components/TypewriterText/TypewriterText'
 import { ArrowLeft, Pencil, Check, X } from 'lucide-react'
 
 /** Victorian-style pineapple — symbol of hospitality, status and exploration */
@@ -66,7 +67,7 @@ export function SpecimenPage({ creature, onBack, onUpdateNickname, currentIndex,
   }
 
   const handleSaveNickname = () => {
-    onUpdateNickname(creature.id, nickname)
+    onUpdateNickname(creature.id, nickname.trim().slice(0, 64))
     setEditing(false)
   }
 
@@ -177,9 +178,10 @@ export function SpecimenPage({ creature, onBack, onUpdateNickname, currentIndex,
                 </div>
               )}
 
-              {/* Nickname — only first discoverer can name the species */}
-              {creature.is_first_discoverer && (
-                <div className="flex items-center gap-2 justify-center">
+              {/* Nickname — any discoverer can name their specimen locally.
+                  Phase 4 will set is_first_discoverer via the register_discovery RPC,
+                  unlocking species-level naming in the public Gazette. */}
+              <div className="flex items-center gap-2 justify-center">
                   {editing ? (
                     <>
                       <Input
@@ -187,6 +189,7 @@ export function SpecimenPage({ creature, onBack, onUpdateNickname, currentIndex,
                         onChange={(e) => setNickname(e.target.value)}
                         className="font-serif text-sm h-8 max-w-[180px]"
                         placeholder="Give it a name..."
+                        maxLength={64}
                         autoFocus
                         onKeyDown={(e) => e.key === 'Enter' && handleSaveNickname()}
                       />
@@ -207,7 +210,6 @@ export function SpecimenPage({ creature, onBack, onUpdateNickname, currentIndex,
                     </button>
                   )}
                 </div>
-              )}
             </div>
 
             {/* Prose description */}
@@ -254,6 +256,20 @@ export function SpecimenPage({ creature, onBack, onUpdateNickname, currentIndex,
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Field Notes — populated by Phase 4 AI generation (Claude, Victorian naturalist voice) */}
+          <div className="bg-card border rounded-sm p-5">
+            <h3 className="font-mono text-[10px] tracking-[2px] text-muted-foreground uppercase mb-4">
+              Field Notes
+            </h3>
+            <p className="font-serif text-sm leading-relaxed text-muted-foreground italic">
+              <TypewriterText
+                text="Naturalist's observations pending transcription from the field..."
+                speed={30}
+                animate={false}
+              />
+            </p>
           </div>
 
           {/* Discovery Record */}

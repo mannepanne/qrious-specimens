@@ -1,8 +1,9 @@
 // ABOUT: Root application component — layered navigation shell with per-destination auth
 // ABOUT: Catalogue and Gazette are publicly browsable; Cabinet and overlays require auth
 
-import { useState, useRef } from 'react'
-import { QueryClientProvider } from '@tanstack/react-query'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { QueryClientProvider, useQueryClient } from '@tanstack/react-query'
+import type { InfiniteData } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { queryClient } from '@/lib/queryClient'
 import { Toaster } from '@/components/ui/sonner'
@@ -11,6 +12,7 @@ import { TabBar, type Tab } from '@/components/TabBar/TabBar'
 import { SiteFooter } from '@/components/SiteFooter/SiteFooter'
 import { CreatureStyleProvider } from '@/hooks/useCreatureStyle'
 import { useAddCreature, useUpdateNickname } from '@/hooks/useCreatures'
+import type { CreatureRow } from '@/types/creature'
 import { generateCreatureDNA } from '@/lib/creatureEngine'
 import { AuthPage } from '@/pages/AuthPage'
 import { CataloguePage } from '@/pages/CataloguePage'
@@ -19,7 +21,7 @@ import { CabinetPage } from '@/pages/CabinetPage'
 import { SpecimenPage } from '@/pages/SpecimenPage'
 import QrScanner from '@/components/QrScanner/QrScanner'
 import HatchingAnimation from '@/components/HatchingAnimation/HatchingAnimation'
-import type { CreatureDNA, CreatureRow } from '@/types/creature'
+import type { CreatureDNA } from '@/types/creature'
 
 type Overlay = 'scanner' | 'hatching' | null
 
@@ -38,10 +40,39 @@ function AppShell() {
 
   const addCreature = useAddCreature()
   const updateNickname = useUpdateNickname()
+  const queryClient = useQueryClient()
 
   // Store hatching result while animation plays
   const hatchingResultRef = useRef<CreatureRow | null>(null)
   const hatchingErrorRef = useRef<string | null>(null)
+  // Set to true when the animation fires onComplete while the insert is still pending
+  const animationDoneRef = useRef(false)
+
+  // Extracted so it can be called by both handleHatchingComplete and the
+  // useEffect that watches for the insert settling after animation finishes.
+  // Must be declared before early returns to satisfy the rules of hooks.
+  const finishHatching = useCallback(() => {
+    animationDoneRef.current = false
+    setOverlay(null)
+    setHatchingDna(null)
+
+    if (hatchingResultRef.current) {
+      setViewingCreature(hatchingResultRef.current)
+      setCabinetIndex(null) // from scan, no prev/next context
+    } else if (hatchingErrorRef.current === 'DUPLICATE') {
+      toast('This specimen is already in your cabinet.', { description: 'Each QR code yields the same creature.' })
+    } else if (hatchingErrorRef.current) {
+      toast('Could not add specimen', { description: 'Please try again.' })
+    }
+  }, [])
+
+  // When the insert settles AFTER the animation already finished (race: slow network),
+  // complete the transition that handleHatchingComplete deferred
+  useEffect(() => {
+    if (animationDoneRef.current && !addCreature.isPending) {
+      finishHatching()
+    }
+  }, [addCreature.isPending, finishHatching])
 
   if (authState.status === 'loading') {
     return (
@@ -82,17 +113,29 @@ function AppShell() {
   // ── Scan flow ──────────────────────────────────────────────────────────
 
   function handleScan(content: string) {
-    const dna = generateCreatureDNA(content)
+    // Clamp to 4096 chars — keeps insert lean and prevents main-thread pin on hash loop
+    const clamped = content.slice(0, 4096)
+    const dna = generateCreatureDNA(clamped)
+
+    // Fast duplicate check against the cached cabinet before starting the animation
+    const cached = queryClient.getQueryData<InfiniteData<CreatureRow[]>>(['creatures', userId])
+    const allCached = cached?.pages.flat() ?? []
+    if (allCached.some((c) => c.qr_hash === dna.hash)) {
+      setOverlay(null)
+      toast('This specimen is already in your cabinet.', { description: 'Each QR code yields the same creature.' })
+      return
+    }
 
     hatchingResultRef.current = null
     hatchingErrorRef.current = null
+    animationDoneRef.current = false
 
     // Close scanner, start hatching immediately
     setHatchingDna(dna)
     setOverlay('hatching')
 
     // Insert in parallel — hatching animation buys time
-    addCreature.mutateAsync({ userId, qrContent: content, dna }).then((row) => {
+    addCreature.mutateAsync({ userId, qrContent: clamped, dna }).then((row) => {
       hatchingResultRef.current = row
     }).catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err)
@@ -101,17 +144,13 @@ function AppShell() {
   }
 
   function handleHatchingComplete() {
-    setOverlay(null)
-    setHatchingDna(null)
-
-    if (hatchingResultRef.current) {
-      setViewingCreature(hatchingResultRef.current)
-      setCabinetIndex(null) // from scan, no prev/next context
-    } else if (hatchingErrorRef.current === 'DUPLICATE') {
-      toast('This specimen is already in your cabinet.', { description: 'Each QR code yields the same creature.' })
-    } else if (hatchingErrorRef.current) {
-      toast('Could not add specimen', { description: 'Please try again.' })
+    if (addCreature.isPending) {
+      // Insert hasn't settled yet — defer the transition; the useEffect above will
+      // call finishHatching() as soon as isPending flips to false
+      animationDoneRef.current = true
+      return
     }
+    finishHatching()
   }
 
   // ── Cabinet navigation ─────────────────────────────────────────────────

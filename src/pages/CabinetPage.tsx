@@ -2,8 +2,10 @@
 // ABOUT: Infinite-scroll grid of SpecimenTeaser cards; scan CTA triggers the QR scanner
 
 import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useCreatures, useDiscoveryCounts } from '@/hooks/useCreatures'
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver'
+import { useCreatureStyle, type CreatureStyle } from '@/hooks/useCreatureStyle'
 import SpecimenTeaser from '@/components/SpecimenTeaser/SpecimenTeaser'
 import type { CreatureRow } from '@/types/creature'
 import type { UseAuthReturn } from '@/hooks/useAuth'
@@ -17,8 +19,16 @@ interface CabinetPageProps {
   onViewCreature: (creature: CreatureRow, index: number, allCreatures: CreatureRow[]) => void
 }
 
+const STYLE_LABELS: Record<CreatureStyle, string> = {
+  'explorer-sketch':   'Explorer Sketch',
+  'volumetric-sketch': 'Volumetric Sketch',
+  'dark-scifi':        'Dark Sci-Fi',
+  'generative-sketch': 'Generative Sketch',
+}
+
 export function CabinetPage({ userId, email, signOut, onOpenScanner, onViewCreature }: CabinetPageProps) {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } = useCreatures(userId)
+  const { style: creatureStyle, setStyle } = useCreatureStyle()
   // useIntersectionObserver creates and returns the ref; pass it to the sentinel element
   const sentinelRef = useIntersectionObserver(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage()
@@ -51,6 +61,23 @@ export function CabinetPage({ userId, email, signOut, onOpenScanner, onViewCreat
               SIGN OUT
             </Button>
           </div>
+        </div>
+
+        {/* Specimen style selector */}
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[10px] tracking-wider text-muted-foreground shrink-0">RENDER STYLE</span>
+          <Select value={creatureStyle} onValueChange={(v) => setStyle(v as CreatureStyle)}>
+            <SelectTrigger className="h-8 font-mono text-xs flex-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(STYLE_LABELS) as CreatureStyle[]).map((s) => (
+                <SelectItem key={s} value={s} className="font-mono text-xs">
+                  {STYLE_LABELS[s]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Scan CTA */}
