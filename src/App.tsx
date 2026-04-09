@@ -1,22 +1,35 @@
-// ABOUT: Root application component — auth gate, navigation shell, tab routing
-// ABOUT: State-based routing: activeTab drives which page renders (no URL router)
+// ABOUT: Root application component — layered navigation shell with per-destination auth
+// ABOUT: Catalogue and Gazette are publicly browsable; Cabinet and overlays require auth
 import { useState } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from '@/lib/queryClient'
 import { Toaster } from '@/components/ui/sonner'
 import { useAuth } from '@/hooks/useAuth'
-import { TabBar, type Tab } from '@/components/TabBar/TabBar'
+import { TabBar, type Tab, type Overlay, type Subpage } from '@/components/TabBar/TabBar'
 import { SiteFooter } from '@/components/SiteFooter/SiteFooter'
-import { EmailConfirmBanner } from '@/components/EmailConfirmBanner/EmailConfirmBanner'
 import { AuthPage } from '@/pages/AuthPage'
-import { ScanPage } from '@/pages/ScanPage'
+import { CataloguePage } from '@/pages/CataloguePage'
+import { GazettePage } from '@/pages/GazettePage'
 import { CabinetPage } from '@/pages/CabinetPage'
-import { CommunityPage } from '@/pages/CommunityPage'
-import { ProfilePage } from '@/pages/ProfilePage'
+
+// Destinations that require an active session. Phase 5 removes 'catalogue' and 'gazette'
+// from this set when public browse is enabled.
+const AUTH_REQUIRED_TABS: Tab[] = ['cabinet']
+const AUTH_REQUIRED_OVERLAYS: Overlay[] = ['scanner', 'hatching', 'specimen']
+
+interface NavState {
+  tab: Tab
+  overlay: Overlay
+  subpage: Subpage
+}
 
 function AppShell() {
   const { authState, sendMagicLink, signOut } = useAuth()
-  const [activeTab, setActiveTab] = useState<Tab>('scan')
+  const [nav, setNav] = useState<NavState>({ tab: 'catalogue', overlay: null, subpage: null })
+
+  function navigateTab(tab: Tab) {
+    setNav({ tab, overlay: null, subpage: null })
+  }
 
   // Show nothing while resolving the initial session — avoids auth flash
   if (authState.status === 'loading') {
@@ -27,29 +40,52 @@ function AppShell() {
     )
   }
 
-  if (authState.status === 'unauthenticated') {
+  // Network or storage failure on session load
+  if (authState.status === 'error') {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-6">
+        <div className="text-center space-y-3">
+          <p className="font-serif text-lg">Could not connect to the Cabinet</p>
+          <p className="text-sm text-muted-foreground">{authState.message}</p>
+          <button
+            className="text-sm underline underline-offset-4 hover:text-foreground text-muted-foreground"
+            onClick={() => window.location.reload()}
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const isAuthenticated = authState.status === 'authenticated'
+
+  // Gate auth-required tabs: show AuthPage inline rather than hard-blocking the whole shell
+  const tabNeedsAuth = AUTH_REQUIRED_TABS.includes(nav.tab)
+  const overlayNeedsAuth = nav.overlay !== null && AUTH_REQUIRED_OVERLAYS.includes(nav.overlay)
+
+  if (!isAuthenticated && (tabNeedsAuth || overlayNeedsAuth)) {
     return <AuthPage sendMagicLink={sendMagicLink} />
   }
 
-  const { session } = authState
-  const email = session.user.email ?? ''
-  const emailConfirmed = !!session.user.email_confirmed_at
+  const email = isAuthenticated ? (authState.session.user.email ?? '') : ''
 
   return (
     <div className="flex min-h-screen flex-col">
-      {!emailConfirmed && <EmailConfirmBanner email={email} />}
-
       <div className="flex-1 pb-16">
-        {activeTab === 'scan'      && <ScanPage />}
-        {activeTab === 'cabinet'   && <CabinetPage />}
-        {activeTab === 'community' && <CommunityPage />}
-        {activeTab === 'profile'   && (
-          <ProfilePage email={email} signOut={signOut} />
+        {nav.tab === 'catalogue' && <CataloguePage />}
+        {nav.tab === 'gazette'   && <GazettePage />}
+        {nav.tab === 'cabinet'   && isAuthenticated && (
+          <CabinetPage email={email} signOut={signOut} />
         )}
       </div>
 
       <SiteFooter />
-      <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+      <TabBar
+        activeTab={nav.tab}
+        onTabChange={navigateTab}
+        hidden={nav.overlay !== null}
+      />
     </div>
   )
 }

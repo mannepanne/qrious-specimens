@@ -1,5 +1,5 @@
-// ABOUT: Integration tests for the App component — auth gating and tab navigation
-// ABOUT: Mocks Supabase auth; verifies loading → auth page → authenticated shell transitions
+// ABOUT: Integration tests for App — auth gating, tab navigation, error state, public browse
+// ABOUT: Catalogue and Gazette are public; Cabinet requires auth
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { App } from './App'
@@ -42,14 +42,14 @@ const fakeSession = {
 }
 
 function setupUnauthenticated() {
-  mockAuth.getSession.mockResolvedValue({ data: { session: null } })
+  mockAuth.getSession.mockResolvedValue({ data: { session: null }, error: null })
   mockAuth.onAuthStateChange.mockReturnValue({
     data: { subscription: { unsubscribe: vi.fn() } },
   })
 }
 
 function setupAuthenticated() {
-  mockAuth.getSession.mockResolvedValue({ data: { session: fakeSession } })
+  mockAuth.getSession.mockResolvedValue({ data: { session: fakeSession }, error: null })
   mockAuth.onAuthStateChange.mockReturnValue({
     data: { subscription: { unsubscribe: vi.fn() } },
   })
@@ -57,11 +57,15 @@ function setupAuthenticated() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  Object.defineProperty(window, 'location', {
+    value: { hash: '', search: '', pathname: '/', origin: 'http://localhost:5173' },
+    writable: true,
+  })
+  vi.spyOn(window.history, 'replaceState').mockImplementation(() => {})
 })
 
 describe('App', () => {
   it('shows loading state initially', () => {
-    // getSession never resolves — holds loading state
     mockAuth.getSession.mockImplementation(() => new Promise(() => {}))
     mockAuth.onAuthStateChange.mockReturnValue({
       data: { subscription: { unsubscribe: vi.fn() } },
@@ -71,88 +75,108 @@ describe('App', () => {
     expect(screen.getByText(/loading/i)).toBeInTheDocument()
   })
 
-  it('shows AuthPage when unauthenticated', async () => {
-    setupUnauthenticated()
-    render(<App />)
-
-    await waitFor(() => {
-      expect(screen.getByText(/qrious specimens/i)).toBeInTheDocument()
-      expect(screen.getByLabelText(/electronic mail/i)).toBeInTheDocument()
+  it('shows error state when session load fails', async () => {
+    mockAuth.getSession.mockResolvedValue({
+      data: { session: null },
+      error: { message: 'Storage corrupted' },
     })
+    mockAuth.onAuthStateChange.mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    })
+
+    render(<App />)
+    await waitFor(() => {
+      expect(screen.getByText(/could not connect/i)).toBeInTheDocument()
+    })
+    expect(screen.getByText('Storage corrupted')).toBeInTheDocument()
   })
 
-  it('shows tab navigation when authenticated', async () => {
-    setupAuthenticated()
+  it('shows Catalogue tab (public) when unauthenticated — no auth wall', async () => {
+    setupUnauthenticated()
     render(<App />)
 
     await waitFor(() => {
       expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
     })
-    expect(screen.getByText('Scan')).toBeInTheDocument()
+    expect(screen.getByText(/species catalogue/i)).toBeInTheDocument()
+  })
+
+  it('shows tab navigation with spec-defined three tabs', async () => {
+    setupUnauthenticated()
+    render(<App />)
+
+    await waitFor(() => screen.getByRole('navigation'))
+    expect(screen.getByText('Catalogue')).toBeInTheDocument()
+    expect(screen.getByText('Gazette')).toBeInTheDocument()
     expect(screen.getByText('Cabinet')).toBeInTheDocument()
   })
 
-  it('defaults to Scan tab when authenticated', async () => {
-    setupAuthenticated()
+  it('defaults to Catalogue tab', async () => {
+    setupUnauthenticated()
     render(<App />)
 
     await waitFor(() => screen.getByRole('navigation'))
-    expect(screen.getByText(/qr scanner arrives/i)).toBeInTheDocument()
+    expect(screen.getByText(/species catalogue/i)).toBeInTheDocument()
   })
 
-  it('switches tabs when tab bar buttons are clicked', async () => {
+  it('unauthenticated user can browse Gazette', async () => {
+    setupUnauthenticated()
+    render(<App />)
+
+    await waitFor(() => screen.getByRole('navigation'))
+    fireEvent.click(screen.getByText('Gazette'))
+    expect(screen.getByText(/the gazette/i)).toBeInTheDocument()
+  })
+
+  it('unauthenticated user clicking Cabinet sees AuthPage', async () => {
+    setupUnauthenticated()
+    render(<App />)
+
+    await waitFor(() => screen.getByRole('navigation'))
+    fireEvent.click(screen.getByText('Cabinet'))
+
+    expect(screen.getByLabelText(/electronic mail/i)).toBeInTheDocument()
+  })
+
+  it('shows Cabinet content when authenticated', async () => {
     setupAuthenticated()
     render(<App />)
 
     await waitFor(() => screen.getByRole('navigation'))
+    fireEvent.click(screen.getByText('Cabinet'))
+    expect(screen.getByText(/cabinet of curiosities/i)).toBeInTheDocument()
+  })
+
+  it('shows email on Cabinet page when authenticated', async () => {
+    setupAuthenticated()
+    render(<App />)
+
+    await waitFor(() => screen.getByRole('navigation'))
+    fireEvent.click(screen.getByText('Cabinet'))
+    expect(screen.getByText('naturalist@example.com')).toBeInTheDocument()
+  })
+
+  it('tab switching works across all three tabs when authenticated', async () => {
+    setupAuthenticated()
+    render(<App />)
+
+    await waitFor(() => screen.getByRole('navigation'))
+
+    fireEvent.click(screen.getByText('Gazette'))
+    expect(screen.getByText(/the gazette/i)).toBeInTheDocument()
 
     fireEvent.click(screen.getByText('Cabinet'))
     expect(screen.getByText(/cabinet of curiosities/i)).toBeInTheDocument()
 
-    fireEvent.click(screen.getByText('Community'))
-    expect(screen.getByText(/society of naturalists/i)).toBeInTheDocument()
-
-    fireEvent.click(screen.getByText('Profile'))
-    expect(screen.getByText(/your field journal/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByText('Catalogue'))
+    expect(screen.getByText(/species catalogue/i)).toBeInTheDocument()
   })
 
-  it('shows email address on Profile tab', async () => {
+  it('tab bar is visible when no overlay is open', async () => {
     setupAuthenticated()
     render(<App />)
 
     await waitFor(() => screen.getByRole('navigation'))
-    fireEvent.click(screen.getByText('Profile'))
-
-    expect(screen.getByText('naturalist@example.com')).toBeInTheDocument()
-  })
-
-  it('does not show email confirmation banner when email is confirmed', async () => {
-    setupAuthenticated()
-    render(<App />)
-
-    await waitFor(() => screen.getByRole('navigation'))
-    expect(screen.queryByText(/please confirm your address/i)).not.toBeInTheDocument()
-  })
-
-  it('shows email confirmation banner when email is unconfirmed', async () => {
-    mockAuth.getSession.mockResolvedValue({
-      data: {
-        session: {
-          ...fakeSession,
-          user: { ...fakeSession.user, email_confirmed_at: null },
-        },
-      },
-    })
-    mockAuth.onAuthStateChange.mockReturnValue({
-      data: { subscription: { unsubscribe: vi.fn() } },
-    })
-    // Mock resend for the banner
-    ;(supabase.auth as unknown as { resend?: ReturnType<typeof vi.fn> }).resend = vi.fn().mockResolvedValue({ error: null })
-
-    render(<App />)
-
-    await waitFor(() => {
-      expect(screen.getByText(/please confirm your address/i)).toBeInTheDocument()
-    })
+    expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
   })
 })

@@ -9,4 +9,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY environment variables')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Explicit PKCE config — Supabase v2 defaults to PKCE for OTP, but declaring it
+// makes the security posture visible and guards against future default changes.
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    flowType: 'pkce',
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+  },
+})
