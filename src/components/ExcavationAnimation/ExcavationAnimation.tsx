@@ -256,13 +256,15 @@ export default function ExcavationAnimation({ dna, workerResult, onCommission, o
   const isScattering = phase === PHASE_REVEALING || phase === PHASE_CATALOGUED
   const scatterProgress = phase === PHASE_REVEALING ? phaseProgress : 1
 
-  // Sketch renderer: visible until reveal, then fades as AI image appears
-  const sketchOpacity =
-    phase < PHASE_REVEALING
-      ? phase >= 2 ? Math.min((phase === 2 ? phaseProgress : 1) * 1.5, 1) : 0
-      : phase === PHASE_REVEALING
-        ? Math.max(1 - phaseProgress * 1.5, 0)
-        : 0
+  // Sketch renderer: visible until reveal, then fades as AI image appears.
+  // If no AI image arrived (generation failed), sketch stays visible as fallback.
+  const sketchOpacity = (() => {
+    if (phase < PHASE_REVEALING) {
+      return phase >= 2 ? Math.min((phase === 2 ? phaseProgress : 1) * 1.5, 1) : 0
+    }
+    if (!workerResult?.imageUrl512) return 1 // no AI image — keep sketch visible
+    return phase === PHASE_REVEALING ? Math.max(1 - phaseProgress * 1.5, 0) : 0
+  })()
 
   // AI illustration: fades in during reveal
   const aiImageOpacity =

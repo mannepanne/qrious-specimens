@@ -174,6 +174,14 @@ describe('handleGenerateCreature', () => {
     expect(res.status).toBe(400)
   })
 
+  it('returns 400 when qrHash is not a 16-char hex string', async () => {
+    const req = makeRequest({ token: validToken, body: { qrHash: '../../etc/passwd', dna: MOCK_DNA } })
+    const res = await handleGenerateCreature(req, makeEnv())
+    expect(res.status).toBe(400)
+    const body = await res.json() as Record<string, unknown>
+    expect(body.error).toContain('Invalid qrHash format')
+  })
+
   it('returns cached data immediately when species_images has an existing entry', async () => {
     const cachedRow = {
       image_url: 'https://pub-test.r2.dev/species/original/abc.png',
@@ -190,7 +198,7 @@ describe('handleGenerateCreature', () => {
       // register_discovery RPC
       .mockResolvedValueOnce(new Response(JSON.stringify({ is_first_discoverer: false, discovery_count: 6 }), { status: 200 }))
 
-    const req = makeRequest({ token: validToken, body: { qrHash: 'abc', dna: MOCK_DNA } })
+    const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
     const res = await handleGenerateCreature(req, makeEnv())
 
     expect(res.status).toBe(200)
@@ -237,7 +245,7 @@ describe('handleGenerateCreature', () => {
       // register_discovery RPC
       .mockResolvedValueOnce(new Response(JSON.stringify({ is_first_discoverer: true, discovery_count: 1 }), { status: 200 }))
 
-    const req = makeRequest({ token: validToken, body: { qrHash: 'abc', dna: MOCK_DNA } })
+    const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
     const res = await handleGenerateCreature(req, makeEnv())
 
     expect(res.status).toBe(200)
@@ -262,7 +270,7 @@ describe('handleGenerateCreature', () => {
       // Gemini generate → failure
       .mockResolvedValueOnce(new Response('Rate limit exceeded', { status: 429 }))
 
-    const req = makeRequest({ token: validToken, body: { qrHash: 'abc', dna: MOCK_DNA } })
+    const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
     const res = await handleGenerateCreature(req, makeEnv())
 
     expect(res.status).toBe(500)
@@ -291,7 +299,7 @@ describe('handleGenerateCreature', () => {
       // register_discovery RPC
       .mockResolvedValueOnce(new Response(JSON.stringify({ is_first_discoverer: true, discovery_count: 1 }), { status: 200 }))
 
-    const req = makeRequest({ token: validToken, body: { qrHash: 'abc', dna: MOCK_DNA } })
+    const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
     const res = await handleGenerateCreature(req, makeEnv())
 
     expect(res.status).toBe(200)
@@ -303,7 +311,7 @@ describe('handleGenerateCreature', () => {
   it('sets correct CORS headers for allowed origin', async () => {
     const req = makeRequest({
       token: validToken,
-      body: { qrHash: 'abc', dna: MOCK_DNA },
+      body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA },
       origin: 'https://qrious.hultberg.org',
     })
     // Mock cache hit to short-circuit

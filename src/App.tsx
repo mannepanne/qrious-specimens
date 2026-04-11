@@ -53,6 +53,8 @@ function AppShell() {
   const animationDoneRef = useRef(false)
   // Prevent calling the Worker more than once per excavation
   const workerCalledRef = useRef(false)
+  // Set to true if Worker call failed with no image
+  const workerFailedRef = useRef(false)
 
   // Extracted so it can be called by both handleExcavationComplete and the
   // useEffect that watches for the insert settling after animation finishes.
@@ -64,13 +66,24 @@ function AppShell() {
     setExcavationWorkerResult(null)
 
     if (excavationResultRef.current) {
-      setViewingCreature(excavationResultRef.current)
+      const creature = excavationResultRef.current
+      const isFirstDiscoverer = excavationWorkerResponseRef.current?.isFirstDiscoverer ?? false
+
+      // Reflect first-discoverer status immediately without waiting for a cabinet reload
+      setViewingCreature(isFirstDiscoverer ? { ...creature, is_first_discoverer: true } : creature)
       setCabinetIndex(null) // from scan, no prev/next context
 
       // First discoverer notification — only when this user is the first globally
-      if (excavationWorkerResponseRef.current?.isFirstDiscoverer) {
+      if (isFirstDiscoverer) {
         toast('First discoverer!', {
           description: 'You are the first naturalist to catalogue this species.',
+        })
+      }
+
+      // Worker failed — specimen added to cabinet but no illustration captured
+      if (workerFailedRef.current) {
+        toast('The specimen eluded our naturalist.', {
+          description: 'The illustration could not be captured — try viewing the specimen again.',
         })
       }
     } else if (excavationErrorRef.current === 'DUPLICATE') {
@@ -145,6 +158,7 @@ function AppShell() {
     excavationWorkerResponseRef.current = null
     animationDoneRef.current = false
     workerCalledRef.current = false
+    workerFailedRef.current = false
 
     // Close scanner, start excavation immediately
     setExcavatingDna(dna)
@@ -182,6 +196,7 @@ function AppShell() {
         ? (await res.json()) as WorkerResponse
         : null
 
+      if (!data) workerFailedRef.current = true
       excavationWorkerResponseRef.current = data
 
       // Unblock the animation — even on failure, pass a result so animation can proceed
@@ -191,6 +206,7 @@ function AppShell() {
       })
     } catch {
       // Network failure — unblock animation with no image
+      workerFailedRef.current = true
       setExcavationWorkerResult({ imageUrl512: null, isFirstDiscoverer: false })
     }
   }

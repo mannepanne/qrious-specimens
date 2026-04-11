@@ -202,6 +202,10 @@ export async function handleGenerateCreature(request: Request, env: Env): Promis
     return json({ error: 'Invalid JSON body' }, 400, origin)
   }
 
+  if (!/^[0-9a-f]{16}$/.test(qrHash)) {
+    return json({ error: 'Invalid qrHash format' }, 400, origin)
+  }
+
   // Step 3: Check species_images cache
   const existing = await getSpeciesImage(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, qrHash)
   if (existing?.image_url) {
