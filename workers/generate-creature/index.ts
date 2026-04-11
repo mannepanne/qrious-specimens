@@ -111,9 +111,12 @@ async function insertSpeciesImage(
     discovery_count: number
   },
 ): Promise<void> {
-  const res = await fetch(`${supabaseUrl}/rest/v1/species_images`, {
+  // Upsert with ignore-duplicates: if a concurrent request already inserted the row,
+  // this becomes a no-op (preserving the first discoverer's data). R2 objects uploaded
+  // by the losing race are orphaned — tracked as TD-003 for a future cleanup job.
+  const res = await fetch(`${supabaseUrl}/rest/v1/species_images?on_conflict=qr_hash`, {
     method: 'POST',
-    headers: { ...supabaseHeaders(serviceKey), Prefer: 'return=minimal' },
+    headers: { ...supabaseHeaders(serviceKey), Prefer: 'return=minimal,resolution=ignore-duplicates' },
     body: JSON.stringify(row),
   })
   if (!res.ok) {

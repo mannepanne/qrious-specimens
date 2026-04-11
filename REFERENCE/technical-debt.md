@@ -46,6 +46,36 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
+### TD-004: No rate limiting on `/api/generate-creature`
+- **Location:** `src/worker.ts` — route handler; `workers/generate-creature/index.ts` — `handleGenerateCreature()`
+- **Issue:** No per-user rate limit on the generation endpoint. Each novel `qrHash` triggers a Gemini image generation + Claude Haiku call. An authenticated user scripting novel QR content could exhaust API quotas. The `species_images` cache only protects against repeated hashes, not novel ones.
+- **Why accepted:** Physical QR scanning naturally limits legitimate use (1–2 scans/min at most). The threat requires a valid authenticated account. Acceptable for an early-stage app with a small user base.
+- **Risk:** Medium — becomes High once the app grows or moves to paid API keys. Each Gemini call costs ~$0.01–0.05 in image generation credits.
+- **Future fix:** Add per-user rate limit in Cloudflare KV: `ratelimit:{userId}` key with TTL, checked before calling Gemini. Alternatively, use Cloudflare's built-in rate limiting rule (Pro plan). Target: ~10 generations per user per hour.
+- **Phase introduced:** Phase 4
+
+---
+
+### TD-005: R2 orphan images from TOCTOU race
+- **Location:** `workers/generate-creature/index.ts` — `uploadToR2()` called before `insertSpeciesImage()`
+- **Issue:** When two concurrent requests scan the same QR code, both upload to R2 (step 5) before the upsert (step 7). The upsert uses `ON CONFLICT (qr_hash) DO NOTHING`, so the second request's R2 objects (three files) are uploaded but never referenced by any DB row. They become orphaned objects in the bucket.
+- **Why accepted:** The race window is narrow and the orphaned objects are small (1–2 MB total). Data integrity is preserved — the DB always has the first discoverer's data. The failure mode is minor storage waste.
+- **Risk:** Low — no data loss, no user-facing breakage. Cumulative storage cost is negligible at early scale.
+- **Future fix:** Periodic R2 cleanup job: list all keys in `species/`, cross-reference against `species_images.qr_hash`, delete unmatched keys older than 24 hours.
+- **Phase introduced:** Phase 4
+
+---
+
+### TD-006: `register_discovery` RPC accepts arbitrary `p_user_id` without auth check
+- **Location:** Supabase database function `register_discovery` (migration file) — not in Worker code
+- **Issue:** The `SECURITY DEFINER` RPC accepts `p_user_id uuid` as a parameter without verifying it matches `auth.uid()`. Any authenticated user could call the RPC directly via the Supabase client with a different user's ID to spoof first-discoverer credit. The Worker path is safe (passes JWT-verified `userId`), but the direct client path is not.
+- **Why accepted:** The first-discoverer badge is cosmetic — no financial or account-integrity consequence. Exploiting this requires knowing another user's UUID. The fix is a DB migration, out of scope for Phase 4.
+- **Risk:** Low-Medium — affects data integrity of the first-discoverer feature but no security escalation beyond badge cosmetics.
+- **Future fix:** Add `IF p_user_id != auth.uid() THEN RAISE EXCEPTION 'Unauthorised'` inside the function, or restrict RPC access to service role only (`REVOKE EXECUTE ON FUNCTION register_discovery FROM authenticated`).
+- **Phase introduced:** Phase 4 (identified during review; function pre-existed)
+
+---
+
 ### Example Format: TD-001: Description
 - **Location:** `src/path/to/file.ts` - `functionName()`
 - **Issue:** Clear description of the limitation or shortcut
