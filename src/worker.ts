@@ -1,15 +1,18 @@
-// ABOUT: Cloudflare Worker entrypoint
-// ABOUT: Serves the SPA for all routes; API Worker routes added in Phase 4
+// ABOUT: Cloudflare Worker entrypoint — serves the SPA and handles API routes
+// ABOUT: POST /api/generate-creature → Gemini illustration + Claude field notes + R2 upload
 
-// Cloudflare evaluates [assets] routes BEFORE calling this fetch handler.
-// Matched static files (JS, CSS, images) are served directly from the asset store.
-// Unmatched paths fall through to not_found_handling = "single-page-application"
-// in wrangler.toml, which serves index.html — enabling client-side SPA routing.
-// This fetch handler is only reached for paths that are neither static assets
-// nor handled by the SPA fallback — in practice, never, until Phase 4 adds
-// explicit API routes here.
+import { handleGenerateCreature, type Env } from '../workers/generate-creature/index'
+
 export default {
-  async fetch(_request: Request): Promise<Response> {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url)
+
+    if (url.pathname === '/api/generate-creature') {
+      return handleGenerateCreature(request, env)
+    }
+
+    // All other paths are handled by Cloudflare's [assets] binding (SPA fallback).
+    // This handler is only reached for paths that bypass the asset store.
     return new Response('Not found', { status: 404 })
   },
 }

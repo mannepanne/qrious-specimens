@@ -36,6 +36,16 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
+### TD-003: R2 image variants store original bytes (no actual pixel resize)
+- **Location:** `workers/generate-creature/r2.ts` — `uploadToR2()`
+- **Issue:** The 512px and 256px R2 variants store the original Gemini image bytes rather than pixel-resized copies. Display sizes are constrained by CSS in `SpecimenPage` and `SpecimenTeaser`, but users on slow connections download the full-resolution image even for thumbnails.
+- **Why accepted:** Cloudflare Workers runtime has no Canvas API or native image resize. Alternatives (WASM-based resize, CF Image Resizing service) require either a paid CF plan add-on or significant added complexity. For Phase 4 MVP this is acceptable — Gemini images are typically 1–2MB and the cabinet loads lazily.
+- **Risk:** Low — no data loss or functional breakage. Performance cost is bandwidth on the cabinet grid for users with many specimens.
+- **Future fix:** Enable Cloudflare Image Resizing on the account (Pro+ plan) and use `fetch(r2Url, { cf: { image: { width: 512 } } })` to resize before uploading the variant, OR use a WASM-based JPEG encoder in the Worker.
+- **Phase introduced:** Phase 4
+
+---
+
 ### Example Format: TD-001: Description
 - **Location:** `src/path/to/file.ts` - `functionName()`
 - **Issue:** Clear description of the limitation or shortcut
