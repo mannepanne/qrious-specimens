@@ -26,6 +26,16 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
+### TD-002: `cabinetCreaturesRef` stale across infinite-scroll page loads
+- **Location:** `src/App.tsx` — `cabinetCreaturesRef`, `handleViewCreature`
+- **Issue:** Opening a specimen from the cabinet snapshots the current `allCreatures` list into a ref. Subsequent infinite-scroll page fetches don't update the ref, so prev/next navigation on `SpecimenPage` operates on a stale list — creatures loaded after the snapshot are unreachable via the arrows.
+- **Why accepted:** Requires a more involved refactor (lifting creature state or passing a live query reference). The failure mode is invisible to users with small cabinets (< 30 specimens). Will become noticeable only once pagination is common.
+- **Risk:** Low — no data loss, no corruption. Worst case: prev/next navigation ends at the last creature in the first page.
+- **Future fix:** Pass a stable reference to the live query data into `SpecimenPage`, or derive prev/next indices from the infinite query directly rather than a snapshot.
+- **Phase introduced:** Phase 3
+
+---
+
 ### Example Format: TD-001: Description
 - **Location:** `src/path/to/file.ts` - `functionName()`
 - **Issue:** Clear description of the limitation or shortcut

@@ -29,6 +29,11 @@ Common issues and solutions for local development, deployment, and API integrati
 
 How to use `/review-pr` and `/review-pr-team` skills for automated code review.
 
+### [creature-engine.md](./creature-engine.md)
+**When to read:** Working on the scan flow, DNA generation, rendering, cabinet, or rarity system.
+
+DNA pipeline (djb2 → FNV-1a → mulberry32 → CreatureDNA), scan flow with parallel DB insert, renderer architecture, infinite scroll pattern, rarity system, and DB schema.
+
 ### [decisions/](./decisions/)
 **When to read:** Making architectural decisions, choosing between alternatives, or looking up why something was built the way it was.
 
