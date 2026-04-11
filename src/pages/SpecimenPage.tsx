@@ -5,7 +5,6 @@ import { useState, useRef } from 'react'
 import type { CreatureRow } from '@/types/creature'
 import CreatureRenderer from '@/components/CreatureRenderer/CreatureRenderer'
 import PageFlip from '@/components/PageFlip/PageFlip'
-import { useCreatureStyle } from '@/hooks/useCreatureStyle'
 import { useDiscoveryCounts } from '@/hooks/useCreatures'
 import { getRarityFromCount, getRarityLabel, getRarityColor } from '@/lib/rarity'
 import { Button } from '@/components/ui/button'
@@ -43,8 +42,6 @@ export function SpecimenPage({ creature, onBack, onUpdateNickname, currentIndex,
   const { dna } = creature
   const [editing, setEditing] = useState(false)
   const [nickname, setNickname] = useState(creature.nickname ?? '')
-  const { style: creatureStyle } = useCreatureStyle()
-  const isSketch = creatureStyle !== 'dark-scifi'
   const { data: discoveryCounts } = useDiscoveryCounts([creature.qr_hash])
   const discoveryCount = discoveryCounts?.[creature.qr_hash]
   const rarity = getRarityFromCount(discoveryCount)
@@ -107,33 +104,7 @@ export function SpecimenPage({ creature, onBack, onUpdateNickname, currentIndex,
 
             {/* Specimen viewport */}
             <div className="flex justify-center mb-5 mt-4">
-              {isSketch ? (
-                <CreatureRenderer dna={dna} size={200} showAnnotations />
-              ) : (
-                <div
-                  className="relative rounded-full overflow-hidden flex items-center justify-center"
-                  style={{
-                    width: 240,
-                    height: 240,
-                    background: 'radial-gradient(circle, #0a0a14 0%, #060610 100%)',
-                    boxShadow: `inset 0 0 40px rgba(0,0,0,0.6), 0 0 20px ${rarityColor}15`,
-                    border: '2px solid hsl(var(--foreground) / 0.2)',
-                  }}
-                >
-                  <div
-                    className="absolute inset-0 rounded-full"
-                    style={{ background: `radial-gradient(circle at 45% 40%, ${rarityColor}10 0%, transparent 60%)` }}
-                  />
-                  <CreatureRenderer dna={dna} size={210} animated />
-                  <div
-                    className="absolute inset-0 rounded-full pointer-events-none"
-                    style={{
-                      background: 'radial-gradient(ellipse at 30% 25%, rgba(255,255,255,0.04) 0%, transparent 50%)',
-                      boxShadow: 'inset 0 0 60px rgba(0,0,0,0.5)',
-                    }}
-                  />
-                </div>
-              )}
+              <CreatureRenderer dna={dna} size={200} showAnnotations />
             </div>
 
             {/* Inline navigation */}

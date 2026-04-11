@@ -3,7 +3,6 @@
 
 import { useEffect, useState, useRef } from 'react'
 import type { CreatureDNA } from '@/types/creature'
-import { useCreatureStyle } from '@/hooks/useCreatureStyle'
 import CreatureRenderer from '@/components/CreatureRenderer/CreatureRenderer'
 
 interface Props {
@@ -18,14 +17,11 @@ const PHASES = [
   { label: 'SPECIMEN CATALOGUED', duration: 1300 },
 ]
 
-function hsl(h: number, s: number, l: number) {
-  return `hsl(${h}, ${s}%, ${l}%)`
-}
-
 /** Victorian Gothic compass rose spinner shown during extended pauses */
-function VictorianSpinner({ color }: { color: string }) {
+function VictorianSpinner() {
   const cx = 60
   const cy = 60
+  const color = 'hsl(var(--foreground))'
   return (
     <div className="flex items-center justify-center py-3">
       <svg
@@ -131,19 +127,11 @@ function VictorianSpinner({ color }: { color: string }) {
 export default function HatchingAnimation({ dna, onComplete }: Props) {
   const [phase, setPhase] = useState(0)
   const [progress, setProgress] = useState(0)
-  const { style: creatureStyle } = useCreatureStyle()
-  const isSketch = creatureStyle !== 'dark-scifi'
   const completedRef = useRef(false)
   // Store onComplete in a ref so the effect never needs it as a dep —
   // avoids restarting the animation when the parent re-renders mid-sequence
   const onCompleteRef = useRef(onComplete)
   onCompleteRef.current = onComplete
-
-  const glowColor = isSketch
-    ? 'hsl(var(--foreground))'
-    : hsl(dna.hue1, Math.max(dna.saturation, 50), 60)
-
-  const spinnerColor = isSketch ? 'hsl(var(--foreground))' : glowColor
 
   useEffect(() => {
     let cancelled = false
@@ -197,31 +185,14 @@ export default function HatchingAnimation({ dna, onComplete }: Props) {
   const totalProgress = (phase / PHASES.length) + (progress / PHASES.length)
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center px-6"
-      style={{
-        background: isSketch
-          ? 'hsl(var(--background))'
-          : 'radial-gradient(circle at 50% 45%, #0d0d18 0%, #060610 100%)',
-      }}
-    >
-      {/* Ambient glow (scifi only) */}
-      {!isSketch && (
-        <div
-          className="absolute inset-0 transition-opacity duration-1000"
-          style={{
-            background: `radial-gradient(circle at 50% 40%, ${glowColor}08 0%, transparent 50%)`,
-            opacity: isRevealed ? 1 : 0,
-          }}
-        />
-      )}
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center px-6 bg-background">
 
       {/* Creature viewport */}
       <div className="relative w-64 h-64 sm:w-56 sm:h-56 mb-8">
         {/* QR fossil shatter effect */}
         <svg
           viewBox="0 0 100 100"
-          className="absolute inset-0 w-full h-full transition-opacity duration-700"
+          className="absolute inset-0 w-full h-full transition-opacity duration-700 text-foreground"
           style={{ opacity: isRevealed ? 0 : 0.6 - progress * 0.2 }}
         >
           {Array.from({ length: 10 }, (_, row) =>
@@ -234,9 +205,8 @@ export default function HatchingAnimation({ dna, onComplete }: Props) {
                   y={10 + row * 8}
                   width={7}
                   height={7}
-                  fill={isSketch ? 'currentColor' : glowColor}
-                  fillOpacity={isSketch ? 0.2 : 0.3}
-                  className={isSketch ? 'text-foreground' : ''}
+                  fill="currentColor"
+                  fillOpacity={0.2}
                   style={{
                     transform: isRevealed
                       ? `translate(${(col - 5) * progress * 10}px, ${(row - 5) * progress * 10}px) scale(${1 - progress})`
@@ -256,39 +226,23 @@ export default function HatchingAnimation({ dna, onComplete }: Props) {
           className="absolute inset-0 flex items-center justify-center transition-opacity duration-700"
           style={{ opacity: creatureOpacity }}
         >
-          <CreatureRenderer
-            dna={dna}
-            size={240}
-            animated
-            inkColor={isSketch ? 'hsl(var(--foreground))' : undefined}
-          />
+          <CreatureRenderer dna={dna} size={240} animated />
         </div>
       </div>
 
       {/* Status panel */}
-      <div className="text-center space-y-4 w-full max-w-xs relative z-10">
-        <p
-          className={`font-mono text-xs tracking-[3px] uppercase font-medium ${isSketch ? 'text-foreground/70' : ''}`}
-          style={isSketch ? undefined : { color: `${glowColor}bb` }}
-        >
+      <div className="text-center space-y-4 w-full max-w-xs">
+        <p className="font-mono text-xs tracking-[3px] uppercase font-medium text-foreground/70">
           {phaseInfo.label}
         </p>
 
-        <VictorianSpinner color={spinnerColor} />
+        <VictorianSpinner />
 
         {/* Progress bar */}
-        <div
-          className={`w-full h-1 rounded-full relative overflow-hidden ${isSketch ? 'bg-border' : ''}`}
-          style={isSketch ? undefined : { background: `${glowColor}15` }}
-        >
+        <div className="w-full h-1 rounded-full relative overflow-hidden bg-border">
           <div
-            className={`absolute inset-y-0 left-0 rounded-full transition-all duration-100 ${isSketch ? 'bg-foreground/60' : ''}`}
-            style={{
-              width: `${totalProgress * 100}%`,
-              ...(isSketch ? {} : {
-                background: `linear-gradient(90deg, ${glowColor}40, ${glowColor}aa)`,
-              }),
-            }}
+            className="absolute inset-y-0 left-0 rounded-full transition-all duration-100 bg-foreground/60"
+            style={{ width: `${totalProgress * 100}%` }}
           />
         </div>
 
@@ -298,14 +252,8 @@ export default function HatchingAnimation({ dna, onComplete }: Props) {
             <div
               key={i}
               className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                isSketch
-                  ? (i <= phase ? 'bg-foreground/60' : 'bg-border')
-                  : ''
+                i <= phase ? 'bg-foreground/60' : 'bg-border'
               }`}
-              style={isSketch ? undefined : {
-                background: i <= phase ? glowColor : `${glowColor}20`,
-                boxShadow: i <= phase ? `0 0 6px ${glowColor}60` : 'none',
-              }}
             />
           ))}
         </div>
@@ -313,13 +261,10 @@ export default function HatchingAnimation({ dna, onComplete }: Props) {
         {/* Creature name reveal at final phase */}
         {phase >= PHASES.length - 1 && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 pt-2">
-            <p className={`font-serif text-2xl sm:text-xl font-medium italic ${isSketch ? 'text-foreground' : 'text-white/90'}`}>
+            <p className="font-serif text-2xl sm:text-xl font-medium italic text-foreground">
               {dna.genus} {dna.species}
             </p>
-            <p
-              className={`font-mono text-[10px] sm:text-[9px] tracking-[2px] mt-1 ${isSketch ? 'text-muted-foreground' : ''}`}
-              style={isSketch ? undefined : { color: `${glowColor}88` }}
-            >
+            <p className="font-mono text-[10px] sm:text-[9px] tracking-[2px] mt-1 text-muted-foreground">
               ORDER {dna.order.toUpperCase()} · FAM. {dna.family.toUpperCase()}
             </p>
           </div>

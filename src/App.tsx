@@ -10,7 +10,6 @@ import { Toaster } from '@/components/ui/sonner'
 import { useAuth } from '@/hooks/useAuth'
 import { TabBar, type Tab } from '@/components/TabBar/TabBar'
 import { SiteFooter } from '@/components/SiteFooter/SiteFooter'
-import { CreatureStyleProvider } from '@/hooks/useCreatureStyle'
 import { useAddCreature, useUpdateNickname } from '@/hooks/useCreatures'
 import type { CreatureRow } from '@/types/creature'
 import { generateCreatureDNA } from '@/lib/creatureEngine'
@@ -250,10 +249,8 @@ function AppShell() {
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <CreatureStyleProvider>
-        <AppShell />
-        <Toaster />
-      </CreatureStyleProvider>
+      <AppShell />
+      <Toaster />
     </QueryClientProvider>
   )
 }
