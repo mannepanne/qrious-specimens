@@ -44,15 +44,15 @@ When asked to remember anything, add project memory in this CLAUDE.md (project r
 - Anthropic Claude Haiku (field notes generation)
 - Cloudflare R2 (creature image storage — original, 512px, 256px variants)
 
-**Current status:** Planning complete — ready to begin Phase 1
+**Current status:** Phases 1–3 complete and merged to main
 
 ## Implementation phases
 
 Development is organised into 9 sequential phases.
 
-1. [01-foundation-infrastructure.md](./SPECIFICATIONS/01-foundation-infrastructure.md) — Git, Supabase schema + data import, Cloudflare + R2 scaffold
-2. [02-auth-design-system.md](./SPECIFICATIONS/02-auth-design-system.md) — Magic link auth, Victorian design system, navigation shell
-3. [03-creature-engine-cabinet.md](./SPECIFICATIONS/03-creature-engine-cabinet.md) — DNA engine, QR scanner, creature rendering, hatching animation, cabinet
+1. ~~[01-foundation-infrastructure.md](./SPECIFICATIONS/ARCHIVE/01-foundation-infrastructure.md)~~ ✓ — Git, Supabase schema + data import, Cloudflare + R2 scaffold
+2. ~~[02-auth-design-system.md](./SPECIFICATIONS/ARCHIVE/02-auth-design-system.md)~~ ✓ — Magic link auth, Victorian design system, navigation shell
+3. ~~[03-creature-engine-cabinet.md](./SPECIFICATIONS/ARCHIVE/03-creature-engine-cabinet.md)~~ ✓ — DNA engine, QR scanner, creature rendering, hatching animation, cabinet
 4. [04-ai-generation-workers.md](./SPECIFICATIONS/04-ai-generation-workers.md) — Cloudflare Workers for Gemini + Claude, R2 image uploads, full discovery flow
 5. [05-catalogue.md](./SPECIFICATIONS/05-catalogue.md) — Public species catalogue, taxonomic index, search and filters
 6. [06-gazette.md](./SPECIFICATIONS/06-gazette.md) — Community activity feed, explorer showcase, Gazette profiles
@@ -60,7 +60,7 @@ Development is organised into 9 sequential phases.
 8. [08-settings-admin.md](./SPECIFICATIONS/08-settings-admin.md) — Account settings, admin dashboard, GDPR tools
 9. [09-polish-launch.md](./SPECIFICATIONS/09-polish-launch.md) — Mary Anning references, About/Privacy/Contact, error handling, production launch
 
-**Current phase:** Phase 1 — Foundation & infrastructure
+**Current phase:** Phase 4 — AI generation workers
 
 ### SPECIFICATIONS/
 - **Implementation phases** (numbered files) — Active work-in-progress
@@ -73,6 +73,7 @@ How-it-works documentation for implemented features:
 - [testing-strategy.md](./REFERENCE/testing-strategy.md) — Testing philosophy (Vitest, TDD, coverage targets)
 - [technical-debt.md](./REFERENCE/technical-debt.md) — Known issues and accepted shortcuts
 - [troubleshooting.md](./REFERENCE/troubleshooting.md) — Common issues and solutions
+- [creature-engine.md](./REFERENCE/creature-engine.md) — DNA pipeline, scan flow, cabinet patterns (Phase 3)
 - [decisions/](./REFERENCE/decisions/) — Architecture Decision Records
 
 ## Code conventions
