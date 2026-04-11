@@ -14,21 +14,16 @@ Move completed specs to **ARCHIVE/** when a phase is merged to main.
 
 Development is organised into 9 sequential phases. Work through them in order — each builds on the previous.
 
-**Current phase:** Phase 1 — Foundation & infrastructure
+**Current phase:** Phase 4 — AI generation & Cloudflare Worker
 
 ### Phase files
 
-1. **[01-foundation-infrastructure.md](./01-foundation-infrastructure.md)**
-   Git, Supabase schema + data import, Cloudflare Workers scaffold, R2 bucket setup, environment variables
-
-2. **[02-auth-design-system.md](./02-auth-design-system.md)**
-   Magic link auth, Victorian design system (Tailwind tokens, typography), shadcn/ui, navigation shell (tab bar, overlays, subpages)
-
-3. **[03-creature-engine-cabinet.md](./03-creature-engine-cabinet.md)**
-   Deterministic DNA engine, QR scanner, all four creature render styles, hatching animation, cabinet view, specimen page
+- ~~01-foundation-infrastructure.md~~ → [ARCHIVE](./ARCHIVE/01-foundation-infrastructure.md)
+- ~~02-auth-design-system.md~~ → [ARCHIVE](./ARCHIVE/02-auth-design-system.md)
+- ~~03-creature-engine-cabinet.md~~ → [ARCHIVE](./ARCHIVE/03-creature-engine-cabinet.md)
 
 4. **[04-ai-generation-workers.md](./04-ai-generation-workers.md)**
-   Cloudflare Workers for Gemini image generation + Claude field notes, R2 image uploads, full discovery registration flow
+   Single Cloudflare Worker calling Gemini (illustration) + Claude Haiku (field notes), R2 image uploads (original + 512px + 256px), full discovery registration flow, excavation animation AI wait phases, useSpeciesImage hook
 
 5. **[05-catalogue.md](./05-catalogue.md)**
    Public species catalogue, taxonomic index sidebar, search and trait filters, paginated species grid, page-flip detail view
