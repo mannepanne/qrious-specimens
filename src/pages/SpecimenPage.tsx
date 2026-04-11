@@ -55,9 +55,11 @@ export function SpecimenPage({ creature, onBack, onUpdateNickname, currentIndex,
     dna,
   )
 
-  // Trigger TypewriterText animation once field notes arrive (only on first render)
+  // Animate field notes only when transitioning from loading → loaded (i.e. freshly generated).
+  // If notes are already present on mount (cache hit or revisit), skip the animation.
+  const wasLoadingOnMountRef = useRef(imageLoading)
   const animateFieldNotesRef = useRef(false)
-  if (fieldNotes && !animateFieldNotesRef.current) {
+  if (fieldNotes && !animateFieldNotesRef.current && wasLoadingOnMountRef.current) {
     animateFieldNotesRef.current = true
     setFieldNotesAnimated(true)
   }

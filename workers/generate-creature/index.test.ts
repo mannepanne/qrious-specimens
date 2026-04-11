@@ -226,7 +226,6 @@ describe('handleGenerateCreature', () => {
 
   it('generates image and field notes for a new species', async () => {
     const fakeImageBase64 = btoa('fake image bytes')
-    const geminiModels = { models: [{ name: 'models/gemini-2.0-flash-preview-image-generation', supportedGenerationMethods: ['generateContent'] }] }
     const geminiResponse = {
       candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: fakeImageBase64 } }] } }],
     }
@@ -234,9 +233,7 @@ describe('handleGenerateCreature', () => {
     mockFetch
       // species_images GET → no cache
       .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }))
-      // Gemini list models
-      .mockResolvedValueOnce(new Response(JSON.stringify(geminiModels), { status: 200 }))
-      // Gemini generate
+      // Gemini generate preferred model → success (no model list call on happy path)
       .mockResolvedValueOnce(new Response(JSON.stringify(geminiResponse), { status: 200 }))
       // Claude field notes
       .mockResolvedValueOnce(new Response(JSON.stringify({ content: [{ type: 'text', text: 'A curious specimen was observed.' }] }), { status: 200 }))
@@ -260,15 +257,16 @@ describe('handleGenerateCreature', () => {
   })
 
   it('returns 500 when Gemini fails on all models', async () => {
+    // Model list contains only the preferred model — which already failed — so no fallbacks are tried
     const geminiModels = { models: [{ name: 'models/gemini-2.0-flash-preview-image-generation', supportedGenerationMethods: ['generateContent'] }] }
 
     mockFetch
       // species_images GET → no cache
       .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }))
-      // Gemini list models
-      .mockResolvedValueOnce(new Response(JSON.stringify(geminiModels), { status: 200 }))
-      // Gemini generate → failure
+      // Gemini generate preferred model → failure
       .mockResolvedValueOnce(new Response('Rate limit exceeded', { status: 429 }))
+      // Gemini list models (fetched after preferred model fails)
+      .mockResolvedValueOnce(new Response(JSON.stringify(geminiModels), { status: 200 }))
 
     const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
     const res = await handleGenerateCreature(req, makeEnv())
@@ -280,7 +278,6 @@ describe('handleGenerateCreature', () => {
 
   it('still returns image URL even when Claude field notes fail', async () => {
     const fakeImageBase64 = btoa('fake image bytes')
-    const geminiModels = { models: [{ name: 'models/gemini-2.0-flash-preview-image-generation', supportedGenerationMethods: ['generateContent'] }] }
     const geminiResponse = {
       candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: fakeImageBase64 } }] } }],
     }
@@ -288,9 +285,7 @@ describe('handleGenerateCreature', () => {
     mockFetch
       // species_images GET → no cache
       .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }))
-      // Gemini list models
-      .mockResolvedValueOnce(new Response(JSON.stringify(geminiModels), { status: 200 }))
-      // Gemini generate → success
+      // Gemini generate preferred model → success
       .mockResolvedValueOnce(new Response(JSON.stringify(geminiResponse), { status: 200 }))
       // Claude → failure (non-fatal)
       .mockResolvedValueOnce(new Response('Service unavailable', { status: 503 }))

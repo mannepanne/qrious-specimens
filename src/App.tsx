@@ -174,6 +174,10 @@ function AppShell() {
     })
   }
 
+  // NOTE: handleCommission calls /api/generate-creature directly rather than via useSpeciesImage.
+  // This is intentional — the scan flow needs to pass the Worker result to ExcavationAnimation
+  // at a precise phase, which requires direct control over timing. useSpeciesImage covers all
+  // other entry points (SpecimenPage, SpecimenTeaser) where passive background loading is fine.
   /** Fired by ExcavationAnimation when COMMISSIONING ILLUSTRATION phase begins */
   async function handleCommission() {
     if (workerCalledRef.current || !excavatingDna) return

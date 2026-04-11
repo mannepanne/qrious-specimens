@@ -1,5 +1,13 @@
 // ABOUT: Hook for fetching or triggering AI-generated creature illustrations
 // ABOUT: Checks species_images cache first; triggers Worker mutation on cache miss
+//
+// NOTE: There are two places that call /api/generate-creature:
+//   1. This hook — used by SpecimenPage and SpecimenTeaser for passive background loading
+//      (cache check → auto-trigger if missing → update display when done)
+//   2. App.tsx handleCommission — used by ExcavationAnimation during the active scan flow
+//      (fires at the COMMISSIONING ILLUSTRATION phase, result passed to the animation directly)
+// Both paths are intentional: the scan flow needs tight timing control that a generic hook
+// cannot provide. This hook covers all other entry points where an image is needed.
 
 import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
