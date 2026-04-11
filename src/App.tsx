@@ -7,11 +7,13 @@ import type { InfiniteData } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { queryClient } from '@/lib/queryClient'
 import { Toaster } from '@/components/ui/sonner'
+import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { TabBar, type Tab } from '@/components/TabBar/TabBar'
 import { SiteFooter } from '@/components/SiteFooter/SiteFooter'
 import { useAddCreature, useUpdateNickname } from '@/hooks/useCreatures'
 import type { CreatureRow } from '@/types/creature'
+import type { WorkerResponse } from '@/types/worker'
 import { generateCreatureDNA } from '@/lib/creatureEngine'
 import { AuthPage } from '@/pages/AuthPage'
 import { CataloguePage } from '@/pages/CataloguePage'
@@ -19,10 +21,11 @@ import { GazettePage } from '@/pages/GazettePage'
 import { CabinetPage } from '@/pages/CabinetPage'
 import { SpecimenPage } from '@/pages/SpecimenPage'
 import QrScanner from '@/components/QrScanner/QrScanner'
-import HatchingAnimation from '@/components/HatchingAnimation/HatchingAnimation'
+import ExcavationAnimation from '@/components/ExcavationAnimation/ExcavationAnimation'
+import type { ExcavationWorkerResult } from '@/components/ExcavationAnimation/ExcavationAnimation'
 import type { CreatureDNA } from '@/types/creature'
 
-type Overlay = 'scanner' | 'hatching' | null
+type Overlay = 'scanner' | 'excavating' | null
 
 // Cabinet requires an active session. Catalogue and Gazette are publicly browsable.
 const AUTH_REQUIRED_TABS: Tab[] = ['cabinet']
@@ -31,47 +34,72 @@ function AppShell() {
   const { authState, sendMagicLink, signOut } = useAuth()
   const [activeTab, setActiveTab] = useState<Tab>('catalogue')
   const [overlay, setOverlay] = useState<Overlay>(null)
-  const [hatchingDna, setHatchingDna] = useState<CreatureDNA | null>(null)
+  const [excavatingDna, setExcavatingDna] = useState<CreatureDNA | null>(null)
+  const [excavationWorkerResult, setExcavationWorkerResult] = useState<ExcavationWorkerResult | null>(null)
   const [viewingCreature, setViewingCreature] = useState<CreatureRow | null>(null)
   const [cabinetIndex, setCabinetIndex] = useState<{ index: number; total: number } | null>(null)
-  // Used to collect cabinet creatures for prev/next navigation from SpecimenPage
+  // Snapshot of cabinet creatures for prev/next navigation from SpecimenPage (TD-002)
   const cabinetCreaturesRef = useRef<CreatureRow[]>([])
 
   const addCreature = useAddCreature()
   const updateNickname = useUpdateNickname()
   const queryClient = useQueryClient()
 
-  // Store hatching result while animation plays
-  const hatchingResultRef = useRef<CreatureRow | null>(null)
-  const hatchingErrorRef = useRef<string | null>(null)
-  // Set to true when the animation fires onComplete while the insert is still pending
+  // Store excavation state in refs for access from callbacks without stale closures
+  const excavationResultRef = useRef<CreatureRow | null>(null)
+  const excavationErrorRef = useRef<string | null>(null)
+  const excavationWorkerResponseRef = useRef<WorkerResponse | null>(null)
+  // Set to true when animation fires onComplete while the insert is still pending
   const animationDoneRef = useRef(false)
+  // Prevent calling the Worker more than once per excavation
+  const workerCalledRef = useRef(false)
+  // Set to true if Worker call failed with no image
+  const workerFailedRef = useRef(false)
 
-  // Extracted so it can be called by both handleHatchingComplete and the
+  // Extracted so it can be called by both handleExcavationComplete and the
   // useEffect that watches for the insert settling after animation finishes.
   // Must be declared before early returns to satisfy the rules of hooks.
-  const finishHatching = useCallback(() => {
+  const finishExcavation = useCallback(() => {
     animationDoneRef.current = false
     setOverlay(null)
-    setHatchingDna(null)
+    setExcavatingDna(null)
+    setExcavationWorkerResult(null)
 
-    if (hatchingResultRef.current) {
-      setViewingCreature(hatchingResultRef.current)
+    if (excavationResultRef.current) {
+      const creature = excavationResultRef.current
+      const isFirstDiscoverer = excavationWorkerResponseRef.current?.isFirstDiscoverer ?? false
+
+      // Reflect first-discoverer status immediately without waiting for a cabinet reload
+      setViewingCreature(isFirstDiscoverer ? { ...creature, is_first_discoverer: true } : creature)
       setCabinetIndex(null) // from scan, no prev/next context
-    } else if (hatchingErrorRef.current === 'DUPLICATE') {
+
+      // First discoverer notification — only when this user is the first globally
+      if (isFirstDiscoverer) {
+        toast('First discoverer!', {
+          description: 'You are the first naturalist to catalogue this species.',
+        })
+      }
+
+      // Worker failed — specimen added to cabinet but no illustration captured
+      if (workerFailedRef.current) {
+        toast('The specimen eluded our naturalist.', {
+          description: 'The illustration could not be captured — try viewing the specimen again.',
+        })
+      }
+    } else if (excavationErrorRef.current === 'DUPLICATE') {
       toast('This specimen is already in your cabinet.', { description: 'Each QR code yields the same creature.' })
-    } else if (hatchingErrorRef.current) {
+    } else if (excavationErrorRef.current) {
       toast('Could not add specimen', { description: 'Please try again.' })
     }
   }, [])
 
   // When the insert settles AFTER the animation already finished (race: slow network),
-  // complete the transition that handleHatchingComplete deferred
+  // complete the transition that handleExcavationComplete deferred
   useEffect(() => {
     if (animationDoneRef.current && !addCreature.isPending) {
-      finishHatching()
+      finishExcavation()
     }
-  }, [addCreature.isPending, finishHatching])
+  }, [addCreature.isPending, finishExcavation])
 
   if (authState.status === 'loading') {
     return (
@@ -125,31 +153,76 @@ function AppShell() {
       return
     }
 
-    hatchingResultRef.current = null
-    hatchingErrorRef.current = null
+    excavationResultRef.current = null
+    excavationErrorRef.current = null
+    excavationWorkerResponseRef.current = null
     animationDoneRef.current = false
+    workerCalledRef.current = false
+    workerFailedRef.current = false
 
-    // Close scanner, start hatching immediately
-    setHatchingDna(dna)
-    setOverlay('hatching')
+    // Close scanner, start excavation immediately
+    setExcavatingDna(dna)
+    setExcavationWorkerResult(null)
+    setOverlay('excavating')
 
-    // Insert in parallel — hatching animation buys time
+    // Insert in parallel — excavation animation buys time
     addCreature.mutateAsync({ userId, qrContent: clamped, dna }).then((row) => {
-      hatchingResultRef.current = row
+      excavationResultRef.current = row
     }).catch((err: unknown) => {
       const msg = err instanceof Error ? err.message : String(err)
-      hatchingErrorRef.current = msg
+      excavationErrorRef.current = msg
     })
   }
 
-  function handleHatchingComplete() {
+  // NOTE: handleCommission calls /api/generate-creature directly rather than via useSpeciesImage.
+  // This is intentional — the scan flow needs to pass the Worker result to ExcavationAnimation
+  // at a precise phase, which requires direct control over timing. useSpeciesImage covers all
+  // other entry points (SpecimenPage, SpecimenTeaser) where passive background loading is fine.
+  /** Fired by ExcavationAnimation when COMMISSIONING ILLUSTRATION phase begins */
+  async function handleCommission() {
+    if (workerCalledRef.current || !excavatingDna) return
+    workerCalledRef.current = true
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+
+      const res = await fetch('/api/generate-creature', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ qrHash: excavatingDna.hash, dna: excavatingDna }),
+      })
+
+      const data = res.ok
+        ? (await res.json()) as WorkerResponse
+        : null
+
+      if (!data) workerFailedRef.current = true
+      excavationWorkerResponseRef.current = data
+
+      // Unblock the animation — even on failure, pass a result so animation can proceed
+      setExcavationWorkerResult({
+        imageUrl512: data?.imageUrl512 ?? null,
+        isFirstDiscoverer: data?.isFirstDiscoverer ?? false,
+      })
+    } catch {
+      // Network failure — unblock animation with no image
+      workerFailedRef.current = true
+      setExcavationWorkerResult({ imageUrl512: null, isFirstDiscoverer: false })
+    }
+  }
+
+  function handleExcavationComplete() {
     if (addCreature.isPending) {
       // Insert hasn't settled yet — defer the transition; the useEffect above will
-      // call finishHatching() as soon as isPending flips to false
+      // call finishExcavation() as soon as isPending flips to false
       animationDoneRef.current = true
       return
     }
-    finishHatching()
+    finishExcavation()
   }
 
   // ── Cabinet navigation ─────────────────────────────────────────────────
@@ -235,11 +308,13 @@ function AppShell() {
         />
       )}
 
-      {/* Hatching animation overlay */}
-      {overlay === 'hatching' && hatchingDna && (
-        <HatchingAnimation
-          dna={hatchingDna}
-          onComplete={handleHatchingComplete}
+      {/* Excavation animation overlay */}
+      {overlay === 'excavating' && excavatingDna && (
+        <ExcavationAnimation
+          dna={excavatingDna}
+          workerResult={excavationWorkerResult}
+          onCommission={handleCommission}
+          onComplete={handleExcavationComplete}
         />
       )}
     </div>

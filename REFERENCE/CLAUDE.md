@@ -34,6 +34,11 @@ How to use `/review-pr` and `/review-pr-team` skills for automated code review.
 
 DNA pipeline (djb2 → FNV-1a → mulberry32 → CreatureDNA), scan flow with parallel DB insert, renderer architecture, infinite scroll pattern, rarity system, and DB schema.
 
+### [ai-generation-worker.md](./ai-generation-worker.md)
+**When to read:** Working on illustration generation, the Cloudflare Worker, the excavation animation, or the discovery pipeline.
+
+Worker request flow (8 steps), Gemini + Claude Haiku integration, R2 image storage, `useSpeciesImage` hook, `ExcavationAnimation` state machine, and end-to-end discovery flow.
+
 ### [decisions/](./decisions/)
 **When to read:** Making architectural decisions, choosing between alternatives, or looking up why something was built the way it was.
 

@@ -1,15 +1,16 @@
-// ABOUT: Full-detail specimen view — taxonomy, observations, discovery record, nickname editing
-// ABOUT: Phase 3: no AI field notes or image; prev/next navigation within cabinet
+// ABOUT: Full-detail specimen view — AI illustration, taxonomy, observations, discovery record
+// ABOUT: useSpeciesImage triggers generation if not yet cached; sketch renderer shown as fallback
 
 import { useState, useRef } from 'react'
 import type { CreatureRow } from '@/types/creature'
 import CreatureRenderer from '@/components/CreatureRenderer/CreatureRenderer'
 import PageFlip from '@/components/PageFlip/PageFlip'
+import TypewriterText from '@/components/TypewriterText/TypewriterText'
 import { useDiscoveryCounts } from '@/hooks/useCreatures'
+import { useSpeciesImage } from '@/hooks/useSpeciesImage'
 import { getRarityFromCount, getRarityLabel, getRarityColor } from '@/lib/rarity'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import TypewriterText from '@/components/TypewriterText/TypewriterText'
 import { ArrowLeft, Pencil, Check, X } from 'lucide-react'
 
 /** Victorian-style pineapple — symbol of hospitality, status and exploration */
@@ -42,11 +43,26 @@ export function SpecimenPage({ creature, onBack, onUpdateNickname, currentIndex,
   const { dna } = creature
   const [editing, setEditing] = useState(false)
   const [nickname, setNickname] = useState(creature.nickname ?? '')
+  const [fieldNotesAnimated, setFieldNotesAnimated] = useState(false)
   const { data: discoveryCounts } = useDiscoveryCounts([creature.qr_hash])
   const discoveryCount = discoveryCounts?.[creature.qr_hash]
   const rarity = getRarityFromCount(discoveryCount)
   const rarityColor = getRarityColor(rarity)
   const flipDirRef = useRef(1)
+
+  const { imageUrl512, fieldNotes, isLoading: imageLoading } = useSpeciesImage(
+    creature.qr_hash,
+    dna,
+  )
+
+  // Animate field notes only when transitioning from loading → loaded (i.e. freshly generated).
+  // If notes are already present on mount (cache hit or revisit), skip the animation.
+  const wasLoadingOnMountRef = useRef(imageLoading)
+  const animateFieldNotesRef = useRef(false)
+  if (fieldNotes && !animateFieldNotesRef.current && wasLoadingOnMountRef.current) {
+    animateFieldNotesRef.current = true
+    setFieldNotesAnimated(true)
+  }
 
   const hasPrev = (currentIndex ?? 0) > 0
   const hasNext = (currentIndex ?? 0) < (totalCount ?? 0) - 1
@@ -102,9 +118,19 @@ export function SpecimenPage({ creature, onBack, onUpdateNickname, currentIndex,
               Plate {dna.seed.toString(16).slice(0, 4).toUpperCase()}
             </div>
 
-            {/* Specimen viewport */}
+            {/* Specimen viewport — AI illustration or sketch fallback */}
             <div className="flex justify-center mb-5 mt-4">
-              <CreatureRenderer dna={dna} size={200} showAnnotations />
+              {imageUrl512 ? (
+                <img
+                  src={imageUrl512}
+                  alt={`${dna.genus} ${dna.species} — Victorian naturalist illustration`}
+                  className="w-52 h-52 object-contain"
+                />
+              ) : (
+                <div className={imageLoading ? 'animate-pulse' : undefined}>
+                  <CreatureRenderer dna={dna} size={200} showAnnotations={!imageLoading} />
+                </div>
+              )}
             </div>
 
             {/* Inline navigation */}
@@ -149,38 +175,36 @@ export function SpecimenPage({ creature, onBack, onUpdateNickname, currentIndex,
                 </div>
               )}
 
-              {/* Nickname — any discoverer can name their specimen locally.
-                  Phase 4 will set is_first_discoverer via the register_discovery RPC,
-                  unlocking species-level naming in the public Gazette. */}
+              {/* Nickname — any discoverer can name their personal specimen */}
               <div className="flex items-center gap-2 justify-center">
-                  {editing ? (
-                    <>
-                      <Input
-                        value={nickname}
-                        onChange={(e) => setNickname(e.target.value)}
-                        className="font-serif text-sm h-8 max-w-[180px]"
-                        placeholder="Give it a name..."
-                        maxLength={64}
-                        autoFocus
-                        onKeyDown={(e) => e.key === 'Enter' && handleSaveNickname()}
-                      />
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleSaveNickname}>
-                        <Check className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditing(false)}>
-                        <X className="h-3.5 w-3.5" />
-                      </Button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => setEditing(true)}
-                      className="flex items-center gap-1.5 text-sm font-serif italic text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      <Pencil className="h-3 w-3" />
-                      {creature.nickname ?? 'Name this specimen...'}
-                    </button>
-                  )}
-                </div>
+                {editing ? (
+                  <>
+                    <Input
+                      value={nickname}
+                      onChange={(e) => setNickname(e.target.value)}
+                      className="font-serif text-sm h-8 max-w-[180px]"
+                      placeholder="Give it a name..."
+                      maxLength={64}
+                      autoFocus
+                      onKeyDown={(e) => e.key === 'Enter' && handleSaveNickname()}
+                    />
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleSaveNickname}>
+                      <Check className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditing(false)}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setEditing(true)}
+                    className="flex items-center gap-1.5 text-sm font-serif italic text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Pencil className="h-3 w-3" />
+                    {creature.nickname ?? 'Name this specimen...'}
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Prose description */}
@@ -229,17 +253,25 @@ export function SpecimenPage({ creature, onBack, onUpdateNickname, currentIndex,
             </div>
           </div>
 
-          {/* Field Notes — populated by Phase 4 AI generation (Claude, Victorian naturalist voice) */}
+          {/* Field Notes — AI-generated by Claude Haiku in Victorian naturalist voice */}
           <div className="bg-card border rounded-sm p-5">
             <h3 className="font-mono text-[10px] tracking-[2px] text-muted-foreground uppercase mb-4">
               Field Notes
             </h3>
-            <p className="font-serif text-sm leading-relaxed text-muted-foreground italic">
-              <TypewriterText
-                text="Naturalist's observations pending transcription from the field..."
-                speed={30}
-                animate={false}
-              />
+            <p className="font-serif text-sm leading-relaxed text-foreground/80 italic">
+              {fieldNotes ? (
+                <TypewriterText
+                  text={fieldNotes}
+                  speed={35}
+                  animate={fieldNotesAnimated}
+                />
+              ) : (
+                <span className="text-muted-foreground">
+                  {imageLoading
+                    ? 'Naturalist is transcribing field observations…'
+                    : 'Naturalist\'s observations pending transcription from the field…'}
+                </span>
+              )}
             </p>
           </div>
 

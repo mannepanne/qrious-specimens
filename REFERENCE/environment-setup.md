@@ -119,6 +119,24 @@ wrangler secret put ANTHROPIC_API_KEY
 
 ---
 
+### `PUBLIC_R2_URL`
+The public base URL for the R2 bucket — prepended to all creature image paths.
+
+**How to obtain:** Cloudflare dashboard → R2 → `qrious-specimens-images` bucket → Settings → Public access → Custom domain or `r2.dev` subdomain.
+
+**Format:** `https://pub-xxxxxxxx.r2.dev` (or a custom domain like `https://images.qrious.hultberg.org`)
+
+**Note:** This is a `[vars]` entry in `wrangler.toml`, not a secret — it is not sensitive. Update the placeholder value (`pub-PLACEHOLDER`) in `wrangler.toml` before deploying.
+
+**Production setup:**
+```toml
+# wrangler.toml
+[vars]
+PUBLIC_R2_URL = "https://pub-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.r2.dev"
+```
+
+---
+
 ## Environment file templates
 
 ### `.dev.vars` template
@@ -142,6 +160,9 @@ SUPABASE_JWT_SECRET=your-jwt-secret-here
 # AI APIs (secret — Workers only)
 GEMINI_API_KEY=AIza...
 ANTHROPIC_API_KEY=sk-ant-...
+
+# R2 public URL (not a secret — set in wrangler.toml [vars], not here)
+# PUBLIC_R2_URL=https://pub-xxxxxxxx.r2.dev
 ```
 
 ---
@@ -194,6 +215,9 @@ wrangler secret list
 # SUPABASE_JWT_SECRET
 # GEMINI_API_KEY
 # ANTHROPIC_API_KEY
+
+# Also verify wrangler.toml [vars]:
+# PUBLIC_R2_URL  — must be updated from placeholder before deploying
 ```
 
 Full deployment:

@@ -36,6 +36,86 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
+### TD-003: R2 image variants store original bytes (no actual pixel resize)
+- **Location:** `workers/generate-creature/r2.ts` — `uploadToR2()`
+- **Issue:** The 512px and 256px R2 variants store the original Gemini image bytes rather than pixel-resized copies. Display sizes are constrained by CSS in `SpecimenPage` and `SpecimenTeaser`, but users on slow connections download the full-resolution image even for thumbnails.
+- **Why accepted:** Cloudflare Workers runtime has no Canvas API or native image resize. Alternatives (WASM-based resize, CF Image Resizing service) require either a paid CF plan add-on or significant added complexity. For Phase 4 MVP this is acceptable — Gemini images are typically 1–2MB and the cabinet loads lazily.
+- **Risk:** Low — no data loss or functional breakage. Performance cost is bandwidth on the cabinet grid for users with many specimens.
+- **Future fix:** Enable Cloudflare Image Resizing on the account (Pro+ plan) and use `fetch(r2Url, { cf: { image: { width: 512 } } })` to resize before uploading the variant, OR use a WASM-based JPEG encoder in the Worker.
+- **Phase introduced:** Phase 4
+
+---
+
+### TD-004: No rate limiting on `/api/generate-creature`
+- **Location:** `src/worker.ts` — route handler; `workers/generate-creature/index.ts` — `handleGenerateCreature()`
+- **Issue:** No per-user rate limit on the generation endpoint. Each novel `qrHash` triggers a Gemini image generation + Claude Haiku call. An authenticated user scripting novel QR content could exhaust API quotas. The `species_images` cache only protects against repeated hashes, not novel ones.
+- **Why accepted:** Physical QR scanning naturally limits legitimate use (1–2 scans/min at most). The threat requires a valid authenticated account. Acceptable for an early-stage app with a small user base.
+- **Risk:** Medium — becomes High once the app grows or moves to paid API keys. Each Gemini call costs ~$0.01–0.05 in image generation credits.
+- **Future fix:** Add per-user rate limit in Cloudflare KV: `ratelimit:{userId}` key with TTL, checked before calling Gemini. Alternatively, use Cloudflare's built-in rate limiting rule (Pro plan). Target: ~10 generations per user per hour.
+- **Phase introduced:** Phase 4
+
+---
+
+### TD-005: R2 orphan images from TOCTOU race
+- **Location:** `workers/generate-creature/index.ts` — `uploadToR2()` called before `insertSpeciesImage()`
+- **Issue:** When two concurrent requests scan the same QR code, both upload to R2 (step 5) before the upsert (step 7). The upsert uses `ON CONFLICT (qr_hash) DO NOTHING`, so the second request's R2 objects (three files) are uploaded but never referenced by any DB row. They become orphaned objects in the bucket.
+- **Why accepted:** The race window is narrow and the orphaned objects are small (1–2 MB total). Data integrity is preserved — the DB always has the first discoverer's data. The failure mode is minor storage waste.
+- **Risk:** Low — no data loss, no user-facing breakage. Cumulative storage cost is negligible at early scale.
+- **Future fix:** Periodic R2 cleanup job: list all keys in `species/`, cross-reference against `species_images.qr_hash`, delete unmatched keys older than 24 hours.
+- **Phase introduced:** Phase 4
+
+---
+
+### TD-006: `register_discovery` RPC accepts arbitrary `p_user_id` without auth check
+- **Location:** Supabase database function `register_discovery` (migration file) — not in Worker code
+- **Issue:** The `SECURITY DEFINER` RPC accepts `p_user_id uuid` as a parameter without verifying it matches `auth.uid()`. Any authenticated user could call the RPC directly via the Supabase client with a different user's ID to spoof first-discoverer credit. The Worker path is safe (passes JWT-verified `userId`), but the direct client path is not.
+- **Why accepted:** The first-discoverer badge is cosmetic — no financial or account-integrity consequence. Exploiting this requires knowing another user's UUID. The fix is a DB migration, out of scope for Phase 4.
+- **Risk:** Low-Medium — affects data integrity of the first-discoverer feature but no security escalation beyond badge cosmetics.
+- **Future fix:** Add `IF p_user_id != auth.uid() THEN RAISE EXCEPTION 'Unauthorised'` inside the function, or restrict RPC access to service role only (`REVOKE EXECUTE ON FUNCTION register_discovery FROM authenticated`).
+- **Phase introduced:** Phase 4 (identified during review; function pre-existed)
+
+---
+
+### TD-007: JWT `alg` header not validated
+- **Location:** `workers/generate-creature/index.ts` — `verifyJWT()`
+- **Issue:** The JWT header's `alg` field is parsed but not checked. Classic "algorithm confusion" attacks exploit implementations that branch on the header value (e.g. switching to `alg: none`). We don't branch on it — `crypto.subtle.verify('HMAC', ...)` is hardcoded to HMAC-SHA256 regardless of what the header says, so this attack doesn't apply in practice.
+- **Why accepted:** Not practically exploitable given the implementation. A 3-line defence-in-depth fix, but zero real-world risk without it.
+- **Risk:** Low — mitigated by implementation detail.
+- **Future fix:** Add `if (header.alg !== 'HS256') throw new Error('Unsupported JWT algorithm')` after parsing the header in `verifyJWT`.
+- **Phase introduced:** Phase 4
+
+---
+
+### TD-008: Gemini API key appears in URL query parameter
+- **Location:** `workers/generate-creature/gemini.ts` — `callGenerateContent()`
+- **Issue:** Google's Gemini API requires the API key as a `?key=` URL query parameter. This means the key appears in outbound request URLs, which will show in Cloudflare request logs if logging is enabled on the account.
+- **Why accepted:** No alternative within Google's API design — there is no header-based authentication option for the v1beta REST API. The key is a Cloudflare Worker secret (not committed to source), so exposure is limited to log access.
+- **Risk:** Low — Cloudflare Worker logs are not public. Risk is proportional to who has access to Cloudflare account logs.
+- **Future fix:** If Google adds header-based auth, migrate. Until then: ensure Cloudflare Workers Logs are restricted to admin access only, and rotate the key if log access is ever compromised.
+- **Phase introduced:** Phase 4
+
+---
+
+### TD-009: Worker error responses include internal `detail` field
+- **Location:** `workers/generate-creature/index.ts` — error `json()` responses (e.g. lines 188, 238, 248)
+- **Issue:** Error responses from the Worker include a `detail` field containing the raw exception message (e.g. `"detail": "Gemini API failed (429): Rate limit exceeded"`). This is useful for debugging but leaks internal implementation details if ever surfaced to users.
+- **Why accepted:** The frontend currently ignores the `detail` field entirely — it only reads `imageUrl`, `fieldNotes`, etc. The detail is only visible to someone inspecting network traffic with DevTools.
+- **Risk:** Low — not surfaced to users today. Becomes a real concern if error toasts are ever made more verbose or if `detail` is forwarded anywhere.
+- **Future fix:** If richer error feedback is ever added to the UI, always show a generic user-facing message (e.g. "The illustration could not be captured") and keep `detail` for console logging only, never for display.
+- **Phase introduced:** Phase 4
+
+---
+
+### TD-010: `http://localhost:5173` in production CORS allowlist
+- **Location:** `workers/generate-creature/index.ts` — `corsHeaders()`
+- **Issue:** The CORS allowlist includes `http://localhost:5173` in production. This allows a local dev server to make cross-origin requests to the production Worker. Still requires a valid Supabase JWT, so there is no bypass of authentication.
+- **Why accepted:** Convenient for development against the production Worker when local Cloudflare dev isn't practical. The JWT requirement prevents any real exploitation.
+- **Risk:** Informational — no practical security impact given auth requirements.
+- **Future fix:** Move the allowlist to a `ALLOWED_ORIGINS` environment variable so localhost is excluded from the production Wrangler deployment automatically.
+- **Phase introduced:** Phase 4
+
+---
+
 ### Example Format: TD-001: Description
 - **Location:** `src/path/to/file.ts` - `functionName()`
 - **Issue:** Clear description of the limitation or shortcut

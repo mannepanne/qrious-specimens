@@ -1,5 +1,5 @@
 # ABOUT: Cloudflare Workers configuration
-# ABOUT: Serves the Vite SPA as static assets; Worker handles SPA routing fallback
+# ABOUT: Serves the Vite SPA as static assets; Worker handles API routes and SPA routing fallback
 
 name = "qrious-specimens"
 compatibility_date = "2025-01-01"
@@ -16,3 +16,15 @@ enabled = true
 [[r2_buckets]]
 binding = "IMAGES"
 bucket_name = "qrious-specimens-images"
+
+# Public R2 URL — set to your bucket's r2.dev URL or custom domain
+# Find this in the Cloudflare dashboard under R2 → qrious-specimens-images → Settings
+[vars]
+PUBLIC_R2_URL = "https://pub-PLACEHOLDER.r2.dev"
+
+# Secrets — set via `wrangler secret put <NAME>` (never in this file):
+#   GEMINI_API_KEY
+#   ANTHROPIC_API_KEY
+#   SUPABASE_URL
+#   SUPABASE_SERVICE_ROLE_KEY
+#   SUPABASE_JWT_SECRET

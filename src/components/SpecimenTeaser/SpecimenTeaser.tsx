@@ -1,8 +1,9 @@
 // ABOUT: Cabinet grid card for a discovered specimen
-// ABOUT: Renders creature illustration, species name, family, and rarity badge
+// ABOUT: Shows AI-generated 256px thumbnail if available; falls back to Victorian sketch renderer
 
 import type { CreatureRow } from '@/types/creature'
 import CreatureRenderer from '@/components/CreatureRenderer/CreatureRenderer'
+import { useSpeciesImage } from '@/hooks/useSpeciesImage'
 import { getRarityFromCount, getRarityLabel, getRarityColor } from '@/lib/rarity'
 
 interface Props {
@@ -17,14 +18,25 @@ export default function SpecimenTeaser({ creature, discoveryCount, onClick }: Pr
   const rarity = getRarityFromCount(discoveryCount)
   const rarityColor = getRarityColor(rarity)
 
+  // Check for cached AI thumbnail; do not trigger generation (generation happens via SpecimenPage)
+  const { imageUrl256 } = useSpeciesImage(creature.qr_hash, null)
+
   return (
     <button
       onClick={onClick}
       className="group w-full text-left border border-border rounded-lg p-3 hover:border-foreground/30 transition-colors bg-card hover:bg-accent/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      {/* Creature illustration */}
+      {/* Creature illustration — AI thumbnail or sketch fallback */}
       <div className="flex justify-center mb-3">
-        <CreatureRenderer dna={dna} size={120} />
+        {imageUrl256 ? (
+          <img
+            src={imageUrl256}
+            alt={`${dna.genus} ${dna.species}`}
+            className="w-[120px] h-[120px] object-contain"
+          />
+        ) : (
+          <CreatureRenderer dna={dna} size={120} />
+        )}
       </div>
 
       {/* Name */}
