@@ -46,6 +46,9 @@ The finishing phase: Mary Anning references woven deliberately throughout the UI
 - Localisation / internationalisation
 - Social sharing (future feature)
 
+### Carried over from Phase 5
+- **Swipe navigation in the catalogue detail view** — The species detail view in the catalogue supports arrow-key / button navigation between species on desktop. Touch swipe left/right for mobile navigation was deferred from Phase 5. Add it here as part of the mobile polish pass, consistent with the swipe patterns used elsewhere in the app.
+
 ### Acceptance criteria
 - [ ] About, Privacy, and Contact pages render correctly
 - [ ] Contact form submits successfully; entry appears in Admin contact inbox

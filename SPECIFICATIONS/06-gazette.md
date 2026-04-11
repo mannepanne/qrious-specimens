@@ -33,6 +33,13 @@ Builds the community layer of the app — the Gazette tab. This includes a chron
 - Badge display in showcase (badges are awarded in Phase 7; Gazette profile grid shows badge icons, but the awarding logic is Phase 7)
 - Explorer rank display (Phase 7)
 
+### Carried over from Phase 5
+- **First discoverer credit in the species catalogue** — The catalogue detail view currently omits the discoverer's name entirely (shows only aggregate stats: discoverer count + first discovered date). Once Gazette profiles exist, surface the first discoverer's display name and profile link in the catalogue `SpeciesDetail` view, subject to these rules:
+  - Only shown to authenticated users (never to unauthenticated visitors)
+  - Only shown if the discoverer has a public Gazette profile (`explorer_profiles.is_public = true`)
+  - Link navigates to their Gazette profile
+  - If no public profile: show nothing (not "anonymous", just omit the credit entirely)
+
 ### Acceptance criteria
 - [ ] Activity timeline shows public discoveries in reverse-chronological order
 - [ ] Each timeline entry correctly colour-codes by event type
