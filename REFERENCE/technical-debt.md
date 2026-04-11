@@ -76,6 +76,46 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
+### TD-007: JWT `alg` header not validated
+- **Location:** `workers/generate-creature/index.ts` — `verifyJWT()`
+- **Issue:** The JWT header's `alg` field is parsed but not checked. Classic "algorithm confusion" attacks exploit implementations that branch on the header value (e.g. switching to `alg: none`). We don't branch on it — `crypto.subtle.verify('HMAC', ...)` is hardcoded to HMAC-SHA256 regardless of what the header says, so this attack doesn't apply in practice.
+- **Why accepted:** Not practically exploitable given the implementation. A 3-line defence-in-depth fix, but zero real-world risk without it.
+- **Risk:** Low — mitigated by implementation detail.
+- **Future fix:** Add `if (header.alg !== 'HS256') throw new Error('Unsupported JWT algorithm')` after parsing the header in `verifyJWT`.
+- **Phase introduced:** Phase 4
+
+---
+
+### TD-008: Gemini API key appears in URL query parameter
+- **Location:** `workers/generate-creature/gemini.ts` — `callGenerateContent()`
+- **Issue:** Google's Gemini API requires the API key as a `?key=` URL query parameter. This means the key appears in outbound request URLs, which will show in Cloudflare request logs if logging is enabled on the account.
+- **Why accepted:** No alternative within Google's API design — there is no header-based authentication option for the v1beta REST API. The key is a Cloudflare Worker secret (not committed to source), so exposure is limited to log access.
+- **Risk:** Low — Cloudflare Worker logs are not public. Risk is proportional to who has access to Cloudflare account logs.
+- **Future fix:** If Google adds header-based auth, migrate. Until then: ensure Cloudflare Workers Logs are restricted to admin access only, and rotate the key if log access is ever compromised.
+- **Phase introduced:** Phase 4
+
+---
+
+### TD-009: Worker error responses include internal `detail` field
+- **Location:** `workers/generate-creature/index.ts` — error `json()` responses (e.g. lines 188, 238, 248)
+- **Issue:** Error responses from the Worker include a `detail` field containing the raw exception message (e.g. `"detail": "Gemini API failed (429): Rate limit exceeded"`). This is useful for debugging but leaks internal implementation details if ever surfaced to users.
+- **Why accepted:** The frontend currently ignores the `detail` field entirely — it only reads `imageUrl`, `fieldNotes`, etc. The detail is only visible to someone inspecting network traffic with DevTools.
+- **Risk:** Low — not surfaced to users today. Becomes a real concern if error toasts are ever made more verbose or if `detail` is forwarded anywhere.
+- **Future fix:** If richer error feedback is ever added to the UI, always show a generic user-facing message (e.g. "The illustration could not be captured") and keep `detail` for console logging only, never for display.
+- **Phase introduced:** Phase 4
+
+---
+
+### TD-010: `http://localhost:5173` in production CORS allowlist
+- **Location:** `workers/generate-creature/index.ts` — `corsHeaders()`
+- **Issue:** The CORS allowlist includes `http://localhost:5173` in production. This allows a local dev server to make cross-origin requests to the production Worker. Still requires a valid Supabase JWT, so there is no bypass of authentication.
+- **Why accepted:** Convenient for development against the production Worker when local Cloudflare dev isn't practical. The JWT requirement prevents any real exploitation.
+- **Risk:** Informational — no practical security impact given auth requirements.
+- **Future fix:** Move the allowlist to a `ALLOWED_ORIGINS` environment variable so localhost is excluded from the production Wrangler deployment automatically.
+- **Phase introduced:** Phase 4
+
+---
+
 ### Example Format: TD-001: Description
 - **Location:** `src/path/to/file.ts` - `functionName()`
 - **Issue:** Clear description of the limitation or shortcut
