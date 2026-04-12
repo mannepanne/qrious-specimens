@@ -105,7 +105,7 @@ describe('App', () => {
     setupUnauthenticated()
     render(<App />)
 
-    await waitFor(() => screen.getByRole('navigation'))
+    await waitFor(() => screen.getByRole('navigation', { name: /main navigation/i }))
     expect(screen.getByText('Catalogue')).toBeInTheDocument()
     expect(screen.getByText('Gazette')).toBeInTheDocument()
     expect(screen.getByText('Cabinet')).toBeInTheDocument()
@@ -115,7 +115,7 @@ describe('App', () => {
     setupUnauthenticated()
     render(<App />)
 
-    await waitFor(() => screen.getByRole('navigation'))
+    await waitFor(() => screen.getByRole('navigation', { name: /main navigation/i }))
     expect(screen.getByText(/species catalogue/i)).toBeInTheDocument()
   })
 
@@ -123,7 +123,7 @@ describe('App', () => {
     setupUnauthenticated()
     render(<App />)
 
-    await waitFor(() => screen.getByRole('navigation'))
+    await waitFor(() => screen.getByRole('navigation', { name: /main navigation/i }))
     fireEvent.click(screen.getByText('Gazette'))
     expect(screen.getByText(/the gazette/i)).toBeInTheDocument()
   })
@@ -132,7 +132,7 @@ describe('App', () => {
     setupUnauthenticated()
     render(<App />)
 
-    await waitFor(() => screen.getByRole('navigation'))
+    await waitFor(() => screen.getByRole('navigation', { name: /main navigation/i }))
     fireEvent.click(screen.getByText('Cabinet'))
 
     expect(screen.getByLabelText(/electronic mail/i)).toBeInTheDocument()
@@ -142,7 +142,7 @@ describe('App', () => {
     setupAuthenticated()
     render(<App />)
 
-    await waitFor(() => screen.getByRole('navigation'))
+    await waitFor(() => screen.getByRole('navigation', { name: /main navigation/i }))
     fireEvent.click(screen.getByText('Cabinet'))
     expect(screen.getByText(/cabinet of curiosities/i)).toBeInTheDocument()
   })
@@ -151,7 +151,7 @@ describe('App', () => {
     setupAuthenticated()
     render(<App />)
 
-    await waitFor(() => screen.getByRole('navigation'))
+    await waitFor(() => screen.getByRole('navigation', { name: /main navigation/i }))
     fireEvent.click(screen.getByText('Cabinet'))
     expect(screen.getByText('naturalist@example.com')).toBeInTheDocument()
   })
@@ -160,7 +160,7 @@ describe('App', () => {
     setupAuthenticated()
     render(<App />)
 
-    await waitFor(() => screen.getByRole('navigation'))
+    await waitFor(() => screen.getByRole('navigation', { name: /main navigation/i }))
 
     fireEvent.click(screen.getByText('Gazette'))
     expect(screen.getByText(/the gazette/i)).toBeInTheDocument()
@@ -181,7 +181,7 @@ describe('App', () => {
     setupAuthenticated()
     render(<App />)
 
-    await waitFor(() => screen.getByRole('navigation'))
+    await waitFor(() => screen.getByRole('navigation', { name: /main navigation/i }))
     expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
   })
 })
