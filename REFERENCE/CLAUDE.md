@@ -34,6 +34,11 @@ How to use `/review-pr` and `/review-pr-team` skills for automated code review.
 
 DNA pipeline (djb2 → FNV-1a → mulberry32 → CreatureDNA), scan flow with parallel DB insert, renderer architecture, infinite scroll pattern, rarity system, and DB schema.
 
+### [gazette.md](./gazette.md)
+**When to read:** Working on the Gazette tab, community feed, explorer profiles, badge awarding, activity posting, or cross-tab species navigation.
+
+Community layer: explorer profiles privacy model, three RPCs (`get_community_feed`, `get_explorer_showcase`, `get_community_stats`, `check_and_award_badges`), `useCommunity` hooks, activity feed write timing, Victorian name generator, cross-tab navigation pattern, and first discoverer credit.
+
 ### [catalogue.md](./catalogue.md)
 **When to read:** Working on the catalogue page, `get_catalogue` RPC, species filters, or the taxonomy sidebar.
 

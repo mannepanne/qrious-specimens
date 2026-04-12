@@ -55,12 +55,12 @@ Development is organised into 9 sequential phases.
 3. ~~[03-creature-engine-cabinet.md](./SPECIFICATIONS/ARCHIVE/03-creature-engine-cabinet.md)~~ ✓ — DNA engine, QR scanner, creature rendering, hatching animation, cabinet
 4. ~~[04-ai-generation-workers.md](./SPECIFICATIONS/ARCHIVE/04-ai-generation-workers.md)~~ ✓ — Cloudflare Workers for Gemini + Claude, R2 image uploads, full discovery flow
 5. ~~[05-catalogue.md](./SPECIFICATIONS/ARCHIVE/05-catalogue.md)~~ ✓ — Public species catalogue, taxonomic index, search and filters
-6. [06-gazette.md](./SPECIFICATIONS/06-gazette.md) — Community activity feed, explorer showcase, Gazette profiles
+6. ~~[06-gazette.md](./SPECIFICATIONS/ARCHIVE/06-gazette.md)~~ ✓ — Community activity feed, explorer showcase, Gazette profiles
 7. [07-gamification.md](./SPECIFICATIONS/07-gamification.md) — Badges, explorer rank, achievement notifications
 8. [08-settings-admin.md](./SPECIFICATIONS/08-settings-admin.md) — Account settings, admin dashboard, GDPR tools
 9. [09-polish-launch.md](./SPECIFICATIONS/09-polish-launch.md) — Mary Anning references, About/Privacy/Contact, error handling, production launch
 
-**Current phase:** Phase 6 — The Explorer's Gazette
+**Current phase:** Phase 7 — Gamification
 
 ### SPECIFICATIONS/
 - **Implementation phases** (numbered files) — Active work-in-progress
@@ -74,6 +74,8 @@ How-it-works documentation for implemented features:
 - [technical-debt.md](./REFERENCE/technical-debt.md) — Known issues and accepted shortcuts
 - [troubleshooting.md](./REFERENCE/troubleshooting.md) — Common issues and solutions
 - [creature-engine.md](./REFERENCE/creature-engine.md) — DNA pipeline, scan flow, cabinet patterns (Phase 3)
+- [catalogue.md](./REFERENCE/catalogue.md) — Catalogue RPC, filters, hooks, auth-gating (Phase 5)
+- [gazette.md](./REFERENCE/gazette.md) — Community feed, explorer profiles, badge RPC, cross-tab navigation (Phase 6)
 - [decisions/](./REFERENCE/decisions/) — Architecture Decision Records
 
 ## Code conventions

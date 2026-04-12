@@ -126,6 +126,39 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
+### TD-012: `rare_discovery` event type defined but never posted
+
+- **Location:** `src/App.tsx` — `finishExcavation()`; `src/hooks/useCommunity.ts` — `FeedEntry`; `supabase/migrations/20260412000000_phase6_gazette.sql` — `activity_feed` CHECK constraint
+- **Issue:** The `rare_discovery` event type exists in the DB CHECK constraint, TypeScript types, and `ActivityTimeline` rendering (amber dot) — but nothing posts it. The frontend posts either `discovery` or `first_discovery` at excavation time and does not check species rarity. Amber dots will never appear in the feed.
+- **Why accepted:** Rarity at excavation time requires a DB lookup (checking `species_discoveries.discovery_count` post-insert) that adds latency to the scan flow. Phase 6 focused on the basic feed structure; rarity-aware posting is natural Phase 7 scope when the discovery flow is revisited for badge toasts.
+- **Risk:** Low — no data loss or broken UI. Feed entries are simply slightly less colourful until fixed.
+- **Future fix:** After `addCreature.mutateAsync` resolves, fetch `species_discoveries.discovery_count` for the new `qr_hash`. If ≤ 3, post `rare_discovery`; if it was the first, post `first_discovery`. Phase 7 revisits the post-excavation flow for badge toasts anyway.
+- **Phase introduced:** Phase 6
+
+---
+
+### TD-013: Cross-tab species auto-open fails for species beyond loaded catalogue pages
+
+- **Location:** `src/pages/CataloguePage.tsx` — `useEffect` for `selectedSpeciesHash` (lines 77–86)
+- **Issue:** When the Gazette's "view species" action sets `selectedCatalogueHash`, `CataloguePage` searches only `allEntries` (the currently loaded infinite-scroll pages). If the target species is on an unloaded page, it won't be found, `onSpeciesViewed` never fires, and `selectedCatalogueHash` stays set indefinitely — the user sees the catalogue with nothing opened and no feedback.
+- **Why accepted:** Fixing this properly requires a single-species RPC lookup by `qr_hash`, or prefetching all pages — both add complexity. The current catalogue is small enough that the first 24 entries cover most linked species. The failure mode is silent (nothing bad happens, just nothing opens).
+- **Risk:** Low — no data loss. Worsens as the catalogue grows beyond 24 entries.
+- **Future fix:** Add a `get_species_by_hash(p_qr_hash text)` RPC (or reuse `get_catalogue` with an exact hash filter) and fall back to it when `selectedSpeciesHash` is not found in `allEntries`. Clear `selectedCatalogueHash` after the fallback fetch resolves.
+- **Phase introduced:** Phase 6
+
+---
+
+### TD-014: `activity_feed` has no DELETE RLS policy (GDPR gap)
+
+- **Location:** `supabase/migrations/20260412000000_phase6_gazette.sql` — `activity_feed` table RLS policies
+- **Issue:** Users can insert and read their own activity entries but cannot delete them. Going private hides entries from others (RLS), but the rows remain in the table. Phase 8 GDPR export/delete must cover this.
+- **Why accepted:** Deleting activity is not a Phase 6 user-facing feature. Hiding via `is_public = false` satisfies the privacy requirement for now.
+- **Risk:** Low — no data loss to users, but non-compliant with GDPR right to erasure until Phase 8 resolves it.
+- **Future fix:** Add `CREATE POLICY "Delete own activity" ON public.activity_feed FOR DELETE TO authenticated USING (user_id = (SELECT auth.uid()))` in the Phase 8 GDPR migration, alongside the full account-delete flow.
+- **Phase introduced:** Phase 6
+
+---
+
 ### Example Format: TD-001: Description
 - **Location:** `src/path/to/file.ts` - `functionName()`
 - **Issue:** Clear description of the limitation or shortcut

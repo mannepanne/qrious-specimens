@@ -8,10 +8,18 @@ interface Props {
   isLoading: boolean
 }
 
-/** Two-letter initials extracted from a display name ("Dr. A. Darwin" → "AD"). */
+/**
+ * Two-letter initials extracted from a display name.
+ * Strips a leading title (multi-character prefix: "Dr.", "Captain", "Prof.") but
+ * preserves a single-letter initial prefix ("A." in "A. Anning" — the Easter egg).
+ *
+ * Examples: "Dr. A. Darwin" → "AD", "Captain R. Huxley" → "RH", "A. Anning" → "AA"
+ */
 function initials(displayName: string): string {
-  const words = displayName.replace(/^[A-Za-z]+\.\s*/, '').split(/\s+/)
-  return words
+  const words = displayName.split(/\s+/)
+  // A first word whose letters-only length is > 1 is a title, not an initial
+  const nameWords = words[0].replace(/\.$/, '').length > 1 ? words.slice(1) : words
+  return nameWords
     .slice(0, 2)
     .map(w => w[0] ?? '')
     .join('')

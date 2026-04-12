@@ -54,6 +54,14 @@ function AppShell() {
   const checkBadges = useCheckBadges()
   const postActivity = usePostActivity()
 
+  // Stable refs so finishExcavation doesn't need mutation objects in its dep array
+  const checkBadgesRef = useRef(checkBadges)
+  const postActivityRef = useRef(postActivity)
+  const explorerProfileDataRef = useRef(explorerProfile.data)
+  checkBadgesRef.current = checkBadges
+  postActivityRef.current = postActivity
+  explorerProfileDataRef.current = explorerProfile.data
+
   // Store excavation state in refs for access from callbacks without stale closures
   const excavationResultRef = useRef<CreatureRow | null>(null)
   const excavationErrorRef = useRef<string | null>(null)
@@ -99,15 +107,15 @@ function AppShell() {
       // Award badges silently (toasts added in Phase 7)
       const currentUserId = authState.status === 'authenticated' ? authState.session.user.id : null
       if (currentUserId) {
-        checkBadges.mutate(currentUserId)
+        checkBadgesRef.current.mutate(currentUserId)
       }
 
       // Post to activity feed if the user has a public profile
-      if (currentUserId && explorerProfile.data?.is_public) {
+      if (currentUserId && explorerProfileDataRef.current?.is_public) {
         const speciesName = `${creature.dna.genus} ${creature.dna.species}`.trim()
         const eventType = isFirstDiscoverer ? 'first_discovery' : 'discovery'
 
-        postActivity.mutate({
+        postActivityRef.current.mutate({
           event_type: eventType,
           species_name: speciesName,
           qr_hash: creature.qr_hash,
@@ -118,7 +126,7 @@ function AppShell() {
     } else if (excavationErrorRef.current) {
       toast('Could not add specimen', { description: 'Please try again.' })
     }
-  }, [authState, checkBadges, postActivity, explorerProfile.data])
+  }, [authState])
 
   // When the insert settles AFTER the animation already finished (race: slow network),
   // complete the transition that handleExcavationComplete deferred

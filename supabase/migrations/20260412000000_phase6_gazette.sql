@@ -91,9 +91,10 @@ CREATE POLICY "Read public badges" ON public.explorer_badges
 CREATE POLICY "Read own badges" ON public.explorer_badges
   FOR SELECT TO authenticated USING (user_id = (SELECT auth.uid()));
 
--- Badges are inserted via check_and_award_badges RPC (SECURITY DEFINER), but policy
--- must still permit the insert since the function runs as the calling user's role
--- for the purposes of RLS evaluation on INSERT.
+-- Badges are inserted via check_and_award_badges (SECURITY DEFINER, runs as the
+-- function owner). Supabase evaluates RLS using auth.uid() from the JWT session
+-- claims, so this INSERT policy must allow the calling user's own rows even though
+-- the executing role is the function owner.
 CREATE POLICY "Insert own badges" ON public.explorer_badges
   FOR INSERT TO authenticated WITH CHECK (user_id = (SELECT auth.uid()));
 

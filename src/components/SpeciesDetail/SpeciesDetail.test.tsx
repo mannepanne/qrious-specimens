@@ -255,4 +255,48 @@ describe('SpeciesDetail', () => {
     fireEvent.click(screen.getByLabelText('Next species'))
     expect(onNext).toHaveBeenCalledOnce()
   })
+
+  it('shows first discoverer name for authenticated users when provided', () => {
+    render(
+      <SpeciesDetail
+        entry={makeEntry()}
+        isAuthenticated={true}
+        onPrev={null}
+        onNext={null}
+        onClose={vi.fn()}
+        firstDiscovererName="Dr. A. Darwin"
+      />,
+    )
+    expect(screen.getByText('First by')).toBeInTheDocument()
+    expect(screen.getByText('Dr. A. Darwin')).toBeInTheDocument()
+  })
+
+  it('does not show first discoverer credit for unauthenticated users', () => {
+    render(
+      <SpeciesDetail
+        entry={makeEntry()}
+        isAuthenticated={false}
+        onPrev={null}
+        onNext={null}
+        onClose={vi.fn()}
+        firstDiscovererName="Dr. A. Darwin"
+      />,
+    )
+    expect(screen.queryByText('First by')).not.toBeInTheDocument()
+    expect(screen.queryByText('Dr. A. Darwin')).not.toBeInTheDocument()
+  })
+
+  it('does not show first discoverer credit when name is null', () => {
+    render(
+      <SpeciesDetail
+        entry={makeEntry()}
+        isAuthenticated={true}
+        onPrev={null}
+        onNext={null}
+        onClose={vi.fn()}
+        firstDiscovererName={null}
+      />,
+    )
+    expect(screen.queryByText('First by')).not.toBeInTheDocument()
+  })
 })
