@@ -8,6 +8,16 @@ vi.mock('@/lib/supabase', () => {
   const mockGetSession = vi.fn()
   const mockOnAuthStateChange = vi.fn()
 
+  // Default from() chain — returns empty data for all table queries
+  const makeFromChain = () => ({
+    select: vi.fn().mockReturnThis(),
+    insert: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    single: vi.fn().mockResolvedValue({ data: null, error: null }),
+  })
+
   return {
     supabase: {
       auth: {
@@ -16,6 +26,9 @@ vi.mock('@/lib/supabase', () => {
         signInWithOtp: vi.fn().mockResolvedValue({ error: null }),
         signOut: vi.fn().mockResolvedValue({}),
       },
+      // Gazette community RPCs return empty results by default
+      rpc: vi.fn().mockResolvedValue({ data: [], error: null }),
+      from: vi.fn().mockImplementation(makeFromChain),
     },
   }
 })
@@ -98,7 +111,7 @@ describe('App', () => {
     await waitFor(() => {
       expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
     })
-    expect(screen.getByText(/species catalogue/i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /the species catalogue/i })).toBeInTheDocument()
   })
 
   it('shows tab navigation with spec-defined three tabs', async () => {
@@ -116,7 +129,7 @@ describe('App', () => {
     render(<App />)
 
     await waitFor(() => screen.getByRole('navigation', { name: /main navigation/i }))
-    expect(screen.getByText(/species catalogue/i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /the species catalogue/i })).toBeInTheDocument()
   })
 
   it('unauthenticated user can browse Gazette', async () => {
@@ -125,7 +138,7 @@ describe('App', () => {
 
     await waitFor(() => screen.getByRole('navigation', { name: /main navigation/i }))
     fireEvent.click(screen.getByText('Gazette'))
-    expect(screen.getByText(/the gazette/i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /the explorer's gazette/i })).toBeInTheDocument()
   })
 
   it('unauthenticated user clicking Cabinet sees AuthPage', async () => {
@@ -163,13 +176,13 @@ describe('App', () => {
     await waitFor(() => screen.getByRole('navigation', { name: /main navigation/i }))
 
     fireEvent.click(screen.getByText('Gazette'))
-    expect(screen.getByText(/the gazette/i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /the explorer's gazette/i })).toBeInTheDocument()
 
     fireEvent.click(screen.getByText('Cabinet'))
     expect(screen.getByText(/cabinet of curiosities/i)).toBeInTheDocument()
 
     fireEvent.click(screen.getByText('Catalogue'))
-    expect(screen.getByText(/species catalogue/i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /the species catalogue/i })).toBeInTheDocument()
   })
 
   // NOTE: the overlayNeedsAuth branch (App.tsx:65) cannot be triggered via Phase 2 UI —

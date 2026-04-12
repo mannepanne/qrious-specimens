@@ -12,6 +12,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { TabBar, type Tab } from '@/components/TabBar/TabBar'
 import { SiteFooter } from '@/components/SiteFooter/SiteFooter'
 import { useAddCreature, useUpdateNickname } from '@/hooks/useCreatures'
+import { useExplorerProfile, useCheckBadges, usePostActivity } from '@/hooks/useCommunity'
 import type { CreatureRow } from '@/types/creature'
 import type { WorkerResponse } from '@/types/worker'
 import { generateCreatureDNA } from '@/lib/creatureEngine'
@@ -38,12 +39,28 @@ function AppShell() {
   const [excavationWorkerResult, setExcavationWorkerResult] = useState<ExcavationWorkerResult | null>(null)
   const [viewingCreature, setViewingCreature] = useState<CreatureRow | null>(null)
   const [cabinetIndex, setCabinetIndex] = useState<{ index: number; total: number } | null>(null)
+  // qr_hash of a species to auto-open in the catalogue (set by Gazette "view species" action)
+  const [selectedCatalogueHash, setSelectedCatalogueHash] = useState<string | null>(null)
   // Snapshot of cabinet creatures for prev/next navigation from SpecimenPage (TD-002)
   const cabinetCreaturesRef = useRef<CreatureRow[]>([])
 
   const addCreature = useAddCreature()
   const updateNickname = useUpdateNickname()
   const queryClient = useQueryClient()
+
+  const explorerProfile = useExplorerProfile(
+    authState.status === 'authenticated' ? authState.session.user.id : null
+  )
+  const checkBadges = useCheckBadges()
+  const postActivity = usePostActivity()
+
+  // Stable refs so finishExcavation doesn't need mutation objects in its dep array
+  const checkBadgesRef = useRef(checkBadges)
+  const postActivityRef = useRef(postActivity)
+  const explorerProfileDataRef = useRef(explorerProfile.data)
+  checkBadgesRef.current = checkBadges
+  postActivityRef.current = postActivity
+  explorerProfileDataRef.current = explorerProfile.data
 
   // Store excavation state in refs for access from callbacks without stale closures
   const excavationResultRef = useRef<CreatureRow | null>(null)
@@ -86,12 +103,30 @@ function AppShell() {
           description: 'The illustration could not be captured — try viewing the specimen again.',
         })
       }
+
+      // Award badges silently (toasts added in Phase 7)
+      const currentUserId = authState.status === 'authenticated' ? authState.session.user.id : null
+      if (currentUserId) {
+        checkBadgesRef.current.mutate(currentUserId)
+      }
+
+      // Post to activity feed if the user has a public profile
+      if (currentUserId && explorerProfileDataRef.current?.is_public) {
+        const speciesName = `${creature.dna.genus} ${creature.dna.species}`.trim()
+        const eventType = isFirstDiscoverer ? 'first_discovery' : 'discovery'
+
+        postActivityRef.current.mutate({
+          event_type: eventType,
+          species_name: speciesName,
+          qr_hash: creature.qr_hash,
+        })
+      }
     } else if (excavationErrorRef.current === 'DUPLICATE') {
       toast('This specimen is already in your cabinet.', { description: 'Each QR code yields the same creature.' })
     } else if (excavationErrorRef.current) {
       toast('Could not add specimen', { description: 'Please try again.' })
     }
-  }, [])
+  }, [authState])
 
   // When the insert settles AFTER the animation already finished (race: slow network),
   // complete the transition that handleExcavationComplete deferred
@@ -284,9 +319,22 @@ function AppShell() {
           <CataloguePage
             isAuthenticated={isAuthenticated}
             onSignUpCta={() => setActiveTab('cabinet')}
+            selectedSpeciesHash={selectedCatalogueHash}
+            onSpeciesViewed={() => setSelectedCatalogueHash(null)}
           />
         )}
-        {activeTab === 'gazette'   && <GazettePage />}
+        {activeTab === 'gazette' && (
+          <GazettePage
+            isAuthenticated={isAuthenticated}
+            userId={isAuthenticated ? userId : undefined}
+            explorerProfile={explorerProfile.data}
+            onSignUpCta={() => setActiveTab('cabinet')}
+            onViewSpecies={(qrHash) => {
+              setSelectedCatalogueHash(qrHash)
+              setActiveTab('catalogue')
+            }}
+          />
+        )}
         {activeTab === 'cabinet'   && isAuthenticated && (
           <CabinetPage
             userId={userId}

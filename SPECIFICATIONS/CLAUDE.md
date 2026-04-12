@@ -14,7 +14,7 @@ Move completed specs to **ARCHIVE/** when a phase is merged to main.
 
 Development is organised into 9 sequential phases. Work through them in order — each builds on the previous.
 
-**Current phase:** Phase 5 — Public species catalogue
+**Current phase:** Phase 7 — Gamification
 
 ### Phase files
 
@@ -26,7 +26,9 @@ Development is organised into 9 sequential phases. Work through them in order �
 
 - ~~05-catalogue.md~~ → [ARCHIVE](./ARCHIVE/05-catalogue.md)
 
-6. **[06-gazette.md](./06-gazette.md)**
+- ~~06-gazette.md~~ → [ARCHIVE](./ARCHIVE/06-gazette.md)
+
+7. **[07-gamification.md](./07-gamification.md)**
    Community activity timeline, explorer showcase, community stats, Gazette profile creation and privacy toggle
 
 7. **[07-gamification.md](./07-gamification.md)**
