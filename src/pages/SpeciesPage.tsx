@@ -53,6 +53,9 @@ export function SpeciesPage() {
     )
   }
 
+  // When opened via direct URL or bookmark there is no prior history entry — fall back to catalogue
+  const canGoBack = location.key !== 'default'
+
   return (
     <div className="min-h-screen bg-background">
       <SpeciesDetail
@@ -60,7 +63,7 @@ export function SpeciesPage() {
         isAuthenticated={isAuthenticated}
         onPrev={null}
         onNext={null}
-        onClose={() => navigate(-1)}
+        onClose={() => canGoBack ? navigate(-1) : navigate('/')}
         firstDiscovererName={firstDiscoverer.data}
       />
     </div>
