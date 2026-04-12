@@ -14,7 +14,7 @@ Move completed specs to **ARCHIVE/** when a phase is merged to main.
 
 Development is organised into 9 sequential phases. Work through them in order — each builds on the previous.
 
-**Current phase:** Phase 4 — AI generation & Cloudflare Worker
+**Current phase:** Phase 5 — Public species catalogue
 
 ### Phase files
 
@@ -22,8 +22,7 @@ Development is organised into 9 sequential phases. Work through them in order �
 - ~~02-auth-design-system.md~~ → [ARCHIVE](./ARCHIVE/02-auth-design-system.md)
 - ~~03-creature-engine-cabinet.md~~ → [ARCHIVE](./ARCHIVE/03-creature-engine-cabinet.md)
 
-4. **[04-ai-generation-workers.md](./04-ai-generation-workers.md)**
-   Single Cloudflare Worker calling Gemini (illustration) + Claude Haiku (field notes), R2 image uploads (original + 512px + 256px), full discovery registration flow, excavation animation AI wait phases, useSpeciesImage hook
+- ~~04-ai-generation-workers.md~~ → [ARCHIVE](./ARCHIVE/04-ai-generation-workers.md)
 
 5. **[05-catalogue.md](./05-catalogue.md)**
    Public species catalogue, taxonomic index sidebar, search and trait filters, paginated species grid, page-flip detail view

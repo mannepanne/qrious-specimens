@@ -34,6 +34,11 @@ How to use `/review-pr` and `/review-pr-team` skills for automated code review.
 
 DNA pipeline (djb2 → FNV-1a → mulberry32 → CreatureDNA), scan flow with parallel DB insert, renderer architecture, infinite scroll pattern, rarity system, and DB schema.
 
+### [catalogue.md](./catalogue.md)
+**When to read:** Working on the catalogue page, `get_catalogue` RPC, species filters, or the taxonomy sidebar.
+
+Data architecture (species_images + creatures.dna join), `get_catalogue` RPC parameters and security notes, `useCatalogue` / `useCatalogueTaxonomy` hooks, component overview, field notes auth-gating, sketch fallback, and known edge cases.
+
 ### [ai-generation-worker.md](./ai-generation-worker.md)
 **When to read:** Working on illustration generation, the Cloudflare Worker, the excavation animation, or the discovery pipeline.
 

@@ -280,7 +280,12 @@ function AppShell() {
   return (
     <div className="flex min-h-screen flex-col">
       <div className="flex-1 pb-16">
-        {activeTab === 'catalogue' && <CataloguePage />}
+        {activeTab === 'catalogue' && (
+          <CataloguePage
+            isAuthenticated={isAuthenticated}
+            onSignUpCta={() => setActiveTab('cabinet')}
+          />
+        )}
         {activeTab === 'gazette'   && <GazettePage />}
         {activeTab === 'cabinet'   && isAuthenticated && (
           <CabinetPage
