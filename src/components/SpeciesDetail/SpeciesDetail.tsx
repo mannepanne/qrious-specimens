@@ -46,8 +46,9 @@ export default function SpeciesDetail({ entry, isAuthenticated, onPrev, onNext, 
 
   // Field notes: full text for authenticated users; teaser for visitors
   const fieldNotesFull = entry.field_notes ?? ''
-  const fieldNotesTeaserText = fieldNotesFull.slice(0, FIELD_NOTES_TEASER_LENGTH)
-  const showTeaser = !isAuthenticated && fieldNotesFull.length > 0
+  // Slice at nearest word boundary so the teaser doesn't cut mid-word
+  const fieldNotesTeaserText = fieldNotesFull.slice(0, FIELD_NOTES_TEASER_LENGTH).replace(/\s\S+$/, '')
+  const showTeaser = !isAuthenticated && fieldNotesFull.length > FIELD_NOTES_TEASER_LENGTH
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">

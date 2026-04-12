@@ -17,6 +17,11 @@ interface Props {
 }
 
 const RARITY_OPTIONS: Rarity[] = ['rare', 'uncommon', 'common']
+const HABITAT_OPTIONS = ['alpine', 'cave', 'coastal', 'deep sea', 'desert', 'forest', 'freshwater', 'urban'] as const
+const SYMMETRY_OPTIONS = ['bilateral', 'fractal', 'radial', 'spiral'] as const
+const BODY_SHAPE_OPTIONS = ['bell', 'diamond', 'elongated', 'ovoid', 'spherical', 'star'] as const
+const LIMB_STYLE_OPTIONS = ['branching', 'flowing', 'jointed', 'spike', 'tentacle'] as const
+const PATTERN_TYPE_OPTIONS = ['dots', 'mesh', 'none', 'rings', 'scales', 'stripes'] as const
 
 // Filter chip for a single active filter value
 function FilterChip({
@@ -69,13 +74,23 @@ export function CataloguePage({ isAuthenticated, onSignUpCta }: Props) {
 
   useEffect(() => () => clearTimeout(debounceRef.current), [])
 
-  // Infinite scroll sentinel
+  // Close the detail overlay on Escape key
+  useEffect(() => {
+    if (!selectedEntry) return
+    const onKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape') setSelectedEntry(null)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [selectedEntry])
+
+  // Infinite scroll sentinel — no useCallback needed; hook uses callbackRef internally
   const sentinelRef = useIntersectionObserver(
-    useCallback(() => {
+    () => {
       if (catalogue.hasNextPage && !catalogue.isFetchingNextPage) {
         catalogue.fetchNextPage()
       }
-    }, [catalogue]),
+    },
     { enabled: catalogue.hasNextPage ?? false },
   )
 
@@ -131,7 +146,7 @@ export function CataloguePage({ isAuthenticated, onSignUpCta }: Props) {
       <div className="px-4 pt-4 pb-3 shrink-0">
         <h1 className="font-serif text-2xl">The Species Catalogue</h1>
         <p className="font-mono text-xs text-muted-foreground mt-0.5">
-          {totalCount > 0 ? `${totalCount} species catalogued` : 'Loading…'}
+          {catalogue.isLoading ? 'Loading…' : `${totalCount} species catalogued`}
         </p>
       </div>
 
@@ -162,7 +177,7 @@ export function CataloguePage({ isAuthenticated, onSignUpCta }: Props) {
                 className="md:hidden px-3 py-2 border border-border rounded font-mono text-xs hover:bg-accent transition-colors shrink-0"
                 aria-label="Toggle taxonomy"
               >
-                ⫶
+                Orders
               </button>
               {/* Search input */}
               <input
@@ -195,7 +210,7 @@ export function CataloguePage({ isAuthenticated, onSignUpCta }: Props) {
                 className="px-2 py-1 border border-border rounded font-mono text-[11px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 <option value="">Habitat</option>
-                {['coastal', 'forest', 'desert', 'cave', 'deep sea', 'alpine', 'freshwater', 'urban'].map(h => (
+                {HABITAT_OPTIONS.map(h => (
                   <option key={h} value={h}>{h}</option>
                 ))}
               </select>
@@ -207,7 +222,43 @@ export function CataloguePage({ isAuthenticated, onSignUpCta }: Props) {
                 className="px-2 py-1 border border-border rounded font-mono text-[11px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 <option value="">Symmetry</option>
-                {['bilateral', 'radial', 'spiral', 'fractal'].map(s => (
+                {SYMMETRY_OPTIONS.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+
+              {/* Body shape filter */}
+              <select
+                value={filters.bodyShape ?? ''}
+                onChange={e => setFilters(prev => ({ ...prev, bodyShape: e.target.value || undefined }))}
+                className="px-2 py-1 border border-border rounded font-mono text-[11px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="">Body form</option>
+                {BODY_SHAPE_OPTIONS.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+
+              {/* Limb style filter */}
+              <select
+                value={filters.limbStyle ?? ''}
+                onChange={e => setFilters(prev => ({ ...prev, limbStyle: e.target.value || undefined }))}
+                className="px-2 py-1 border border-border rounded font-mono text-[11px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="">Appendages</option>
+                {LIMB_STYLE_OPTIONS.map(s => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+
+              {/* Pattern type filter */}
+              <select
+                value={filters.patternType ?? ''}
+                onChange={e => setFilters(prev => ({ ...prev, patternType: e.target.value || undefined }))}
+                className="px-2 py-1 border border-border rounded font-mono text-[11px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="">Pattern</option>
+                {PATTERN_TYPE_OPTIONS.map(s => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
@@ -226,11 +277,14 @@ export function CataloguePage({ isAuthenticated, onSignUpCta }: Props) {
             {/* Active filter chips */}
             {hasActiveFilters && (
               <div className="flex flex-wrap gap-1.5">
-                {filters.order    && <FilterChip label="Order"    value={filters.order}    onRemove={() => setFilters(p => ({ ...p, order: undefined }))} />}
-                {filters.habitat  && <FilterChip label="Habitat"  value={filters.habitat}  onRemove={() => setFilters(p => ({ ...p, habitat: undefined }))} />}
-                {filters.symmetry && <FilterChip label="Symmetry" value={filters.symmetry} onRemove={() => setFilters(p => ({ ...p, symmetry: undefined }))} />}
-                {filters.rarity   && <FilterChip label="Rarity"   value={filters.rarity}   onRemove={() => setFilters(p => ({ ...p, rarity: undefined }))} />}
-                {filters.search   && <FilterChip label="Search"   value={filters.search}   onRemove={() => { setSearchInput(''); setFilters(p => ({ ...p, search: undefined })) }} />}
+                {filters.order      && <FilterChip label="Order"     value={filters.order}      onRemove={() => setFilters(p => ({ ...p, order: undefined }))} />}
+                {filters.habitat    && <FilterChip label="Habitat"   value={filters.habitat}    onRemove={() => setFilters(p => ({ ...p, habitat: undefined }))} />}
+                {filters.symmetry   && <FilterChip label="Symmetry"  value={filters.symmetry}   onRemove={() => setFilters(p => ({ ...p, symmetry: undefined }))} />}
+                {filters.bodyShape  && <FilterChip label="Body form" value={filters.bodyShape}   onRemove={() => setFilters(p => ({ ...p, bodyShape: undefined }))} />}
+                {filters.limbStyle  && <FilterChip label="Appendages" value={filters.limbStyle}  onRemove={() => setFilters(p => ({ ...p, limbStyle: undefined }))} />}
+                {filters.patternType && <FilterChip label="Pattern"  value={filters.patternType} onRemove={() => setFilters(p => ({ ...p, patternType: undefined }))} />}
+                {filters.rarity     && <FilterChip label="Rarity"    value={filters.rarity}     onRemove={() => setFilters(p => ({ ...p, rarity: undefined }))} />}
+                {filters.search     && <FilterChip label="Search"    value={filters.search}     onRemove={() => { setSearchInput(''); setFilters(p => ({ ...p, search: undefined })) }} />}
               </div>
             )}
           </div>
@@ -301,6 +355,9 @@ export function CataloguePage({ isAuthenticated, onSignUpCta }: Props) {
       {/* Species detail overlay */}
       {selectedEntry && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${selectedEntry.genus} ${selectedEntry.species} — species detail`}
           className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm overflow-y-auto"
           onClick={e => { if (e.target === e.currentTarget) setSelectedEntry(null) }}
         >

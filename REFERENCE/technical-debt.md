@@ -116,6 +116,16 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
+### TD-011: Catalogue pagination window-function drift
+- **Location:** `src/hooks/useCatalogue.ts` — `getNextPageParam`; `supabase/migrations/20260411000000_add_catalogue_filtering.sql` — `COUNT(*) OVER ()`
+- **Issue:** `total_count` is a Postgres window function re-evaluated on every page fetch. If a new species is discovered between fetching page 1 and page 2, `total_count` on page 2 is one higher than page 1. This can cause `getNextPageParam` to load an extra page (resulting in an empty final page) or — in the reverse case — miss the last item. The UX impact is invisible to almost all users.
+- **Why accepted:** Inherent limitation of cursor-free keyset pagination with a live dataset. Fixing it properly requires either a stable cursor (e.g. `WHERE created_at > last_seen`) or a snapshot count stored at session start. Both add complexity that isn't justified at current scale.
+- **Risk:** Low — no data loss, no incorrect display. Worst case is an extra empty load-more request.
+- **Future fix:** Switch to keyset pagination using `first_discovered_at` + `qr_hash` as a stable cursor, or snapshot `total_count` into component state on the first page load and use that for all subsequent `getNextPageParam` calls.
+- **Phase introduced:** Phase 5
+
+---
+
 ### Example Format: TD-001: Description
 - **Location:** `src/path/to/file.ts` - `functionName()`
 - **Issue:** Clear description of the limitation or shortcut

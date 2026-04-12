@@ -45,6 +45,7 @@ RETURNS TABLE (
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
+SET search_path = public
 AS $$
   WITH catalogue_base AS (
     SELECT
@@ -102,13 +103,14 @@ AS $$
     COUNT(*) OVER () AS total_count
   FROM catalogue_base
   WHERE
-    -- Full-text search across genus, species, order, family (case-insensitive)
+    -- Full-text search across genus, species, order, family (case-insensitive).
+    -- Wildcards in p_search are escaped so a search for '%' doesn't match everything.
     (
       p_search IS NULL
-      OR genus        ILIKE '%' || p_search || '%'
-      OR species      ILIKE '%' || p_search || '%'
-      OR "order"      ILIKE '%' || p_search || '%'
-      OR family       ILIKE '%' || p_search || '%'
+      OR genus        ILIKE '%' || REPLACE(REPLACE(p_search, '\', '\\'), '%', '\%') || '%' ESCAPE '\'
+      OR species      ILIKE '%' || REPLACE(REPLACE(p_search, '\', '\\'), '%', '\%') || '%' ESCAPE '\'
+      OR "order"      ILIKE '%' || REPLACE(REPLACE(p_search, '\', '\\'), '%', '\%') || '%' ESCAPE '\'
+      OR family       ILIKE '%' || REPLACE(REPLACE(p_search, '\', '\\'), '%', '\%') || '%' ESCAPE '\'
     )
     -- Taxonomic order filter
     AND (p_order_filter        IS NULL OR "order"      = p_order_filter)
