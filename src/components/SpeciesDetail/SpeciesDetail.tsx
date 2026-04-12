@@ -14,6 +14,8 @@ interface Props {
   /** Navigate to next species in the current result set */
   onNext: (() => void) | null
   onClose: () => void
+  /** Public display name of the first discoverer (only shown to authenticated users with public profiles) */
+  firstDiscovererName?: string | null
 }
 
 const FIELD_NOTES_TEASER_LENGTH = 120
@@ -37,7 +39,7 @@ function MetaRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-export default function SpeciesDetail({ entry, isAuthenticated, onPrev, onNext, onClose }: Props) {
+export default function SpeciesDetail({ entry, isAuthenticated, onPrev, onNext, onClose, firstDiscovererName }: Props) {
   const rarity = getRarityFromCount(entry.discovery_count)
   const rarityColor = getRarityColor(rarity)
 
@@ -177,6 +179,9 @@ export default function SpeciesDetail({ entry, isAuthenticated, onPrev, onNext, 
               label="Discoverers"
               value={`${entry.discovery_count} explorer${entry.discovery_count !== 1 ? 's' : ''}`}
             />
+            {isAuthenticated && firstDiscovererName && (
+              <MetaRow label="First by" value={firstDiscovererName} />
+            )}
           </div>
         </section>
       </div>

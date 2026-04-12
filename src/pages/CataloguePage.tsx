@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef, useCallback, type ChangeEvent } from 'react'
 import { useCatalogue, useCatalogueTaxonomy } from '@/hooks/useCatalogue'
 import type { CatalogueFilters, CatalogueEntry } from '@/hooks/useCatalogue'
+import { useFirstDiscoverer } from '@/hooks/useCommunity'
 import SpeciesCard from '@/components/SpeciesCard/SpeciesCard'
 import TaxonomicSidebar from '@/components/TaxonomicSidebar/TaxonomicSidebar'
 import SpeciesDetail from '@/components/SpeciesDetail/SpeciesDetail'
@@ -14,6 +15,10 @@ import type { Rarity } from '@/lib/rarity'
 interface Props {
   isAuthenticated: boolean
   onSignUpCta?: () => void
+  /** When set, auto-opens the species detail for this qr_hash (cross-tab navigation from Gazette). */
+  selectedSpeciesHash?: string | null
+  /** Called after the auto-opened species has been displayed, so the parent can clear selectedSpeciesHash. */
+  onSpeciesViewed?: () => void
 }
 
 const RARITY_OPTIONS: Rarity[] = ['rare', 'uncommon', 'common']
@@ -48,7 +53,7 @@ function FilterChip({
   )
 }
 
-export function CataloguePage({ isAuthenticated, onSignUpCta }: Props) {
+export function CataloguePage({ isAuthenticated, onSignUpCta, selectedSpeciesHash, onSpeciesViewed }: Props) {
   const [filters, setFilters] = useState<CatalogueFilters>({})
   const [searchInput, setSearchInput] = useState('')
   const [selectedEntry, setSelectedEntry] = useState<CatalogueEntry | null>(null)
@@ -59,8 +64,26 @@ export function CataloguePage({ isAuthenticated, onSignUpCta }: Props) {
   const catalogue = useCatalogue(filters)
   const taxonomy = useCatalogueTaxonomy()
 
+  // First discoverer lookup — only fetches when a detail view is open and the entry has a discoverer id
+  const firstDiscoverer = useFirstDiscoverer(
+    selectedEntry?.first_discoverer_id ?? null,
+    isAuthenticated && !!selectedEntry,
+  )
+
   const allEntries: CatalogueEntry[] = catalogue.data?.pages.flatMap(p => p) ?? []
   const totalCount = catalogue.data?.pages[0]?.[0]?.total_count ?? 0
+
+  // Auto-open species detail when navigating here from the Gazette
+  useEffect(() => {
+    if (!selectedSpeciesHash || allEntries.length === 0) return
+    const entry = allEntries.find(e => e.qr_hash === selectedSpeciesHash)
+    if (entry) {
+      setSelectedEntry(entry)
+      setFlipDirection(1)
+      onSpeciesViewed?.()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSpeciesHash, allEntries.length])
 
   // 300ms search debounce
   const handleSearchChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
@@ -369,6 +392,7 @@ export function CataloguePage({ isAuthenticated, onSignUpCta }: Props) {
                 onPrev={selectedIndex > 0 ? goToPrev : null}
                 onNext={selectedIndex < allEntries.length - 1 ? goToNext : null}
                 onClose={() => setSelectedEntry(null)}
+                firstDiscovererName={firstDiscoverer.data}
               />
             </PageFlip>
           </div>
