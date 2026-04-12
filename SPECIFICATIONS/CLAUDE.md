@@ -24,8 +24,7 @@ Development is organised into 9 sequential phases. Work through them in order �
 
 - ~~04-ai-generation-workers.md~~ → [ARCHIVE](./ARCHIVE/04-ai-generation-workers.md)
 
-5. **[05-catalogue.md](./05-catalogue.md)**
-   Public species catalogue, taxonomic index sidebar, search and trait filters, paginated species grid, page-flip detail view
+- ~~05-catalogue.md~~ → [ARCHIVE](./ARCHIVE/05-catalogue.md)
 
 6. **[06-gazette.md](./06-gazette.md)**
    Community activity timeline, explorer showcase, community stats, Gazette profile creation and privacy toggle

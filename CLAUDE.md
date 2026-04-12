@@ -54,13 +54,13 @@ Development is organised into 9 sequential phases.
 2. ~~[02-auth-design-system.md](./SPECIFICATIONS/ARCHIVE/02-auth-design-system.md)~~ ✓ — Magic link auth, Victorian design system, navigation shell
 3. ~~[03-creature-engine-cabinet.md](./SPECIFICATIONS/ARCHIVE/03-creature-engine-cabinet.md)~~ ✓ — DNA engine, QR scanner, creature rendering, hatching animation, cabinet
 4. ~~[04-ai-generation-workers.md](./SPECIFICATIONS/ARCHIVE/04-ai-generation-workers.md)~~ ✓ — Cloudflare Workers for Gemini + Claude, R2 image uploads, full discovery flow
-5. [05-catalogue.md](./SPECIFICATIONS/05-catalogue.md) — Public species catalogue, taxonomic index, search and filters
+5. ~~[05-catalogue.md](./SPECIFICATIONS/ARCHIVE/05-catalogue.md)~~ ✓ — Public species catalogue, taxonomic index, search and filters
 6. [06-gazette.md](./SPECIFICATIONS/06-gazette.md) — Community activity feed, explorer showcase, Gazette profiles
 7. [07-gamification.md](./SPECIFICATIONS/07-gamification.md) — Badges, explorer rank, achievement notifications
 8. [08-settings-admin.md](./SPECIFICATIONS/08-settings-admin.md) — Account settings, admin dashboard, GDPR tools
 9. [09-polish-launch.md](./SPECIFICATIONS/09-polish-launch.md) — Mary Anning references, About/Privacy/Contact, error handling, production launch
 
-**Current phase:** Phase 5 — Public species catalogue
+**Current phase:** Phase 6 — The Explorer's Gazette
 
 ### SPECIFICATIONS/
 - **Implementation phases** (numbered files) — Active work-in-progress
