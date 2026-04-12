@@ -75,6 +75,22 @@ export function useCatalogue(filters: CatalogueFilters = {}) {
   })
 }
 
+/** Fetch a single catalogue entry by qr_hash — used by the /species/:qrHash route. */
+export function useCatalogueEntry(qrHash: string | undefined) {
+  return useQuery({
+    queryKey: ['catalogue-entry', qrHash],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_species_by_hash', { p_qr_hash: qrHash! })
+      if (error) throw error
+      const row = (data as unknown as CatalogueEntry[] | null)?.[0] ?? null
+      // Attach total_count sentinel so the return value satisfies CatalogueEntry
+      return row ? ({ ...row, total_count: 1 } as CatalogueEntry) : null
+    },
+    enabled: !!qrHash,
+    staleTime: 2 * 60 * 1000,
+  })
+}
+
 /** Full unfiltered catalogue fetch used to build the Taxonomic Index sidebar. */
 export function useCatalogueTaxonomy() {
   return useQuery({

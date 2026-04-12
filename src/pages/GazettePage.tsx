@@ -1,29 +1,29 @@
 // ABOUT: The Explorer's Gazette — community activity timeline, showcase, and stats
 // ABOUT: Publicly readable; profile creation and discovery posting requires auth
 
-import { useCommunityFeed, useExplorerShowcase, useCommunityStats, useCreateProfile, useUpdateProfile } from '@/hooks/useCommunity'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '@/hooks/useAuth'
+import { useCommunityFeed, useExplorerShowcase, useCommunityStats, useCreateProfile, useUpdateProfile, useExplorerProfile } from '@/hooks/useCommunity'
 import type { ExplorerProfile } from '@/hooks/useCommunity'
 import ActivityTimeline from '@/components/ActivityTimeline/ActivityTimeline'
 import ExplorerShowcase from '@/components/ExplorerShowcase/ExplorerShowcase'
 import CommunityStats from '@/components/CommunityStats/CommunityStats'
 import GazetteJoinPrompt from '@/components/GazetteJoinPrompt/GazetteJoinPrompt'
 
-interface Props {
-  isAuthenticated: boolean
-  userId?: string
-  explorerProfile: ExplorerProfile | null | undefined
-  onSignUpCta?: () => void
-  onViewSpecies?: (qrHash: string) => void
-}
+export function GazettePage() {
+  const navigate = useNavigate()
+  const { authState } = useAuth()
+  const isAuthenticated = authState.status === 'authenticated'
+  const userId = isAuthenticated ? authState.session.user.id : undefined
 
-export function GazettePage({ isAuthenticated, userId, explorerProfile, onSignUpCta, onViewSpecies }: Props) {
   const feed      = useCommunityFeed(30)
   const showcase  = useExplorerShowcase()
   const stats     = useCommunityStats()
+  const explorerProfile = useExplorerProfile(userId ?? null)
   const createProfile = useCreateProfile()
   const updateProfile = useUpdateProfile()
 
-  const hasProfile = !!explorerProfile
+  const hasProfile = !!explorerProfile.data
 
   function handleJoin(displayName: string, isPublic: boolean) {
     if (!userId) return
@@ -31,9 +31,12 @@ export function GazettePage({ isAuthenticated, userId, explorerProfile, onSignUp
   }
 
   function handleTogglePrivacy() {
-    if (!explorerProfile || !userId) return
-    updateProfile.mutate({ user_id: userId, is_public: !explorerProfile.is_public })
+    const profile = explorerProfile.data as ExplorerProfile | null
+    if (!profile || !userId) return
+    updateProfile.mutate({ user_id: userId, is_public: !profile.is_public })
   }
+
+  const profile = explorerProfile.data as ExplorerProfile | null | undefined
 
   return (
     <main className="flex flex-col h-full overflow-y-auto">
@@ -43,7 +46,7 @@ export function GazettePage({ isAuthenticated, userId, explorerProfile, onSignUp
           <span className="font-mono text-xs text-muted-foreground">
             Reading the Gazette.{' '}
             <button
-              onClick={onSignUpCta}
+              onClick={() => navigate('/enter')}
               className="underline hover:text-foreground transition-colors"
             >
               Sign in
@@ -66,7 +69,7 @@ export function GazettePage({ isAuthenticated, userId, explorerProfile, onSignUp
         <CommunityStats stats={stats.data} isLoading={stats.isLoading} />
 
         {/* Join prompt — authenticated users without a profile */}
-        {isAuthenticated && !hasProfile && explorerProfile !== undefined && (
+        {isAuthenticated && !hasProfile && explorerProfile.data !== undefined && (
           <GazetteJoinPrompt
             onSubmit={handleJoin}
             isSubmitting={createProfile.isPending}
@@ -74,12 +77,12 @@ export function GazettePage({ isAuthenticated, userId, explorerProfile, onSignUp
         )}
 
         {/* Privacy toggle — authenticated users with a profile */}
-        {isAuthenticated && explorerProfile && (
+        {isAuthenticated && profile && (
           <div className="flex items-center justify-between border border-border rounded-lg px-4 py-3">
             <div>
-              <p className="font-mono text-xs font-medium">{explorerProfile.display_name}</p>
+              <p className="font-mono text-xs font-medium">{profile.display_name}</p>
               <p className="font-mono text-[10px] text-muted-foreground">
-                {explorerProfile.is_public ? 'Your discoveries are public' : 'Your profile is private'}
+                {profile.is_public ? 'Your discoveries are public' : 'Your profile is private'}
               </p>
             </div>
             <button
@@ -87,7 +90,7 @@ export function GazettePage({ isAuthenticated, userId, explorerProfile, onSignUp
               disabled={updateProfile.isPending}
               className="font-mono text-[11px] px-3 py-1.5 border border-border rounded hover:bg-accent transition-colors disabled:opacity-50"
             >
-              {explorerProfile.is_public ? 'Go private' : 'Go public'}
+              {profile.is_public ? 'Go private' : 'Go public'}
             </button>
           </div>
         )}
@@ -100,7 +103,7 @@ export function GazettePage({ isAuthenticated, userId, explorerProfile, onSignUp
           <ActivityTimeline
             entries={feed.data ?? []}
             isLoading={feed.isLoading}
-            onViewSpecies={onViewSpecies}
+            onViewSpecies={(qrHash) => navigate(`/species/${qrHash}`)}
           />
         </section>
 

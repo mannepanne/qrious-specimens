@@ -99,6 +99,23 @@ export function useUpdateNickname() {
   })
 }
 
+/** Fetch a single creature by its UUID — used by the /specimen/:id route for direct URL access. */
+export function useCreatureById(id: string | undefined) {
+  return useQuery({
+    queryKey: ['creature', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('creatures')
+        .select('*')
+        .eq('id', id!)
+        .single()
+      if (error) throw error
+      return data as CreatureRow
+    },
+    enabled: !!id,
+  })
+}
+
 /** Fetch discovery counts for a set of QR hashes (for rarity display) */
 export function useDiscoveryCounts(qrHashes: string[]) {
   return useQuery({

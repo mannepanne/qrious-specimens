@@ -1,12 +1,14 @@
 // ABOUT: Full-detail specimen view — AI illustration, taxonomy, observations, discovery record
-// ABOUT: useSpeciesImage triggers generation if not yet cached; sketch renderer shown as fallback
+// ABOUT: Reads creature from navigation state (fast path) or fetches by ID for direct URL access
 
 import { useState, useRef } from 'react'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { useAuth } from '@/hooks/useAuth'
+import { useCreatureById, useDiscoveryCounts, useUpdateNickname } from '@/hooks/useCreatures'
 import type { CreatureRow } from '@/types/creature'
 import CreatureRenderer from '@/components/CreatureRenderer/CreatureRenderer'
 import PageFlip from '@/components/PageFlip/PageFlip'
 import TypewriterText from '@/components/TypewriterText/TypewriterText'
-import { useDiscoveryCounts } from '@/hooks/useCreatures'
 import { useSpeciesImage } from '@/hooks/useSpeciesImage'
 import { getRarityFromCount, getRarityLabel, getRarityColor } from '@/lib/rarity'
 import { Button } from '@/components/ui/button'
@@ -29,34 +31,52 @@ function Pineapple({ className }: { className?: string }) {
   )
 }
 
-interface Props {
-  creature: CreatureRow
-  onBack: () => void
-  onUpdateNickname: (id: string, nickname: string) => void
-  currentIndex?: number
-  totalCount?: number
-  onPrev?: () => void
-  onNext?: () => void
+interface LocationState {
+  creature?: CreatureRow
+  cabinetCreatures?: CreatureRow[]
+  cabinetIndex?: number
 }
 
-export function SpecimenPage({ creature, onBack, onUpdateNickname, currentIndex, totalCount, onPrev, onNext }: Props) {
-  const { dna } = creature
+export function SpecimenPage() {
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { authState } = useAuth()
+  const userId = authState.status === 'authenticated' ? authState.session.user.id : ''
+
+  const state = (location.state as LocationState | null) ?? {}
+  const stateCreature = state.creature
+  const cabinetCreatures = state.cabinetCreatures ?? []
+  const cabinetIndex = state.cabinetIndex ?? -1
+
+  // Only fetch from DB when there's no creature in navigation state (direct URL access)
+  const { data: fetchedCreature, isLoading } = useCreatureById(stateCreature ? undefined : id)
+  const creature = stateCreature ?? fetchedCreature
+
+  const updateNickname = useUpdateNickname()
+
   const [editing, setEditing] = useState(false)
-  const [nickname, setNickname] = useState(creature.nickname ?? '')
+  const [nickname, setNickname] = useState(creature?.nickname ?? '')
   const [fieldNotesAnimated, setFieldNotesAnimated] = useState(false)
-  const { data: discoveryCounts } = useDiscoveryCounts([creature.qr_hash])
-  const discoveryCount = discoveryCounts?.[creature.qr_hash]
-  const rarity = getRarityFromCount(discoveryCount)
-  const rarityColor = getRarityColor(rarity)
   const flipDirRef = useRef(1)
 
+  // Update local nickname when creature loads (direct URL access path)
+  const prevCreatureIdRef = useRef<string | undefined>(undefined)
+  if (creature && creature.id !== prevCreatureIdRef.current) {
+    prevCreatureIdRef.current = creature.id
+    setNickname(creature.nickname ?? '')
+  }
+
+  const { data: discoveryCounts } = useDiscoveryCounts(creature ? [creature.qr_hash] : [])
+  const discoveryCount = creature ? discoveryCounts?.[creature.qr_hash] : undefined
+  const rarity = getRarityFromCount(discoveryCount)
+  const rarityColor = getRarityColor(rarity)
+
   const { imageUrl512, fieldNotes, isLoading: imageLoading } = useSpeciesImage(
-    creature.qr_hash,
-    dna,
+    creature?.qr_hash ?? '',
+    creature?.dna ?? null,
   )
 
-  // Animate field notes only when transitioning from loading → loaded (i.e. freshly generated).
-  // If notes are already present on mount (cache hit or revisit), skip the animation.
   const wasLoadingOnMountRef = useRef(imageLoading)
   const animateFieldNotesRef = useRef(false)
   if (fieldNotes && !animateFieldNotesRef.current && wasLoadingOnMountRef.current) {
@@ -64,26 +84,59 @@ export function SpecimenPage({ creature, onBack, onUpdateNickname, currentIndex,
     setFieldNotesAnimated(true)
   }
 
-  const hasPrev = (currentIndex ?? 0) > 0
-  const hasNext = (currentIndex ?? 0) < (totalCount ?? 0) - 1
+  const hasPrev = cabinetIndex > 0
+  const hasNext = cabinetIndex >= 0 && cabinetIndex < cabinetCreatures.length - 1
 
-  const handlePrev = () => {
+  function handlePrev() {
+    if (!hasPrev) return
     flipDirRef.current = -1
-    onPrev?.()
-    window.scrollTo(0, 0)
+    const prev = cabinetCreatures[cabinetIndex - 1]
+    navigate(`/specimen/${prev.id}`, {
+      state: { creature: prev, cabinetCreatures, cabinetIndex: cabinetIndex - 1 },
+    })
   }
 
-  const handleNext = () => {
+  function handleNext() {
+    if (!hasNext) return
     flipDirRef.current = 1
-    onNext?.()
-    window.scrollTo(0, 0)
+    const next = cabinetCreatures[cabinetIndex + 1]
+    navigate(`/specimen/${next.id}`, {
+      state: { creature: next, cabinetCreatures, cabinetIndex: cabinetIndex + 1 },
+    })
   }
 
-  const handleSaveNickname = () => {
-    onUpdateNickname(creature.id, nickname.trim().slice(0, 64))
+  function handleSaveNickname() {
+    if (!creature) return
+    const trimmed = nickname.trim().slice(0, 64)
+    updateNickname.mutate({ id: creature.id, nickname: trimmed, userId })
     setEditing(false)
   }
 
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="animate-pulse text-muted-foreground text-sm font-mono tracking-widest">
+          Consulting the strata…
+        </p>
+      </div>
+    )
+  }
+
+  if (!creature) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center p-6 text-center gap-4">
+        <p className="font-serif text-lg text-muted-foreground italic">Specimen not found</p>
+        <button
+          onClick={() => navigate('/cabinet')}
+          className="font-mono text-xs underline text-muted-foreground hover:text-foreground"
+        >
+          Return to cabinet
+        </button>
+      </div>
+    )
+  }
+
+  const { dna } = creature
   const date = new Date(creature.discovered_at)
   const dateStr = date.toLocaleDateString('en-GB', {
     day: 'numeric',
@@ -95,7 +148,7 @@ export function SpecimenPage({ creature, onBack, onUpdateNickname, currentIndex,
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur px-4 py-3 flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={onBack}>
+        <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1 min-w-0">
@@ -134,7 +187,7 @@ export function SpecimenPage({ creature, onBack, onUpdateNickname, currentIndex,
             </div>
 
             {/* Inline navigation */}
-            {totalCount !== undefined && totalCount > 1 && (
+            {cabinetCreatures.length > 1 && (
               <div className="flex items-center justify-between px-4 mb-2">
                 <button
                   onClick={handlePrev}
@@ -144,7 +197,7 @@ export function SpecimenPage({ creature, onBack, onUpdateNickname, currentIndex,
                   &larr; PREV
                 </button>
                 <span className="font-mono text-[9px] tracking-[2px] text-muted-foreground/50">
-                  {(currentIndex ?? 0) + 1} / {totalCount}
+                  {cabinetIndex + 1} / {cabinetCreatures.length}
                 </span>
                 <button
                   onClick={handleNext}

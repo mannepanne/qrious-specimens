@@ -1,34 +1,40 @@
 // ABOUT: Cabinet page — the authenticated naturalist's personal specimen collection
-// ABOUT: Infinite-scroll grid of SpecimenTeaser cards; scan CTA triggers the QR scanner
+// ABOUT: Infinite-scroll grid of SpecimenTeaser cards; scan CTA triggers the QR scanner overlay
 
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { useCreatures, useDiscoveryCounts } from '@/hooks/useCreatures'
+import { useAuth } from '@/hooks/useAuth'
+import { useScanOverlay } from '@/App'
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver'
 import SpecimenTeaser from '@/components/SpecimenTeaser/SpecimenTeaser'
 import type { CreatureRow } from '@/types/creature'
-import type { UseAuthReturn } from '@/hooks/useAuth'
 import { ScanLine } from 'lucide-react'
 
-interface CabinetPageProps {
-  userId: string
-  email: string
-  signOut: UseAuthReturn['signOut']
-  onOpenScanner: () => void
-  onViewCreature: (creature: CreatureRow, index: number, allCreatures: CreatureRow[]) => void
-}
+export function CabinetPage() {
+  const navigate = useNavigate()
+  const { authState, signOut } = useAuth()
+  const { openScanner } = useScanOverlay()
 
-export function CabinetPage({ userId, email, signOut, onOpenScanner, onViewCreature }: CabinetPageProps) {
+  // Cabinet is only rendered inside RequireAuth, so authState is always 'authenticated' here
+  const userId = authState.status === 'authenticated' ? authState.session.user.id : ''
+  const email  = authState.status === 'authenticated' ? (authState.session.user.email ?? '') : ''
+
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } = useCreatures(userId)
-  // useIntersectionObserver creates and returns the ref; pass it to the sentinel element
   const sentinelRef = useIntersectionObserver(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage()
   })
 
   const allCreatures = data?.pages.flat() ?? []
-
-  // Collect all QR hashes to get rarity data in bulk
   const qrHashes = allCreatures.map((c) => c.qr_hash)
   const { data: discoveryCounts } = useDiscoveryCounts(qrHashes)
+
+  function handleViewCreature(creature: CreatureRow, index: number, allCreatures: CreatureRow[]) {
+    // Pass the full cabinet list so SpecimenPage can offer prev/next navigation
+    navigate(`/specimen/${creature.id}`, {
+      state: { creature, cabinetCreatures: allCreatures, cabinetIndex: index },
+    })
+  }
 
   return (
     <main className="min-h-screen">
@@ -44,7 +50,6 @@ export function CabinetPage({ userId, email, signOut, onOpenScanner, onViewCreat
             </p>
           </div>
 
-          {/* Temp sign-out */}
           <div className="text-right">
             <p className="text-[10px] text-muted-foreground font-mono mb-1 truncate max-w-[120px]">{email}</p>
             <Button variant="outline" size="sm" className="font-mono text-[10px] tracking-wider" onClick={signOut}>
@@ -56,7 +61,7 @@ export function CabinetPage({ userId, email, signOut, onOpenScanner, onViewCreat
         {/* Scan CTA */}
         <Button
           className="w-full gap-2 font-mono tracking-wider"
-          onClick={onOpenScanner}
+          onClick={openScanner}
         >
           <ScanLine className="h-4 w-4" />
           EXCAVATE NEW SPECIMEN
@@ -102,7 +107,7 @@ export function CabinetPage({ userId, email, signOut, onOpenScanner, onViewCreat
                 key={creature.id}
                 creature={creature}
                 discoveryCount={discoveryCounts?.[creature.qr_hash]}
-                onClick={() => onViewCreature(creature, index, allCreatures)}
+                onClick={() => handleViewCreature(creature, index, allCreatures)}
               />
             ))}
           </div>

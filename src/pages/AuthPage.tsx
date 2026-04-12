@@ -1,18 +1,15 @@
 // ABOUT: Magic link authentication page — email entry and confirmation states
 // ABOUT: No password fields; uses Supabase OTP (one-time password) via email
 import { useState } from 'react'
+import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import type { UseAuthReturn } from '@/hooks/useAuth'
-
-interface AuthPageProps {
-  sendMagicLink: UseAuthReturn['sendMagicLink']
-}
 
 type PageState = 'idle' | 'sending' | 'sent' | 'error'
 
-export function AuthPage({ sendMagicLink }: AuthPageProps) {
+export function AuthPage() {
+  const { sendMagicLink } = useAuth()
   const [email, setEmail] = useState('')
   const [pageState, setPageState] = useState<PageState>('idle')
   const [errorMessage, setErrorMessage] = useState('')

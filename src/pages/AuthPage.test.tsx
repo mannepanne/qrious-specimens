@@ -1,28 +1,51 @@
 // ABOUT: Tests for the magic link authentication page
 // ABOUT: Covers idle state, form submission, sent confirmation, and error handling
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { AuthPage } from './AuthPage'
 
-function makeSendMagicLink(result: { error: string | null }) {
-  return vi.fn().mockResolvedValue(result)
+// Mock useAuth so tests control sendMagicLink without a real Supabase connection
+vi.mock('@/hooks/useAuth', () => ({
+  useAuth: vi.fn(),
+}))
+
+import { useAuth } from '@/hooks/useAuth'
+const mockUseAuth = vi.mocked(useAuth)
+
+function setupAuth(sendMagicLinkResult: { error: string | null }) {
+  mockUseAuth.mockReturnValue({
+    authState: { status: 'unauthenticated' },
+    sendMagicLink: vi.fn().mockResolvedValue(sendMagicLinkResult),
+    signOut: vi.fn(),
+  })
 }
+
+// Expose the mock sendMagicLink for assertions
+function getSendMagicLink() {
+  return mockUseAuth.mock.results[0]?.value?.sendMagicLink as ReturnType<typeof vi.fn>
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+})
 
 describe('AuthPage', () => {
   it('renders email input and submit button', () => {
-    render(<AuthPage sendMagicLink={makeSendMagicLink({ error: null })} />)
+    setupAuth({ error: null })
+    render(<AuthPage />)
     expect(screen.getByLabelText(/electronic mail/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /send magic link/i })).toBeInTheDocument()
   })
 
   it('submit button is disabled when email is empty', () => {
-    render(<AuthPage sendMagicLink={makeSendMagicLink({ error: null })} />)
+    setupAuth({ error: null })
+    render(<AuthPage />)
     expect(screen.getByRole('button', { name: /send magic link/i })).toBeDisabled()
   })
 
   it('calls sendMagicLink with trimmed email on submit', async () => {
-    const sendMagicLink = makeSendMagicLink({ error: null })
-    render(<AuthPage sendMagicLink={sendMagicLink} />)
+    setupAuth({ error: null })
+    render(<AuthPage />)
 
     fireEvent.change(screen.getByLabelText(/electronic mail/i), {
       target: { value: '  naturalist@example.com  ' },
@@ -30,12 +53,13 @@ describe('AuthPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /send magic link/i }))
 
     await waitFor(() => {
-      expect(sendMagicLink).toHaveBeenCalledWith('naturalist@example.com')
+      expect(getSendMagicLink()).toHaveBeenCalledWith('naturalist@example.com')
     })
   })
 
   it('shows confirmation state after successful send', async () => {
-    render(<AuthPage sendMagicLink={makeSendMagicLink({ error: null })} />)
+    setupAuth({ error: null })
+    render(<AuthPage />)
 
     fireEvent.change(screen.getByLabelText(/electronic mail/i), {
       target: { value: 'naturalist@example.com' },
@@ -49,9 +73,8 @@ describe('AuthPage', () => {
   })
 
   it('shows error message when sendMagicLink fails', async () => {
-    render(
-      <AuthPage sendMagicLink={makeSendMagicLink({ error: 'Rate limit exceeded' })} />
-    )
+    setupAuth({ error: 'Rate limit exceeded' })
+    render(<AuthPage />)
 
     fireEvent.change(screen.getByLabelText(/electronic mail/i), {
       target: { value: 'naturalist@example.com' },
@@ -64,7 +87,8 @@ describe('AuthPage', () => {
   })
 
   it('returns to idle when "use a different address" is clicked', async () => {
-    render(<AuthPage sendMagicLink={makeSendMagicLink({ error: null })} />)
+    setupAuth({ error: null })
+    render(<AuthPage />)
 
     fireEvent.change(screen.getByLabelText(/electronic mail/i), {
       target: { value: 'naturalist@example.com' },
@@ -79,9 +103,12 @@ describe('AuthPage', () => {
   })
 
   it('shows dispatching state while sending', async () => {
-    // Never resolves — holds the sending state
-    const sendMagicLink = vi.fn().mockImplementation(() => new Promise(() => {}))
-    render(<AuthPage sendMagicLink={sendMagicLink} />)
+    mockUseAuth.mockReturnValue({
+      authState: { status: 'unauthenticated' },
+      sendMagicLink: vi.fn().mockImplementation(() => new Promise(() => {})),
+      signOut: vi.fn(),
+    })
+    render(<AuthPage />)
 
     fireEvent.change(screen.getByLabelText(/electronic mail/i), {
       target: { value: 'naturalist@example.com' },
