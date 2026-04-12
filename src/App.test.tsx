@@ -157,7 +157,7 @@ describe('App', () => {
     setupUnauthenticated()
     renderApp({ initialPath: '/cabinet' })
 
-    // Auth guard in AppShell uses useEffect — wait for redirect + AuthPage to render
+    // Auth guard is synchronous Navigate — wait for AuthPage to render
     await waitFor(
       () => { expect(screen.getByRole('heading', { name: /qrious specimens/i })).toBeInTheDocument() },
       { timeout: 3000 }

@@ -113,6 +113,7 @@ export function useCreatureById(id: string | undefined) {
       return data as CreatureRow
     },
     enabled: !!id,
+    staleTime: 2 * 60 * 1000,
   })
 }
 

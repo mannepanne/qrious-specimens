@@ -1,7 +1,7 @@
 // ABOUT: Full-detail specimen view — AI illustration, taxonomy, observations, discovery record
 // ABOUT: Reads creature from navigation state (fast path) or fetches by ID for direct URL access
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useCreatureById, useDiscoveryCounts, useUpdateNickname } from '@/hooks/useCreatures'
@@ -60,12 +60,13 @@ export function SpecimenPage() {
   const [fieldNotesAnimated, setFieldNotesAnimated] = useState(false)
   const flipDirRef = useRef(1)
 
-  // Update local nickname when creature loads (direct URL access path)
-  const prevCreatureIdRef = useRef<string | undefined>(undefined)
-  if (creature && creature.id !== prevCreatureIdRef.current) {
-    prevCreatureIdRef.current = creature.id
-    setNickname(creature.nickname ?? '')
-  }
+  // Sync nickname when navigating to a different creature (prev/next or direct URL access)
+  const creatureId = creature?.id
+  useEffect(() => {
+    setNickname(creature?.nickname ?? '')
+    // creatureId is the only meaningful change — nickname syncs when we load a different creature
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [creatureId])
 
   const { data: discoveryCounts } = useDiscoveryCounts(creature ? [creature.qr_hash] : [])
   const discoveryCount = creature ? discoveryCounts?.[creature.qr_hash] : undefined
