@@ -54,26 +54,28 @@ export default function SpeciesDetail({ entry, isAuthenticated, onPrev, onNext, 
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
-      {/* Header: close + prev/next navigation */}
+      {/* Header: close + prev/next navigation (prev/next hidden when both unavailable) */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
-        <div className="flex gap-2">
-          <button
-            onClick={onPrev ?? undefined}
-            disabled={!onPrev}
-            aria-label="Previous species"
-            className="w-8 h-8 flex items-center justify-center rounded border border-border font-mono text-sm disabled:opacity-30 hover:bg-accent transition-colors"
-          >
-            ‹
-          </button>
-          <button
-            onClick={onNext ?? undefined}
-            disabled={!onNext}
-            aria-label="Next species"
-            className="w-8 h-8 flex items-center justify-center rounded border border-border font-mono text-sm disabled:opacity-30 hover:bg-accent transition-colors"
-          >
-            ›
-          </button>
-        </div>
+        {(onPrev || onNext) ? (
+          <div className="flex gap-2">
+            <button
+              onClick={onPrev ?? undefined}
+              disabled={!onPrev}
+              aria-label="Previous species"
+              className="w-8 h-8 flex items-center justify-center rounded border border-border font-mono text-sm disabled:opacity-30 hover:bg-accent transition-colors"
+            >
+              ‹
+            </button>
+            <button
+              onClick={onNext ?? undefined}
+              disabled={!onNext}
+              aria-label="Next species"
+              className="w-8 h-8 flex items-center justify-center rounded border border-border font-mono text-sm disabled:opacity-30 hover:bg-accent transition-colors"
+            >
+              ›
+            </button>
+          </div>
+        ) : <div />}
         <button
           onClick={onClose}
           aria-label="Close species detail"

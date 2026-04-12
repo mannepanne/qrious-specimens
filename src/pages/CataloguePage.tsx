@@ -1,25 +1,15 @@
 // ABOUT: Public species catalogue — paginated, filterable index of all discovered species
-// ABOUT: Accessible to unauthenticated visitors; field notes auth-gated to a teaser
+// ABOUT: Accessible to unauthenticated visitors; clicking a species navigates to /species/:qrHash
 
 import { useState, useEffect, useRef, useCallback, type ChangeEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useCatalogue, useCatalogueTaxonomy } from '@/hooks/useCatalogue'
 import type { CatalogueFilters, CatalogueEntry } from '@/hooks/useCatalogue'
-import { useFirstDiscoverer } from '@/hooks/useCommunity'
+import { useAuth } from '@/hooks/useAuth'
 import SpeciesCard from '@/components/SpeciesCard/SpeciesCard'
 import TaxonomicSidebar from '@/components/TaxonomicSidebar/TaxonomicSidebar'
-import SpeciesDetail from '@/components/SpeciesDetail/SpeciesDetail'
-import PageFlip from '@/components/PageFlip/PageFlip'
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver'
 import type { Rarity } from '@/lib/rarity'
-
-interface Props {
-  isAuthenticated: boolean
-  onSignUpCta?: () => void
-  /** When set, auto-opens the species detail for this qr_hash (cross-tab navigation from Gazette). */
-  selectedSpeciesHash?: string | null
-  /** Called after the auto-opened species has been displayed, so the parent can clear selectedSpeciesHash. */
-  onSpeciesViewed?: () => void
-}
 
 const RARITY_OPTIONS: Rarity[] = ['rare', 'uncommon', 'common']
 const HABITAT_OPTIONS = ['alpine', 'cave', 'coastal', 'deep sea', 'desert', 'forest', 'freshwater', 'urban'] as const
@@ -53,37 +43,21 @@ function FilterChip({
   )
 }
 
-export function CataloguePage({ isAuthenticated, onSignUpCta, selectedSpeciesHash, onSpeciesViewed }: Props) {
+export function CataloguePage() {
+  const navigate = useNavigate()
+  const { authState } = useAuth()
+  const isAuthenticated = authState.status === 'authenticated'
+
   const [filters, setFilters] = useState<CatalogueFilters>({})
   const [searchInput, setSearchInput] = useState('')
-  const [selectedEntry, setSelectedEntry] = useState<CatalogueEntry | null>(null)
-  const [flipDirection, setFlipDirection] = useState(1)
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
 
   const catalogue = useCatalogue(filters)
   const taxonomy = useCatalogueTaxonomy()
 
-  // First discoverer lookup — only fetches when a detail view is open and the entry has a discoverer id
-  const firstDiscoverer = useFirstDiscoverer(
-    selectedEntry?.first_discoverer_id ?? null,
-    isAuthenticated && !!selectedEntry,
-  )
-
   const allEntries: CatalogueEntry[] = catalogue.data?.pages.flatMap(p => p) ?? []
   const totalCount = catalogue.data?.pages[0]?.[0]?.total_count ?? 0
-
-  // Auto-open species detail when navigating here from the Gazette
-  useEffect(() => {
-    if (!selectedSpeciesHash || allEntries.length === 0) return
-    const entry = allEntries.find(e => e.qr_hash === selectedSpeciesHash)
-    if (entry) {
-      setSelectedEntry(entry)
-      setFlipDirection(1)
-      onSpeciesViewed?.()
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSpeciesHash, allEntries.length])
 
   // 300ms search debounce
   const handleSearchChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
@@ -97,17 +71,7 @@ export function CataloguePage({ isAuthenticated, onSignUpCta, selectedSpeciesHas
 
   useEffect(() => () => clearTimeout(debounceRef.current), [])
 
-  // Close the detail overlay on Escape key
-  useEffect(() => {
-    if (!selectedEntry) return
-    const onKeyDown = (e: globalThis.KeyboardEvent) => {
-      if (e.key === 'Escape') setSelectedEntry(null)
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [selectedEntry])
-
-  // Infinite scroll sentinel — no useCallback needed; hook uses callbackRef internally
+  // Infinite scroll sentinel
   const sentinelRef = useIntersectionObserver(
     () => {
       if (catalogue.hasNextPage && !catalogue.isFetchingNextPage) {
@@ -117,22 +81,9 @@ export function CataloguePage({ isAuthenticated, onSignUpCta, selectedSpeciesHas
     { enabled: catalogue.hasNextPage ?? false },
   )
 
-  // Navigation between species in the detail view
-  const selectedIndex = selectedEntry
-    ? allEntries.findIndex(e => e.qr_hash === selectedEntry.qr_hash)
-    : -1
-
-  function openEntry(entry: CatalogueEntry, direction = 1) {
-    setFlipDirection(direction)
-    setSelectedEntry(entry)
-  }
-
-  function goToPrev() {
-    if (selectedIndex > 0) openEntry(allEntries[selectedIndex - 1], -1)
-  }
-
-  function goToNext() {
-    if (selectedIndex < allEntries.length - 1) openEntry(allEntries[selectedIndex + 1], 1)
+  function handleSpeciesClick(entry: CatalogueEntry) {
+    // Pass the entry in navigation state so SpeciesPage can render immediately
+    navigate(`/species/${entry.qr_hash}`, { state: { entry } })
   }
 
   function clearAllFilters() {
@@ -143,8 +94,6 @@ export function CataloguePage({ isAuthenticated, onSignUpCta, selectedSpeciesHas
   const hasActiveFilters = Object.values(filters).some(Boolean)
 
   const taxonomyData = taxonomy.data ?? new Map<string, number>()
-
-  // Count all species across the full (unfiltered) taxonomy for the sidebar total
   const taxonomyTotal = [...taxonomyData.values()].reduce((s, c) => s + c, 0)
 
   return (
@@ -155,7 +104,7 @@ export function CataloguePage({ isAuthenticated, onSignUpCta, selectedSpeciesHas
           <span className="font-mono text-xs text-muted-foreground">
             Browse freely.{' '}
             <button
-              onClick={onSignUpCta}
+              onClick={() => navigate('/enter')}
               className="underline hover:text-foreground transition-colors"
             >
               Sign in
@@ -354,7 +303,7 @@ export function CataloguePage({ isAuthenticated, onSignUpCta, selectedSpeciesHas
                     <SpeciesCard
                       key={entry.qr_hash}
                       entry={entry}
-                      onClick={() => openEntry(entry)}
+                      onClick={() => handleSpeciesClick(entry)}
                     />
                   ))}
                 </div>
@@ -374,30 +323,6 @@ export function CataloguePage({ isAuthenticated, onSignUpCta, selectedSpeciesHas
           </div>
         </div>
       </div>
-
-      {/* Species detail overlay */}
-      {selectedEntry && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${selectedEntry.genus} ${selectedEntry.species} — species detail`}
-          className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm overflow-y-auto"
-          onClick={e => { if (e.target === e.currentTarget) setSelectedEntry(null) }}
-        >
-          <div className="max-w-lg mx-auto min-h-full">
-            <PageFlip pageKey={selectedEntry.qr_hash} direction={flipDirection}>
-              <SpeciesDetail
-                entry={selectedEntry}
-                isAuthenticated={isAuthenticated}
-                onPrev={selectedIndex > 0 ? goToPrev : null}
-                onNext={selectedIndex < allEntries.length - 1 ? goToNext : null}
-                onClose={() => setSelectedEntry(null)}
-                firstDiscovererName={firstDiscoverer.data}
-              />
-            </PageFlip>
-          </div>
-        </div>
-      )}
     </main>
   )
 }

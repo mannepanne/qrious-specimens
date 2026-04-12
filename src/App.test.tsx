@@ -1,8 +1,10 @@
-// ABOUT: Integration tests for App — auth gating, tab navigation, error state, public browse
-// ABOUT: Catalogue and Gazette are public; Cabinet requires auth
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+// ABOUT: Integration tests for App routing — auth gating, tab navigation, error state
+// ABOUT: Catalogue and Gazette are public; Cabinet and Specimen require auth
+import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { App } from './App'
+import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { AppRoutes } from './App'
 
 vi.mock('@/lib/supabase', () => {
   const mockGetSession = vi.fn()
@@ -68,13 +70,23 @@ function setupAuthenticated() {
   })
 }
 
+function renderApp({ initialPath = '/' } = {}) {
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={qc}>
+      <MemoryRouter initialEntries={[initialPath]}>
+        <AppRoutes />
+      </MemoryRouter>
+    </QueryClientProvider>
+  )
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
-  Object.defineProperty(window, 'location', {
-    value: { hash: '', search: '', pathname: '/', origin: 'http://localhost:5173' },
-    writable: true,
-  })
-  vi.spyOn(window.history, 'replaceState').mockImplementation(() => {})
+  // Clean up jsdom's history state between tests
+  window.history.replaceState(null, '', '/')
 })
 
 describe('App', () => {
@@ -84,7 +96,7 @@ describe('App', () => {
       data: { subscription: { unsubscribe: vi.fn() } },
     })
 
-    render(<App />)
+    renderApp()
     expect(screen.getByText(/loading/i)).toBeInTheDocument()
   })
 
@@ -97,16 +109,16 @@ describe('App', () => {
       data: { subscription: { unsubscribe: vi.fn() } },
     })
 
-    render(<App />)
+    renderApp()
     await waitFor(() => {
       expect(screen.getByText(/could not connect/i)).toBeInTheDocument()
     })
     expect(screen.getByText('Storage corrupted')).toBeInTheDocument()
   })
 
-  it('shows Catalogue tab (public) when unauthenticated — no auth wall', async () => {
+  it('shows Catalogue at root path (public) when unauthenticated — no auth wall', async () => {
     setupUnauthenticated()
-    render(<App />)
+    renderApp({ initialPath: '/' })
 
     await waitFor(() => {
       expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
@@ -116,7 +128,7 @@ describe('App', () => {
 
   it('shows tab navigation with spec-defined three tabs', async () => {
     setupUnauthenticated()
-    render(<App />)
+    renderApp()
 
     await waitFor(() => screen.getByRole('navigation', { name: /main navigation/i }))
     expect(screen.getByText('Catalogue')).toBeInTheDocument()
@@ -124,9 +136,9 @@ describe('App', () => {
     expect(screen.getByText('Cabinet')).toBeInTheDocument()
   })
 
-  it('defaults to Catalogue tab', async () => {
+  it('defaults to Catalogue at root path', async () => {
     setupUnauthenticated()
-    render(<App />)
+    renderApp({ initialPath: '/' })
 
     await waitFor(() => screen.getByRole('navigation', { name: /main navigation/i }))
     expect(screen.getByRole('heading', { name: /the species catalogue/i })).toBeInTheDocument()
@@ -134,67 +146,68 @@ describe('App', () => {
 
   it('unauthenticated user can browse Gazette', async () => {
     setupUnauthenticated()
-    render(<App />)
+    renderApp({ initialPath: '/gazette' })
 
-    await waitFor(() => screen.getByRole('navigation', { name: /main navigation/i }))
-    fireEvent.click(screen.getByText('Gazette'))
-    expect(screen.getByRole('heading', { name: /the explorer's gazette/i })).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /the explorer's gazette/i })).toBeInTheDocument()
+    })
   })
 
-  it('unauthenticated user clicking Cabinet sees AuthPage', async () => {
+  it('unauthenticated user visiting /cabinet is redirected to /enter', async () => {
     setupUnauthenticated()
-    render(<App />)
+    renderApp({ initialPath: '/cabinet' })
 
-    await waitFor(() => screen.getByRole('navigation', { name: /main navigation/i }))
-    fireEvent.click(screen.getByText('Cabinet'))
-
-    expect(screen.getByLabelText(/electronic mail/i)).toBeInTheDocument()
+    // Auth guard is synchronous Navigate — wait for AuthPage to render
+    await waitFor(
+      () => { expect(screen.getByRole('heading', { name: /qrious specimens/i })).toBeInTheDocument() },
+      { timeout: 3000 }
+    )
   })
 
   it('shows Cabinet content when authenticated', async () => {
     setupAuthenticated()
-    render(<App />)
+    renderApp({ initialPath: '/cabinet' })
 
-    await waitFor(() => screen.getByRole('navigation', { name: /main navigation/i }))
-    fireEvent.click(screen.getByText('Cabinet'))
-    expect(screen.getByText(/cabinet of curiosities/i)).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText(/cabinet of curiosities/i)).toBeInTheDocument()
+    })
   })
 
   it('shows email on Cabinet page when authenticated', async () => {
     setupAuthenticated()
-    render(<App />)
+    renderApp({ initialPath: '/cabinet' })
 
-    await waitFor(() => screen.getByRole('navigation', { name: /main navigation/i }))
-    fireEvent.click(screen.getByText('Cabinet'))
-    expect(screen.getByText('naturalist@example.com')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText('naturalist@example.com')).toBeInTheDocument()
+    })
   })
 
-  it('tab switching works across all three tabs when authenticated', async () => {
-    setupAuthenticated()
-    render(<App />)
+  it('tab navigation links are rendered as anchor elements', async () => {
+    setupUnauthenticated()
+    renderApp()
 
     await waitFor(() => screen.getByRole('navigation', { name: /main navigation/i }))
 
-    fireEvent.click(screen.getByText('Gazette'))
-    expect(screen.getByRole('heading', { name: /the explorer's gazette/i })).toBeInTheDocument()
-
-    fireEvent.click(screen.getByText('Cabinet'))
-    expect(screen.getByText(/cabinet of curiosities/i)).toBeInTheDocument()
-
-    fireEvent.click(screen.getByText('Catalogue'))
-    expect(screen.getByRole('heading', { name: /the species catalogue/i })).toBeInTheDocument()
+    // NavLink renders as <a>, not <button>
+    expect(screen.getByText('Catalogue').closest('a')).toHaveAttribute('href', '/')
+    expect(screen.getByText('Gazette').closest('a')).toHaveAttribute('href', '/gazette')
+    expect(screen.getByText('Cabinet').closest('a')).toHaveAttribute('href', '/cabinet')
   })
 
-  // NOTE: the overlayNeedsAuth branch (App.tsx:65) cannot be triggered via Phase 2 UI —
-  // there are no overlay-opening actions yet. Phase 3 adds the scanner CTA that sets
-  // nav.overlay = 'scanner'. Add a test here when that trigger lands:
-  //   it('unauthenticated user opening scanner overlay sees AuthPage', ...)
-
-  it('tab bar is visible when no overlay is open', async () => {
+  it('tab bar is visible on main pages', async () => {
     setupAuthenticated()
-    render(<App />)
+    renderApp({ initialPath: '/' })
 
     await waitFor(() => screen.getByRole('navigation', { name: /main navigation/i }))
     expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
+  })
+
+  it('Gazette route renders The Explorer\'s Gazette heading', async () => {
+    setupAuthenticated()
+    renderApp({ initialPath: '/gazette' })
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /the explorer's gazette/i })).toBeInTheDocument()
+    })
   })
 })
