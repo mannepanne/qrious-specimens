@@ -1,6 +1,10 @@
 -- Phase 6: Gazette — Explorer profiles, badges, activity feed, community RPCs
 --
--- Consolidates all reference community migrations into a single clean migration.
+-- Idempotent: safe to run against a database that already has these tables
+-- (e.g. imported from the original app-builder export in Phase 1).
+-- Uses IF NOT EXISTS for tables/indexes, DROP IF EXISTS before policies,
+-- and ON CONFLICT DO NOTHING for badge seed data.
+--
 -- Key design decisions:
 --   - activity_feed includes qr_hash from the start (no later ALTER needed)
 --   - check_and_award_badges uses FOREACH loop + r_ prefixed return columns (v3 final)
@@ -13,8 +17,7 @@
 -- Tables
 -- ============================================================
 
--- Explorer profiles: opt-in public display with chosen display name
-CREATE TABLE public.explorer_profiles (
+CREATE TABLE IF NOT EXISTS public.explorer_profiles (
   id          uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id     uuid        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
   display_name text       NOT NULL CHECK (char_length(display_name) BETWEEN 2 AND 30),
@@ -24,22 +27,26 @@ CREATE TABLE public.explorer_profiles (
 
 ALTER TABLE public.explorer_profiles ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Read public profiles" ON public.explorer_profiles;
 CREATE POLICY "Read public profiles" ON public.explorer_profiles
   FOR SELECT TO anon, authenticated USING (is_public = true);
 
+DROP POLICY IF EXISTS "Read own profile" ON public.explorer_profiles;
 CREATE POLICY "Read own profile" ON public.explorer_profiles
   FOR SELECT TO authenticated USING (user_id = (SELECT auth.uid()));
 
+DROP POLICY IF EXISTS "Insert own profile" ON public.explorer_profiles;
 CREATE POLICY "Insert own profile" ON public.explorer_profiles
   FOR INSERT TO authenticated WITH CHECK (user_id = (SELECT auth.uid()));
 
+DROP POLICY IF EXISTS "Update own profile" ON public.explorer_profiles;
 CREATE POLICY "Update own profile" ON public.explorer_profiles
   FOR UPDATE TO authenticated
   USING (user_id = (SELECT auth.uid()))
   WITH CHECK (user_id = (SELECT auth.uid()));
 
 -- Badge definitions: static reference table, seeded below
-CREATE TABLE public.badge_definitions (
+CREATE TABLE IF NOT EXISTS public.badge_definitions (
   slug        text    PRIMARY KEY,
   name        text    NOT NULL,
   description text    NOT NULL,
@@ -50,9 +57,11 @@ CREATE TABLE public.badge_definitions (
 
 ALTER TABLE public.badge_definitions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can read badge definitions" ON public.badge_definitions;
 CREATE POLICY "Anyone can read badge definitions" ON public.badge_definitions
   FOR SELECT TO anon, authenticated USING (true);
 
+-- Seed badge definitions — ON CONFLICT DO NOTHING so re-runs are safe
 INSERT INTO public.badge_definitions (slug, name, description, icon, tier, sort_order) VALUES
   ('first_steps',        'First Steps',                    'Discovered your first specimen',        '🌱', 'bronze', 1),
   ('budding_naturalist', 'Budding Naturalist',             'Discovered 5 specimens',                '🌿', 'bronze', 2),
@@ -63,10 +72,11 @@ INSERT INTO public.badge_definitions (slug, name, description, icon, tier, sort_
   ('connoisseur',        'Connoisseur of the Uncommon',    'Own 5 or more rare specimens',          '👑', 'gold',   7),
   ('pioneer',            'Pioneer',                        'First to discover a species',           '⭐', 'silver', 8),
   ('trailblazer',        'Trailblazer',                    'First to discover 5 different species', '🏔️', 'gold',  9),
-  ('dedicated',          'Dedicated Naturalist',           'Visited on 7 different days',           '📅', 'silver', 10);
+  ('dedicated',          'Dedicated Naturalist',           'Visited on 7 different days',           '📅', 'silver', 10)
+ON CONFLICT (slug) DO NOTHING;
 
 -- Explorer badges: earned badges per user with per-badge visibility toggle
-CREATE TABLE public.explorer_badges (
+CREATE TABLE IF NOT EXISTS public.explorer_badges (
   id          uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id     uuid        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   badge_slug  text        NOT NULL REFERENCES public.badge_definitions(slug),
@@ -77,7 +87,7 @@ CREATE TABLE public.explorer_badges (
 
 ALTER TABLE public.explorer_badges ENABLE ROW LEVEL SECURITY;
 
--- Public badges of public profiles are readable by all
+DROP POLICY IF EXISTS "Read public badges" ON public.explorer_badges;
 CREATE POLICY "Read public badges" ON public.explorer_badges
   FOR SELECT TO anon, authenticated
   USING (
@@ -88,6 +98,7 @@ CREATE POLICY "Read public badges" ON public.explorer_badges
     )
   );
 
+DROP POLICY IF EXISTS "Read own badges" ON public.explorer_badges;
 CREATE POLICY "Read own badges" ON public.explorer_badges
   FOR SELECT TO authenticated USING (user_id = (SELECT auth.uid()));
 
@@ -95,9 +106,11 @@ CREATE POLICY "Read own badges" ON public.explorer_badges
 -- function owner). Supabase evaluates RLS using auth.uid() from the JWT session
 -- claims, so this INSERT policy must allow the calling user's own rows even though
 -- the executing role is the function owner.
+DROP POLICY IF EXISTS "Insert own badges" ON public.explorer_badges;
 CREATE POLICY "Insert own badges" ON public.explorer_badges
   FOR INSERT TO authenticated WITH CHECK (user_id = (SELECT auth.uid()));
 
+DROP POLICY IF EXISTS "Update own badge visibility" ON public.explorer_badges;
 CREATE POLICY "Update own badge visibility" ON public.explorer_badges
   FOR UPDATE TO authenticated
   USING (user_id = (SELECT auth.uid()))
@@ -105,7 +118,7 @@ CREATE POLICY "Update own badge visibility" ON public.explorer_badges
 
 -- Activity feed: recent public events from public profiles
 -- qr_hash included from the start so we can link back to species images
-CREATE TABLE public.activity_feed (
+CREATE TABLE IF NOT EXISTS public.activity_feed (
   id           uuid        DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id      uuid        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   event_type   text        NOT NULL CHECK (event_type IN ('discovery', 'rare_discovery', 'first_discovery', 'badge_earned')),
@@ -116,9 +129,20 @@ CREATE TABLE public.activity_feed (
   created_at   timestamptz NOT NULL DEFAULT now()
 );
 
+-- Add qr_hash column if the table existed without it (from Phase 1 import)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'activity_feed' AND column_name = 'qr_hash'
+  ) THEN
+    ALTER TABLE public.activity_feed ADD COLUMN qr_hash text;
+  END IF;
+END $$;
+
 ALTER TABLE public.activity_feed ENABLE ROW LEVEL SECURITY;
 
--- Only show activity from users with public profiles
+DROP POLICY IF EXISTS "Read public activity" ON public.activity_feed;
 CREATE POLICY "Read public activity" ON public.activity_feed
   FOR SELECT TO anon, authenticated
   USING (
@@ -128,15 +152,17 @@ CREATE POLICY "Read public activity" ON public.activity_feed
     )
   );
 
+DROP POLICY IF EXISTS "Read own activity" ON public.activity_feed;
 CREATE POLICY "Read own activity" ON public.activity_feed
   FOR SELECT TO authenticated USING (user_id = (SELECT auth.uid()));
 
+DROP POLICY IF EXISTS "Insert own activity" ON public.activity_feed;
 CREATE POLICY "Insert own activity" ON public.activity_feed
   FOR INSERT TO authenticated WITH CHECK (user_id = (SELECT auth.uid()));
 
-CREATE INDEX idx_activity_feed_created_at ON public.activity_feed (created_at DESC);
-CREATE INDEX idx_activity_feed_user_id    ON public.activity_feed (user_id);
-CREATE INDEX idx_explorer_badges_user_id  ON public.explorer_badges (user_id);
+CREATE INDEX IF NOT EXISTS idx_activity_feed_created_at ON public.activity_feed (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_activity_feed_user_id    ON public.activity_feed (user_id);
+CREATE INDEX IF NOT EXISTS idx_explorer_badges_user_id  ON public.explorer_badges (user_id);
 
 -- ============================================================
 -- RPCs
