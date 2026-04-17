@@ -28,7 +28,7 @@ export function TabBar({ hidden = false }: TabBarProps) {
       className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background pb-[env(safe-area-inset-bottom)]"
       aria-label="Main navigation"
     >
-      <div className="flex">
+      <div className="flex justify-center">
         {TABS.map(({ to, label, Icon }) => (
           <NavLink
             key={to}
@@ -36,15 +36,15 @@ export function TabBar({ hidden = false }: TabBarProps) {
             end={to === '/'}  // exact match for root so /gazette doesn't also activate Catalogue
             className={({ isActive }) =>
               cn(
-                'flex flex-1 flex-col items-center gap-1 py-2 text-xs transition-colors',
+                'flex w-24 flex-col items-center gap-1 py-2 font-mono text-[10px] tracking-widest transition-colors',
                 isActive
-                  ? 'text-primary'
+                  ? 'text-foreground'
                   : 'text-muted-foreground hover:text-foreground'
               )
             }
           >
             <Icon className="h-5 w-5" aria-hidden="true" />
-            <span>{label}</span>
+            <span>{label.toUpperCase()}</span>
           </NavLink>
         ))}
       </div>
