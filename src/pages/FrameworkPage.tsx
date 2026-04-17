@@ -1,9 +1,9 @@
 // ABOUT: Temporary design prototype — demonstrates the shell layout before rolling out to all pages
 // ABOUT: Remove this page and its route once the layout is approved and applied globally
 
-import { useState } from 'react'
+import { useState, type ElementType } from 'react'
 import { Link } from 'react-router-dom'
-import { Search, SlidersHorizontal, ChevronRight, ChevronDown, Compass } from 'lucide-react'
+import { Search, SlidersHorizontal, ChevronRight, ChevronDown, Compass, LayoutGrid, Newspaper, BookOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -77,7 +77,8 @@ function PageHeader({ view }: { view: ProtoView }) {
   if (view === 'auth') return null
 
   return (
-    <header className="border-b border-border px-6 py-5 md:px-8">
+    // pl-10 on md+ matches the sidebar's left padding so title aligns with sidebar content below it
+    <header className="border-b border-border px-6 py-5 md:pl-10 md:pr-8">
       {view === 'catalogue' && (
         <>
           <h1 className="font-serif text-xl font-semibold">Catalogue of Known Species</h1>
@@ -108,12 +109,13 @@ function LeftSidebar({ view }: { view: ProtoView }) {
 
   return (
     // The sidebar creates the "journal margin" — a narrow left panel with a right border.
+    // The pl-10 left padding is the decorative breathing room between the browser edge and the text.
     // On the catalogue it contains the taxonomic index; on other pages it is decorative whitespace.
     // Hidden on mobile; visible from md breakpoint upward.
-    // The slightly warmer background tint gives it subtle visual distinction from the content area.
-    <aside className="hidden md:flex w-56 lg:w-64 shrink-0 flex-col border-r border-border bg-[hsl(36,25%,92%)]">
+    <aside className="hidden md:flex w-64 lg:w-72 shrink-0 flex-col border-r border-border bg-[hsl(36,25%,92%)]">
       {view === 'catalogue' && (
-        <nav className="flex-1 overflow-y-auto p-4 pt-5" aria-label="Taxonomic index">
+        // pl-10 is the left margin — the breathing room between browser edge and sidebar text
+        <nav className="flex-1 overflow-y-auto pl-10 pr-4 pt-5 pb-4" aria-label="Taxonomic index">
           <p className="mb-3 font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
             Taxonomic Index
           </p>
@@ -315,10 +317,10 @@ function ProtoFooter() {
 
 // ── Tab bar — switches prototype views ───────────────────────────────────────
 
-const PROTO_TABS: { id: ProtoView; label: string }[] = [
-  { id: 'catalogue', label: 'CATALOGUE' },
-  { id: 'gazette',   label: 'GAZETTE'   },
-  { id: 'auth',      label: 'SIGN IN'   },
+const PROTO_TABS: { id: ProtoView; label: string; Icon: ElementType }[] = [
+  { id: 'catalogue', label: 'CATALOGUE', Icon: LayoutGrid },
+  { id: 'gazette',   label: 'GAZETTE',   Icon: Newspaper  },
+  { id: 'auth',      label: 'SIGN IN',   Icon: BookOpen   },
 ]
 
 function ProtoTabBar({ active, onChange }: { active: ProtoView; onChange: (v: ProtoView) => void }) {
@@ -328,15 +330,16 @@ function ProtoTabBar({ active, onChange }: { active: ProtoView; onChange: (v: Pr
       aria-label="Prototype view switcher"
     >
       <div className="flex justify-center">
-        {PROTO_TABS.map(({ id, label }) => (
+        {PROTO_TABS.map(({ id, label, Icon }) => (
           <button
             key={id}
             onClick={() => onChange(id)}
             className={cn(
-              'w-28 py-2 font-mono text-[10px] tracking-widest transition-colors',
+              'flex w-28 flex-col items-center gap-1 py-2 font-mono text-[10px] tracking-widest transition-colors',
               active === id ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
             )}
           >
+            <Icon className="h-5 w-5" aria-hidden="true" />
             {label}
           </button>
         ))}
