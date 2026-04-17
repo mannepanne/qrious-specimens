@@ -301,9 +301,9 @@ export function AppRoutes() {
         <Route path="/cabinet"          element={<CabinetPage />} />
         <Route path="/specimen/:id"     element={<SpecimenPage />} />
         <Route path="/enter"            element={<AuthPage />} />
-        {/* Temporary design prototype — remove once layout is approved */}
-        <Route path="/framework"        element={<FrameworkPage />} />
       </Route>
+      {/* Temporary design prototype — standalone, outside AppShell. Remove once layout is approved. */}
+      <Route path="/framework"          element={<FrameworkPage />} />
     </Routes>
   )
 }
