@@ -131,9 +131,9 @@ describe('App', () => {
     renderApp()
 
     await waitFor(() => screen.getByRole('navigation', { name: /main navigation/i }))
-    expect(screen.getByText('Catalogue')).toBeInTheDocument()
-    expect(screen.getByText('Gazette')).toBeInTheDocument()
-    expect(screen.getByText('Cabinet')).toBeInTheDocument()
+    expect(screen.getByText('CATALOGUE')).toBeInTheDocument()
+    expect(screen.getByText('GAZETTE')).toBeInTheDocument()
+    expect(screen.getByText('CABINET')).toBeInTheDocument()
   })
 
   it('defaults to Catalogue at root path', async () => {
@@ -189,9 +189,9 @@ describe('App', () => {
     await waitFor(() => screen.getByRole('navigation', { name: /main navigation/i }))
 
     // NavLink renders as <a>, not <button>
-    expect(screen.getByText('Catalogue').closest('a')).toHaveAttribute('href', '/')
-    expect(screen.getByText('Gazette').closest('a')).toHaveAttribute('href', '/gazette')
-    expect(screen.getByText('Cabinet').closest('a')).toHaveAttribute('href', '/cabinet')
+    expect(screen.getByText('CATALOGUE').closest('a')).toHaveAttribute('href', '/')
+    expect(screen.getByText('GAZETTE').closest('a')).toHaveAttribute('href', '/gazette')
+    expect(screen.getByText('CABINET').closest('a')).toHaveAttribute('href', '/cabinet')
   })
 
   it('tab bar is visible on main pages', async () => {
