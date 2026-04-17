@@ -10,6 +10,7 @@ import { generateFieldNotes } from './claude'
 import { uploadToR2 } from './r2'
 
 export interface Env {
+  ASSETS: Fetcher
   IMAGES: R2Bucket
   SUPABASE_URL: string
   SUPABASE_SERVICE_ROLE_KEY: string
