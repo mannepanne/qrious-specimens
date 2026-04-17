@@ -81,7 +81,7 @@ function PageHeader({ view }: { view: ProtoView }) {
       {view === 'catalogue' && (
         <>
           <h1 className="font-serif text-lg">Catalogue of Known Species</h1>
-          <p className="mt-0.5 font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
+          <p className="mt-0.5 font-mono text-[9px] tracking-widest text-muted-foreground uppercase">
             21 Species Documented
           </p>
         </>
