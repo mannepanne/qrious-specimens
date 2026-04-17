@@ -371,7 +371,7 @@ export function FrameworkPage() {
         {/* Narrow decorative strip — full height, sits at the browser left edge.
             Hidden on mobile. Slightly darker than the sidebar to the right of it. */}
         {view !== 'auth' && (
-          <div className="hidden md:block w-5 shrink-0 border-r border-border bg-[hsl(36,20%,88%)]" />
+          <div className="hidden md:block w-10 shrink-0 border-r border-border bg-[hsl(36,20%,88%)]" />
         )}
 
         {/* Right column — stacks header, body row, footer vertically */}
