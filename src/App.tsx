@@ -31,6 +31,7 @@ import { GazettePage } from '@/pages/GazettePage'
 import { CabinetPage } from '@/pages/CabinetPage'
 import { SpecimenPage } from '@/pages/SpecimenPage'
 import { SpeciesPage } from '@/pages/SpeciesPage'
+import { FrameworkPage } from '@/pages/FrameworkPage'
 import QrScanner from '@/components/QrScanner/QrScanner'
 import ExcavationAnimation from '@/components/ExcavationAnimation/ExcavationAnimation'
 import type { ExcavationWorkerResult } from '@/components/ExcavationAnimation/ExcavationAnimation'
@@ -300,6 +301,8 @@ export function AppRoutes() {
         <Route path="/cabinet"          element={<CabinetPage />} />
         <Route path="/specimen/:id"     element={<SpecimenPage />} />
         <Route path="/enter"            element={<AuthPage />} />
+        {/* Temporary design prototype — remove once layout is approved */}
+        <Route path="/framework"        element={<FrameworkPage />} />
       </Route>
     </Routes>
   )
