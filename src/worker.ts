@@ -11,8 +11,9 @@ export default {
       return handleGenerateCreature(request, env)
     }
 
-    // All other paths are handled by Cloudflare's [assets] binding (SPA fallback).
-    // This handler is only reached for paths that bypass the asset store.
-    return new Response('Not found', { status: 404 })
+    // All other paths — static assets and SPA routes — are served by the assets binding.
+    // The binding's not_found_handling = "single-page-application" ensures unknown paths
+    // receive index.html so React Router can handle client-side navigation.
+    return env.ASSETS.fetch(request)
   },
 }
