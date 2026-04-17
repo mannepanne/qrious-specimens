@@ -299,7 +299,7 @@ function AuthContent() {
 
 function ProtoFooter() {
   return (
-    <footer className="border-t border-border pb-16 pt-6 text-center font-mono text-[11px] tracking-widest text-muted-foreground">
+    <footer className="border-t border-border pt-6 pb-6 text-center font-mono text-[11px] tracking-widest text-muted-foreground">
       <p className="flex items-center justify-center gap-3">
         <Link to="/about" className="hover:text-foreground transition-colors">ABOUT</Link>
         <span>·</span>
@@ -322,7 +322,7 @@ const PROTO_TABS: { id: ProtoView; label: string; Icon: ElementType }[] = [
 function ProtoTabBar({ active, onChange }: { active: ProtoView; onChange: (v: ProtoView) => void }) {
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background pb-[env(safe-area-inset-bottom)]"
+      className="sticky bottom-0 z-40 border-t border-border bg-background pb-[env(safe-area-inset-bottom)]"
       aria-label="Prototype view switcher"
     >
       <div className="flex justify-center">
@@ -393,11 +393,11 @@ export function FrameworkPage() {
 
           {/* Footer */}
           <ProtoFooter />
+
+          {/* Tab bar — sticky to bottom of the right column so the strip extends alongside it */}
+          <ProtoTabBar active={view} onChange={setView} />
         </div>
       </div>
-
-      {/* Tab bar — fixed, full viewport width */}
-      <ProtoTabBar active={view} onChange={setView} />
     </div>
   )
 }
