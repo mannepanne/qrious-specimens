@@ -77,8 +77,8 @@ function PageHeader({ view }: { view: ProtoView }) {
   if (view === 'auth') return null
 
   return (
-    // pl-10 on md+ matches the sidebar's left padding so title aligns with sidebar content below it
-    <header className="border-b border-border px-6 py-5 md:pl-10 md:pr-8">
+    // On md+: left padding = narrow strip width (w-5 = 20px) + sidebar padding (16px) ≈ pl-9
+    <header className="border-b border-border px-6 py-5 md:pl-9 md:pr-8">
       {view === 'catalogue' && (
         <>
           <h1 className="font-serif text-xl font-semibold">Catalogue of Known Species</h1>
@@ -108,14 +108,15 @@ function LeftSidebar({ view }: { view: ProtoView }) {
   if (view === 'auth') return null
 
   return (
-    // The sidebar creates the "journal margin" — a narrow left panel with a right border.
-    // The pl-10 left padding is the decorative breathing room between the browser edge and the text.
-    // On the catalogue it contains the taxonomic index; on other pages it is decorative whitespace.
-    // Hidden on mobile; visible from md breakpoint upward.
-    <aside className="hidden md:flex w-64 lg:w-72 shrink-0 flex-col border-r border-border bg-[hsl(36,25%,92%)]">
+    <>
+      {/* Narrow decorative left margin strip — sits at the browser edge, full page height.
+          Slightly darker than the sidebar background. Separated from sidebar by a border. */}
+      <div className="hidden md:block w-5 shrink-0 border-r border-border bg-[hsl(36,20%,88%)]" />
+
+      {/* Sidebar panel — taxonomic index on catalogue, decorative whitespace on other pages */}
+      <aside className="hidden md:flex w-56 lg:w-64 shrink-0 flex-col border-r border-border bg-[hsl(36,25%,92%)]">
       {view === 'catalogue' && (
-        // pl-10 is the left margin — the breathing room between browser edge and sidebar text
-        <nav className="flex-1 overflow-y-auto pl-10 pr-4 pt-5 pb-4" aria-label="Taxonomic index">
+        <nav className="flex-1 overflow-y-auto px-4 pt-5 pb-4" aria-label="Taxonomic index">
           <p className="mb-3 font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
             Taxonomic Index
           </p>
@@ -175,7 +176,8 @@ function LeftSidebar({ view }: { view: ProtoView }) {
           </ul>
         </nav>
       )}
-    </aside>
+      </aside>
+    </>
   )
 }
 
