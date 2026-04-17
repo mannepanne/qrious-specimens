@@ -77,8 +77,7 @@ function PageHeader({ view }: { view: ProtoView }) {
   if (view === 'auth') return null
 
   return (
-    // On md+: left padding = narrow strip width (w-5 = 20px) + sidebar padding (16px) ≈ pl-9
-    <header className="border-b border-border px-6 py-5 md:pl-9 md:pr-8">
+    <header className="border-b border-border px-6 py-5">
       {view === 'catalogue' && (
         <>
           <h1 className="font-serif text-xl font-semibold">Catalogue of Known Species</h1>
@@ -108,13 +107,9 @@ function LeftSidebar({ view }: { view: ProtoView }) {
   if (view === 'auth') return null
 
   return (
-    <>
-      {/* Narrow decorative left margin strip — sits at the browser edge, full page height.
-          Slightly darker than the sidebar background. Separated from sidebar by a border. */}
-      <div className="hidden md:block w-5 shrink-0 border-r border-border bg-[hsl(36,20%,88%)]" />
-
-      {/* Sidebar panel — taxonomic index on catalogue, decorative whitespace on other pages */}
-      <aside className="hidden md:flex w-56 lg:w-64 shrink-0 flex-col border-r border-border bg-[hsl(36,25%,92%)]">
+    // Sidebar panel — taxonomic index on catalogue, decorative whitespace on other pages.
+    // The left strip is rendered in the outer layout (FrameworkPage) so it spans full page height.
+    <aside className="hidden md:flex w-56 lg:w-64 shrink-0 flex-col border-r border-border bg-[hsl(36,25%,92%)]">
       {view === 'catalogue' && (
         <nav className="flex-1 overflow-y-auto px-4 pt-5 pb-4" aria-label="Taxonomic index">
           <p className="mb-3 font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
@@ -176,8 +171,7 @@ function LeftSidebar({ view }: { view: ProtoView }) {
           </ul>
         </nav>
       )}
-      </aside>
-    </>
+    </aside>
   )
 }
 
@@ -371,24 +365,38 @@ export function FrameworkPage() {
     <div className="flex min-h-screen flex-col">
       <PrototypeBanner view={view} />
 
-      {/* Full-width page header — spans sidebar + content columns */}
-      <PageHeader view={view} />
-
-      {/* Body: sidebar margin + main content */}
+      {/* Outer row: strip (full height) + right column (header / body / footer stacked) */}
       <div className="flex flex-1">
-        <LeftSidebar view={view} />
 
-        <main className="flex-1 min-w-0 p-6">
-          {view === 'catalogue' && <CatalogueContent />}
-          {view === 'gazette'   && <GazetteContent />}
-          {view === 'auth'      && <AuthContent />}
-        </main>
+        {/* Narrow decorative strip — full height, sits at the browser left edge.
+            Hidden on mobile. Slightly darker than the sidebar to the right of it. */}
+        {view !== 'auth' && (
+          <div className="hidden md:block w-5 shrink-0 border-r border-border bg-[hsl(36,20%,88%)]" />
+        )}
+
+        {/* Right column — stacks header, body row, footer vertically */}
+        <div className="flex flex-1 flex-col min-w-0">
+
+          {/* Page header — full width of the right column */}
+          <PageHeader view={view} />
+
+          {/* Body row: sidebar + main content */}
+          <div className="flex flex-1">
+            <LeftSidebar view={view} />
+
+            <main className="flex-1 min-w-0 p-6">
+              {view === 'catalogue' && <CatalogueContent />}
+              {view === 'gazette'   && <GazetteContent />}
+              {view === 'auth'      && <AuthContent />}
+            </main>
+          </div>
+
+          {/* Footer */}
+          <ProtoFooter />
+        </div>
       </div>
 
-      {/* Single footer, full width */}
-      <ProtoFooter />
-
-      {/* Tab bar for switching prototype views */}
+      {/* Tab bar — fixed, full viewport width */}
       <ProtoTabBar active={view} onChange={setView} />
     </div>
   )
