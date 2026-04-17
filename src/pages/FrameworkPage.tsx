@@ -77,11 +77,11 @@ function PageHeader({ view }: { view: ProtoView }) {
   if (view === 'auth') return null
 
   return (
-    <header className="border-b border-border px-6 py-5">
+    <header className="border-b border-border px-5 py-3">
       {view === 'catalogue' && (
         <>
-          <h1 className="font-serif text-xl font-semibold">Catalogue of Known Species</h1>
-          <p className="mt-1 font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
+          <h1 className="font-serif text-lg">Catalogue of Known Species</h1>
+          <p className="mt-0.5 font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
             21 Species Documented
           </p>
         </>
@@ -91,7 +91,7 @@ function PageHeader({ view }: { view: ProtoView }) {
           <p className="font-mono text-[10px] tracking-widest text-muted-foreground uppercase">
             Field Dispatches
           </p>
-          <h1 className="mt-1 font-serif text-2xl font-semibold">The Explorer's Gazette</h1>
+          <h1 className="mt-0.5 font-serif text-xl">The Explorer's Gazette</h1>
         </>
       )}
     </header>
