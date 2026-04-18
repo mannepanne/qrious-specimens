@@ -1,5 +1,5 @@
 // ABOUT: Catalogue grid card for a discovered species
-// ABOUT: Shows AI-generated 256px thumbnail if available; falls back to Victorian sketch renderer
+// ABOUT: Fixed-width card with centred illustration and vertically-stacked taxonomy labels
 
 import CreatureRenderer from '@/components/CreatureRenderer/CreatureRenderer'
 import { getRarityFromCount, getRarityLabel, getRarityColor } from '@/lib/rarity'
@@ -31,13 +31,13 @@ export default function SpeciesCard({ entry, onClick }: Props) {
           <img
             src={entry.image_url_256}
             alt={`${entry.genus} ${entry.species}`}
-            width={120}
-            height={120}
+            width={144}
+            height={144}
             loading="lazy"
-            className="w-[120px] h-[120px] object-contain"
+            className="w-36 h-36 object-contain"
           />
         ) : sketchDna ? (
-          <CreatureRenderer dna={sketchDna} size={120} />
+          <CreatureRenderer dna={sketchDna} size={144} />
         ) : null}
       </div>
 
@@ -46,13 +46,15 @@ export default function SpeciesCard({ entry, onClick }: Props) {
         {entry.genus} {entry.species}
       </p>
 
-      {/* Family + rarity */}
-      <div className="flex items-center justify-between mt-2">
-        <span className="font-mono text-[9px] text-muted-foreground tracking-wider truncate">
-          {entry.family}
-        </span>
+      {/* Family */}
+      <p className="font-mono text-[10px] text-muted-foreground tracking-wider text-center mt-1 truncate">
+        {entry.family}
+      </p>
+
+      {/* Rarity badge */}
+      <div className="flex justify-center mt-1.5">
         <span
-          className="font-mono text-[8px] tracking-widest px-1.5 py-0.5 rounded-sm shrink-0 ml-1"
+          className="font-mono text-[9px] tracking-widest px-1.5 py-0.5 rounded-sm"
           style={{ color: rarityColor, borderColor: rarityColor, border: '1px solid' }}
         >
           {getRarityLabel(rarity)}

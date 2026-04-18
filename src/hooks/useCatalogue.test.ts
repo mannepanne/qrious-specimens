@@ -145,11 +145,11 @@ describe('useCatalogueTaxonomy', () => {
     vi.clearAllMocks()
   })
 
-  it('returns a map of order → species count', async () => {
+  it('returns a map of order → { count, families }', async () => {
     const entries = [
-      makeEntry({ order: 'Arachnoida', total_count: 3 }),
-      makeEntry({ order: 'Arachnoida', total_count: 3 }),
-      makeEntry({ order: 'Molluscia', total_count: 3 }),
+      makeEntry({ order: 'Arachnoida', family: 'Plexidae', total_count: 3 }),
+      makeEntry({ order: 'Arachnoida', family: 'Vexidae', total_count: 3 }),
+      makeEntry({ order: 'Molluscia',  family: 'Cristidae', total_count: 3 }),
     ]
     mockRpc.mockResolvedValue({ data: entries, error: null })
 
@@ -157,8 +157,10 @@ describe('useCatalogueTaxonomy', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
     const taxonomy = result.current.data!
-    expect(taxonomy.get('Arachnoida')).toBe(2)
-    expect(taxonomy.get('Molluscia')).toBe(1)
+    expect(taxonomy.get('Arachnoida')?.count).toBe(2)
+    expect(taxonomy.get('Arachnoida')?.families.get('Plexidae')).toBe(1)
+    expect(taxonomy.get('Arachnoida')?.families.get('Vexidae')).toBe(1)
+    expect(taxonomy.get('Molluscia')?.count).toBe(1)
   })
 
   it('returns alphabetically sorted orders', async () => {

@@ -3,8 +3,10 @@
 
 import { useState, useEffect, useRef, useCallback, type ChangeEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { Search } from 'lucide-react'
 import { useCatalogue, useCatalogueTaxonomy } from '@/hooks/useCatalogue'
 import type { CatalogueFilters, CatalogueEntry } from '@/hooks/useCatalogue'
+import { useAuth } from '@/hooks/useAuth'
 import SpeciesCard from '@/components/SpeciesCard/SpeciesCard'
 import TaxonomicSidebar from '@/components/TaxonomicSidebar/TaxonomicSidebar'
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver'
@@ -44,13 +46,15 @@ function FilterChip({
 
 export function CataloguePage() {
   const navigate = useNavigate()
+  const { authState } = useAuth()
+  const isAuthenticated = authState.status === 'authenticated'
+
   // Order comes from the URL path (/catalogue/:order) — other filters remain local state
   const { order: orderParam } = useParams<{ order?: string }>()
-  const [filters, setFilters] = useState<CatalogueFilters>({
-    order: orderParam,
-  })
+  const [filters, setFilters] = useState<CatalogueFilters>({ order: orderParam })
   const [searchInput, setSearchInput] = useState('')
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
+  const [showFilters, setShowFilters] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
 
   // Keep filters.order in sync with the URL param whenever navigation changes it
@@ -62,7 +66,16 @@ export function CataloguePage() {
   const taxonomy = useCatalogueTaxonomy()
 
   const allEntries: CatalogueEntry[] = catalogue.data?.pages.flatMap(p => p) ?? []
-  const totalCount = catalogue.data?.pages[0]?.[0]?.total_count ?? 0
+
+  // Infinite scroll sentinel
+  const sentinelRef = useIntersectionObserver(
+    () => {
+      if (catalogue.hasNextPage && !catalogue.isFetchingNextPage) {
+        catalogue.fetchNextPage()
+      }
+    },
+    { enabled: catalogue.hasNextPage ?? false },
+  )
 
   // 300ms search debounce
   const handleSearchChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
@@ -76,16 +89,6 @@ export function CataloguePage() {
 
   useEffect(() => () => clearTimeout(debounceRef.current), [])
 
-  // Infinite scroll sentinel
-  const sentinelRef = useIntersectionObserver(
-    () => {
-      if (catalogue.hasNextPage && !catalogue.isFetchingNextPage) {
-        catalogue.fetchNextPage()
-      }
-    },
-    { enabled: catalogue.hasNextPage ?? false },
-  )
-
   function handleSpeciesClick(entry: CatalogueEntry) {
     // Pass the entry in navigation state so SpeciesPage can render immediately
     navigate(`/species/${entry.qr_hash}`, { state: { entry } })
@@ -97,29 +100,29 @@ export function CataloguePage() {
     if (orderParam) navigate('/catalogue')
   }
 
-  const hasActiveFilters = Object.values(filters).some(Boolean)
+  const taxonomyData = taxonomy.data ?? new Map()
+  // Total across all orders — used in the header; does not change when filters are applied
+  const taxonomyTotal = [...taxonomyData.values()].reduce((s, v) => s + v.count, 0)
 
-  const taxonomyData = taxonomy.data ?? new Map<string, number>()
-  const taxonomyTotal = [...taxonomyData.values()].reduce((s, c) => s + c, 0)
+  const nonOrderFilterCount = [
+    filters.rarity, filters.habitat, filters.symmetry,
+    filters.bodyShape, filters.limbStyle, filters.patternType, filters.search,
+  ].filter(Boolean).length
+  const hasActiveFilters = !!(orderParam || nonOrderFilterCount > 0)
 
   return (
     <main className="flex flex-col h-full">
       {/* Page title */}
       <div className="px-4 pt-4 pb-3 shrink-0">
-        <h1 className="font-serif text-2xl">The Species Catalogue</h1>
+        <h1 className="font-serif text-2xl">Catalogue of Known Species</h1>
         <p className="font-mono text-xs text-muted-foreground mt-0.5">
-          {catalogue.isLoading ? 'Loading…' : `${totalCount} species catalogued`}
+          {taxonomy.isLoading ? 'Loading…' : `${taxonomyTotal} species documented`}
         </p>
       </div>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Taxonomic sidebar — desktop always visible, mobile behind toggle */}
-        <aside
-          className={[
-            'shrink-0 border-r border-border overflow-y-auto transition-all duration-200',
-            'hidden md:block w-48 px-3 py-2',
-          ].join(' ')}
-        >
+        <aside className="hidden md:block shrink-0 border-r border-border overflow-y-auto w-48 px-3 py-2">
           <TaxonomicSidebar
             taxonomy={taxonomyData}
             selectedOrder={orderParam ?? null}
@@ -133,7 +136,7 @@ export function CataloguePage() {
 
         {/* Main column */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Search + filter bar */}
+          {/* Search + filter controls */}
           <div className="px-4 pb-3 pt-1 space-y-2 shrink-0">
             <div className="flex gap-2">
               {/* Mobile taxonomy toggle */}
@@ -144,112 +147,119 @@ export function CataloguePage() {
               >
                 Orders
               </button>
-              {/* Search input */}
-              <input
-                type="search"
-                value={searchInput}
-                onChange={handleSearchChange}
-                placeholder="Search species, orders, families…"
-                className="flex-1 px-3 py-2 border border-border rounded font-mono text-xs bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-              />
+
+              {/* Search input with icon */}
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                <input
+                  type="search"
+                  value={searchInput}
+                  onChange={handleSearchChange}
+                  placeholder="Search by name, order, or family…"
+                  className="w-full pl-8 pr-3 py-2 border border-border rounded font-mono text-xs bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                />
+              </div>
+
+              {/* Filter toggle */}
+              <button
+                onClick={() => setShowFilters(f => !f)}
+                className={[
+                  'flex items-center gap-1.5 px-3 py-2 border border-border rounded font-mono text-[11px] tracking-widest transition-colors shrink-0',
+                  showFilters ? 'bg-accent' : 'hover:bg-accent',
+                ].join(' ')}
+                aria-expanded={showFilters}
+              >
+                <span>FILTERS</span>
+                {nonOrderFilterCount > 0 && (
+                  <span className="bg-foreground text-background rounded-full w-4 h-4 text-[10px] flex items-center justify-center">
+                    {nonOrderFilterCount}
+                  </span>
+                )}
+                <span className="text-[10px] opacity-60">{showFilters ? '▲' : '▼'}</span>
+              </button>
             </div>
 
-            {/* Trait filter dropdowns */}
-            <div className="flex flex-wrap gap-2">
-              {/* Rarity filter */}
-              <select
-                value={filters.rarity ?? ''}
-                onChange={e => setFilters(prev => ({ ...prev, rarity: (e.target.value as Rarity) || undefined }))}
-                className="px-2 py-1 border border-border rounded font-mono text-[11px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-              >
-                <option value="">Rarity</option>
-                {RARITY_OPTIONS.map(r => (
-                  <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
-                ))}
-              </select>
-
-              {/* Habitat filter */}
-              <select
-                value={filters.habitat ?? ''}
-                onChange={e => setFilters(prev => ({ ...prev, habitat: e.target.value || undefined }))}
-                className="px-2 py-1 border border-border rounded font-mono text-[11px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-              >
-                <option value="">Habitat</option>
-                {HABITAT_OPTIONS.map(h => (
-                  <option key={h} value={h}>{h}</option>
-                ))}
-              </select>
-
-              {/* Symmetry filter */}
-              <select
-                value={filters.symmetry ?? ''}
-                onChange={e => setFilters(prev => ({ ...prev, symmetry: e.target.value || undefined }))}
-                className="px-2 py-1 border border-border rounded font-mono text-[11px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-              >
-                <option value="">Symmetry</option>
-                {SYMMETRY_OPTIONS.map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-
-              {/* Body shape filter */}
-              <select
-                value={filters.bodyShape ?? ''}
-                onChange={e => setFilters(prev => ({ ...prev, bodyShape: e.target.value || undefined }))}
-                className="px-2 py-1 border border-border rounded font-mono text-[11px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-              >
-                <option value="">Body form</option>
-                {BODY_SHAPE_OPTIONS.map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-
-              {/* Limb style filter */}
-              <select
-                value={filters.limbStyle ?? ''}
-                onChange={e => setFilters(prev => ({ ...prev, limbStyle: e.target.value || undefined }))}
-                className="px-2 py-1 border border-border rounded font-mono text-[11px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-              >
-                <option value="">Appendages</option>
-                {LIMB_STYLE_OPTIONS.map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-
-              {/* Pattern type filter */}
-              <select
-                value={filters.patternType ?? ''}
-                onChange={e => setFilters(prev => ({ ...prev, patternType: e.target.value || undefined }))}
-                className="px-2 py-1 border border-border rounded font-mono text-[11px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-              >
-                <option value="">Pattern</option>
-                {PATTERN_TYPE_OPTIONS.map(s => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
-
-              {/* Clear filters */}
-              {hasActiveFilters && (
-                <button
-                  onClick={clearAllFilters}
-                  className="px-2 py-1 border border-border rounded font-mono text-[11px] text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            {/* Collapsible trait filter dropdowns */}
+            {showFilters && (
+              <div className="flex flex-wrap gap-2">
+                <select
+                  value={filters.rarity ?? ''}
+                  onChange={e => setFilters(prev => ({ ...prev, rarity: (e.target.value as Rarity) || undefined }))}
+                  className="px-2 py-1 border border-border rounded font-mono text-[11px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
                 >
-                  Clear filters
-                </button>
-              )}
-            </div>
+                  <option value="">Rarity</option>
+                  {RARITY_OPTIONS.map(r => (
+                    <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
+                  ))}
+                </select>
 
-            {/* Active filter chips */}
+                <select
+                  value={filters.habitat ?? ''}
+                  onChange={e => setFilters(prev => ({ ...prev, habitat: e.target.value || undefined }))}
+                  className="px-2 py-1 border border-border rounded font-mono text-[11px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="">Habitat</option>
+                  {HABITAT_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
+                </select>
+
+                <select
+                  value={filters.symmetry ?? ''}
+                  onChange={e => setFilters(prev => ({ ...prev, symmetry: e.target.value || undefined }))}
+                  className="px-2 py-1 border border-border rounded font-mono text-[11px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="">Symmetry</option>
+                  {SYMMETRY_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+
+                <select
+                  value={filters.bodyShape ?? ''}
+                  onChange={e => setFilters(prev => ({ ...prev, bodyShape: e.target.value || undefined }))}
+                  className="px-2 py-1 border border-border rounded font-mono text-[11px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="">Body form</option>
+                  {BODY_SHAPE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+
+                <select
+                  value={filters.limbStyle ?? ''}
+                  onChange={e => setFilters(prev => ({ ...prev, limbStyle: e.target.value || undefined }))}
+                  className="px-2 py-1 border border-border rounded font-mono text-[11px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="">Appendages</option>
+                  {LIMB_STYLE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+
+                <select
+                  value={filters.patternType ?? ''}
+                  onChange={e => setFilters(prev => ({ ...prev, patternType: e.target.value || undefined }))}
+                  className="px-2 py-1 border border-border rounded font-mono text-[11px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="">Pattern</option>
+                  {PATTERN_TYPE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+
+                {hasActiveFilters && (
+                  <button
+                    onClick={clearAllFilters}
+                    className="px-2 py-1 border border-border rounded font-mono text-[11px] text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Active filter chips — visible whether filters bar is open or closed */}
             {hasActiveFilters && (
               <div className="flex flex-wrap gap-1.5">
-                {orderParam         && <FilterChip label="Order"     value={orderParam}          onRemove={() => navigate('/catalogue')} />}
-                {filters.habitat    && <FilterChip label="Habitat"   value={filters.habitat}    onRemove={() => setFilters(p => ({ ...p, habitat: undefined }))} />}
-                {filters.symmetry   && <FilterChip label="Symmetry"  value={filters.symmetry}   onRemove={() => setFilters(p => ({ ...p, symmetry: undefined }))} />}
-                {filters.bodyShape  && <FilterChip label="Body form" value={filters.bodyShape}   onRemove={() => setFilters(p => ({ ...p, bodyShape: undefined }))} />}
-                {filters.limbStyle  && <FilterChip label="Appendages" value={filters.limbStyle}  onRemove={() => setFilters(p => ({ ...p, limbStyle: undefined }))} />}
-                {filters.patternType && <FilterChip label="Pattern"  value={filters.patternType} onRemove={() => setFilters(p => ({ ...p, patternType: undefined }))} />}
-                {filters.rarity     && <FilterChip label="Rarity"    value={filters.rarity}     onRemove={() => setFilters(p => ({ ...p, rarity: undefined }))} />}
-                {filters.search     && <FilterChip label="Search"    value={filters.search}     onRemove={() => { setSearchInput(''); setFilters(p => ({ ...p, search: undefined })) }} />}
+                {orderParam          && <FilterChip label="Order"      value={orderParam}           onRemove={() => navigate('/catalogue')} />}
+                {filters.habitat     && <FilterChip label="Habitat"    value={filters.habitat}      onRemove={() => setFilters(p => ({ ...p, habitat: undefined }))} />}
+                {filters.symmetry    && <FilterChip label="Symmetry"   value={filters.symmetry}     onRemove={() => setFilters(p => ({ ...p, symmetry: undefined }))} />}
+                {filters.bodyShape   && <FilterChip label="Body form"  value={filters.bodyShape}    onRemove={() => setFilters(p => ({ ...p, bodyShape: undefined }))} />}
+                {filters.limbStyle   && <FilterChip label="Appendages" value={filters.limbStyle}    onRemove={() => setFilters(p => ({ ...p, limbStyle: undefined }))} />}
+                {filters.patternType && <FilterChip label="Pattern"    value={filters.patternType}  onRemove={() => setFilters(p => ({ ...p, patternType: undefined }))} />}
+                {filters.rarity      && <FilterChip label="Rarity"     value={filters.rarity}       onRemove={() => setFilters(p => ({ ...p, rarity: undefined }))} />}
+                {filters.search      && <FilterChip label="Search"     value={filters.search}       onRemove={() => { setSearchInput(''); setFilters(p => ({ ...p, search: undefined })) }} />}
               </div>
             )}
           </div>
@@ -270,12 +280,28 @@ export function CataloguePage() {
             </div>
           )}
 
-          {/* Species grid */}
+          {/* Species grid — centred, fixed card widths, max 4 columns */}
           <div className="flex-1 overflow-y-auto px-4 pb-4">
+            {/* Sign-in CTA for visitors */}
+            {!isAuthenticated && (
+              <div className="mx-auto max-w-[736px] mb-4 mt-2">
+                <div className="border border-border rounded p-3 text-center font-mono text-[11px] text-muted-foreground bg-accent/30">
+                  Browse freely —{' '}
+                  <button
+                    onClick={() => navigate('/enter')}
+                    className="underline hover:text-foreground transition-colors"
+                  >
+                    sign in
+                  </button>
+                  {' '}to scan QR codes, collect specimens, and read complete field notes.
+                </div>
+              </div>
+            )}
+
             {catalogue.isLoading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 pt-2">
+              <div className="grid grid-cols-[repeat(2,160px)] sm:grid-cols-[repeat(3,160px)] lg:grid-cols-[repeat(4,160px)] gap-4 justify-center pt-2">
                 {Array.from({ length: 12 }).map((_, i) => (
-                  <div key={i} className="h-44 rounded-lg border border-border animate-pulse bg-accent/20" />
+                  <div key={i} className="w-[160px] h-52 rounded-lg border border-border animate-pulse bg-accent/20" />
                 ))}
               </div>
             ) : allEntries.length === 0 ? (
@@ -292,7 +318,7 @@ export function CataloguePage() {
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 pt-2">
+                <div className="grid grid-cols-[repeat(2,160px)] sm:grid-cols-[repeat(3,160px)] lg:grid-cols-[repeat(4,160px)] gap-4 justify-center pt-2">
                   {allEntries.map(entry => (
                     <SpeciesCard
                       key={entry.qr_hash}

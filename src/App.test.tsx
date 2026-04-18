@@ -123,7 +123,7 @@ describe('App', () => {
     await waitFor(() => {
       expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
     })
-    expect(screen.getByRole('heading', { name: /the species catalogue/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /catalogue of known species/i })).toBeInTheDocument()
   })
 
   it('shows tab navigation with spec-defined three tabs', async () => {
@@ -141,7 +141,7 @@ describe('App', () => {
     renderApp({ initialPath: '/' })
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /the species catalogue/i })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: /catalogue of known species/i })).toBeInTheDocument()
     })
   })
 
