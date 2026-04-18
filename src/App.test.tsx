@@ -203,7 +203,7 @@ describe('App', () => {
     renderApp({ initialPath: '/cabinet' })
 
     await waitFor(() => {
-      expect(screen.getByText(/excavate new specimen/i)).toBeInTheDocument()
+      expect(screen.getByLabelText(/excavate new specimen/i)).toBeInTheDocument()
     })
   })
 
