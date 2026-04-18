@@ -136,6 +136,22 @@ export function CataloguePage() {
 
         {/* Main column */}
         <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Sign-in CTA for visitors — above search/filter controls, width matches 4-col grid */}
+          {!isAuthenticated && (
+            <div className="px-4 pt-2 shrink-0">
+              <div className="mx-auto max-w-[688px] border border-border rounded p-3 text-center font-mono text-[11px] text-muted-foreground bg-accent/30">
+                Browse freely —{' '}
+                <button
+                  onClick={() => navigate('/enter')}
+                  className="underline hover:text-foreground transition-colors"
+                >
+                  sign in
+                </button>
+                {' '}to scan QR codes, collect specimens, and read complete field notes.
+              </div>
+            </div>
+          )}
+
           {/* Search + filter controls */}
           <div className="px-4 pb-3 pt-1 space-y-2 shrink-0">
             <div className="flex gap-2">
@@ -175,7 +191,7 @@ export function CataloguePage() {
                     {nonOrderFilterCount}
                   </span>
                 )}
-                <span className="text-[10px] opacity-60">{showFilters ? '▲' : '▼'}</span>
+                <span className="text-[10px] opacity-60" aria-hidden="true">{showFilters ? '▲' : '▼'}</span>
               </button>
             </div>
 
@@ -282,22 +298,6 @@ export function CataloguePage() {
 
           {/* Species grid — centred, fixed card widths, max 4 columns */}
           <div className="flex-1 overflow-y-auto px-4 pb-4">
-            {/* Sign-in CTA for visitors */}
-            {!isAuthenticated && (
-              <div className="mx-auto max-w-[736px] mb-4 mt-2">
-                <div className="border border-border rounded p-3 text-center font-mono text-[11px] text-muted-foreground bg-accent/30">
-                  Browse freely —{' '}
-                  <button
-                    onClick={() => navigate('/enter')}
-                    className="underline hover:text-foreground transition-colors"
-                  >
-                    sign in
-                  </button>
-                  {' '}to scan QR codes, collect specimens, and read complete field notes.
-                </div>
-              </div>
-            )}
-
             {catalogue.isLoading ? (
               <div className="grid grid-cols-[repeat(2,160px)] sm:grid-cols-[repeat(3,160px)] lg:grid-cols-[repeat(4,160px)] gap-4 justify-center pt-2">
                 {Array.from({ length: 12 }).map((_, i) => (

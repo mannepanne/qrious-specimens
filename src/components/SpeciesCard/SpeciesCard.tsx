@@ -31,13 +31,13 @@ export default function SpeciesCard({ entry, onClick }: Props) {
           <img
             src={entry.image_url_256}
             alt={`${entry.genus} ${entry.species}`}
-            width={144}
-            height={144}
+            width={136}
+            height={136}
             loading="lazy"
-            className="w-36 h-36 object-contain"
+            className="w-[136px] h-[136px] object-contain"
           />
         ) : sketchDna ? (
-          <CreatureRenderer dna={sketchDna} size={144} />
+          <CreatureRenderer dna={sketchDna} size={136} />
         ) : null}
       </div>
 
