@@ -61,10 +61,10 @@ export function AboutPage() {
       </div>
 
       {/* Catalogue CTA */}
-      <div className="pt-2">
+      <div className="pt-2 text-center">
         <Link
           to="/catalogue"
-          className="font-mono text-sm tracking-widest hover:text-muted-foreground transition-colors"
+          className="font-mono text-sm tracking-widest text-muted-foreground hover:text-foreground transition-colors"
         >
           BROWSE THE CATALOGUE →
         </Link>
