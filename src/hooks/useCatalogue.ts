@@ -91,6 +91,13 @@ export function useCatalogueEntry(qrHash: string | undefined) {
   })
 }
 
+/** Per-order taxonomy entry — species count plus family breakdown. */
+export interface OrderTaxonomy {
+  count: number
+  /** Family name → species count within this order */
+  families: Map<string, number>
+}
+
 /** Full unfiltered catalogue fetch used to build the Taxonomic Index sidebar. */
 export function useCatalogueTaxonomy() {
   return useQuery({
@@ -101,12 +108,18 @@ export function useCatalogueTaxonomy() {
       if (error) throw error
       const entries = (data ?? []) as unknown as CatalogueEntry[]
 
-      // Build order → count map, sorted alphabetically
-      const counts = new Map<string, number>()
+      // Build order → { count, families } map, sorted alphabetically by order
+      const taxonomy = new Map<string, OrderTaxonomy>()
       for (const entry of entries) {
-        counts.set(entry.order, (counts.get(entry.order) ?? 0) + 1)
+        const existing = taxonomy.get(entry.order)
+        if (existing) {
+          existing.count++
+          existing.families.set(entry.family, (existing.families.get(entry.family) ?? 0) + 1)
+        } else {
+          taxonomy.set(entry.order, { count: 1, families: new Map([[entry.family, 1]]) })
+        }
       }
-      return new Map([...counts.entries()].sort(([a], [b]) => a.localeCompare(b)))
+      return new Map([...taxonomy.entries()].sort(([a], [b]) => a.localeCompare(b)))
     },
     staleTime: 5 * 60 * 1000,
   })

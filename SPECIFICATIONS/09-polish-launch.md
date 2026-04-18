@@ -112,6 +112,12 @@ Anonymous for unauthenticated users (no user_id). Session ID is a UUID stored in
 - [ ] `wrangler deploy` succeeds
 - [ ] R2 bucket public access confirmed
 
+> **⚠️ Discuss before Phase 9:** Two Cloudflare services worth evaluating before launch:
+>
+> **Cloudflare Images** — may replace our current R2 + manual 512px/256px variant approach. Offers on-the-fly resizing/transformations via URL parameters, a global CDN, and avoids the current race-condition around orphaned R2 objects (TD-003). Evaluate against current R2 approach for cost and simplicity.
+>
+> **Cloudflare Email** — new transactional email service (https://blog.cloudflare.com/email-service/). Could replace Resend for the contact form and any future notification emails. Evaluate against Resend (already available via hultberg.org domain) for feature parity and pricing.
+
 **Smoke test:**
 - [ ] Sign in via magic link
 - [ ] Scan a QR code → full hatching sequence → creature added to cabinet
