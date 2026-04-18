@@ -165,6 +165,30 @@ describe('App', () => {
     )
   })
 
+  it('unauthenticated user visiting /settings is redirected to /enter', async () => {
+    setupUnauthenticated()
+    renderApp({ initialPath: '/settings' })
+
+    await waitFor(
+      () => { expect(screen.getByRole('heading', { name: /qrious specimens/i })).toBeInTheDocument() },
+      { timeout: 3000 }
+    )
+  })
+
+  it('stub pages render at /about, /privacy, /contact', async () => {
+    setupUnauthenticated()
+    const { unmount } = renderApp({ initialPath: '/about' })
+    await waitFor(() => expect(screen.getByRole('heading', { name: /about/i })).toBeInTheDocument())
+    unmount()
+
+    renderApp({ initialPath: '/privacy' })
+    await waitFor(() => expect(screen.getByRole('heading', { name: /privacy/i })).toBeInTheDocument())
+    unmount()
+
+    renderApp({ initialPath: '/contact' })
+    await waitFor(() => expect(screen.getByRole('heading', { name: /correspondence/i })).toBeInTheDocument())
+  })
+
   it('shows Cabinet content when authenticated', async () => {
     setupAuthenticated()
     renderApp({ initialPath: '/cabinet' })
