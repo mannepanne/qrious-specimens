@@ -29,8 +29,8 @@ describe('TabBar', () => {
     expect(catalogueLink).not.toHaveAttribute('aria-current')
   })
 
-  it('marks Catalogue as active on root path', () => {
-    renderTabBar('/')
+  it('marks Catalogue as active on /catalogue path', () => {
+    renderTabBar('/catalogue')
     const catalogueLink = screen.getByText('CATALOGUE').closest('a')
     expect(catalogueLink).toHaveAttribute('aria-current', 'page')
   })
@@ -43,7 +43,7 @@ describe('TabBar', () => {
 
   it('each tab is a link pointing to the correct route', () => {
     renderTabBar()
-    expect(screen.getByText('CATALOGUE').closest('a')).toHaveAttribute('href', '/')
+    expect(screen.getByText('CATALOGUE').closest('a')).toHaveAttribute('href', '/catalogue')
     expect(screen.getByText('GAZETTE').closest('a')).toHaveAttribute('href', '/gazette')
     expect(screen.getByText('CABINET').closest('a')).toHaveAttribute('href', '/cabinet')
   })
