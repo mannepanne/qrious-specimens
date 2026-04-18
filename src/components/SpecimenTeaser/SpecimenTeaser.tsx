@@ -1,10 +1,11 @@
 // ABOUT: Cabinet grid card for a discovered specimen
-// ABOUT: Shows AI-generated 256px thumbnail if available; falls back to Victorian sketch renderer
+// ABOUT: Circular illustration container — AI thumbnail or Victorian sketch renderer; marks first-discoverer specimens with a pineapple
 
 import type { CreatureRow } from '@/types/creature'
 import CreatureRenderer from '@/components/CreatureRenderer/CreatureRenderer'
 import { useSpeciesImage } from '@/hooks/useSpeciesImage'
 import { getRarityFromCount, getRarityLabel, getRarityColor } from '@/lib/rarity'
+import Pineapple from '@/components/Pineapple/Pineapple'
 
 interface Props {
   creature: CreatureRow
@@ -24,42 +25,40 @@ export default function SpecimenTeaser({ creature, discoveryCount, onClick }: Pr
   return (
     <button
       onClick={onClick}
-      className="group w-full text-left border border-border rounded-lg p-3 hover:border-foreground/30 transition-colors bg-card hover:bg-accent/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="group bg-card border rounded-sm p-4 text-center hover:shadow-md transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring w-full"
     >
-      {/* Creature illustration — AI thumbnail or sketch fallback */}
-      <div className="flex justify-center mb-3">
+      {/* Circular illustration */}
+      <div
+        className="mx-auto mb-3 w-[108px] h-[108px] rounded-full overflow-hidden flex items-center justify-center group-hover:scale-105 transition-transform border border-border"
+        style={{ background: 'hsl(36,20%,91%)' }}
+      >
         {imageUrl256 ? (
           <img
             src={imageUrl256}
             alt={`${dna.genus} ${dna.species}`}
-            className="w-[120px] h-[120px] object-contain"
+            className="w-full h-full object-contain"
           />
         ) : (
-          <CreatureRenderer dna={dna} size={120} />
+          <CreatureRenderer dna={dna} size={100} />
         )}
       </div>
 
       {/* Name */}
-      <p className="font-serif text-sm font-medium italic leading-tight text-center">
-        {nickname ?? `${dna.genus} ${dna.species}`}
+      <p className="font-serif text-xs font-medium italic truncate">
+        {nickname ?? dna.genus}
       </p>
-      {nickname && (
-        <p className="font-serif text-[10px] italic text-muted-foreground text-center mt-0.5">
-          {dna.genus} {dna.species}
-        </p>
-      )}
+      <p className="font-serif text-[10px] italic text-muted-foreground truncate">
+        {nickname ? `${dna.genus} ${dna.species}` : dna.species}
+      </p>
 
-      {/* Family + rarity */}
-      <div className="flex items-center justify-between mt-2">
-        <span className="font-mono text-[9px] text-muted-foreground tracking-wider truncate">
-          {dna.family}
-        </span>
-        <span
-          className="font-mono text-[8px] tracking-widest px-1.5 py-0.5 rounded-sm shrink-0 ml-1"
-          style={{ color: rarityColor, borderColor: rarityColor, border: `1px solid` }}
-        >
+      {/* Rarity + first-discoverer pineapple */}
+      <div className="flex items-center justify-center gap-1 mt-1.5">
+        <span className="font-mono text-[8px] tracking-wider" style={{ color: rarityColor }}>
           {getRarityLabel(rarity)}
         </span>
+        {creature.is_first_discoverer && (
+          <Pineapple className="h-4 w-4 text-amber-600" />
+        )}
       </div>
     </button>
   )

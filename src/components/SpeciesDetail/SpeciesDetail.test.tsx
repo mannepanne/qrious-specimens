@@ -267,7 +267,7 @@ describe('SpeciesDetail', () => {
         firstDiscovererName="Dr. A. Darwin"
       />,
     )
-    expect(screen.getByText('First by')).toBeInTheDocument()
+    expect(screen.getByText('FIRST BY')).toBeInTheDocument()
     expect(screen.getByText('Dr. A. Darwin')).toBeInTheDocument()
   })
 
@@ -282,7 +282,7 @@ describe('SpeciesDetail', () => {
         firstDiscovererName="Dr. A. Darwin"
       />,
     )
-    expect(screen.queryByText('First by')).not.toBeInTheDocument()
+    expect(screen.queryByText('FIRST BY')).not.toBeInTheDocument()
     expect(screen.queryByText('Dr. A. Darwin')).not.toBeInTheDocument()
   })
 
@@ -297,6 +297,6 @@ describe('SpeciesDetail', () => {
         firstDiscovererName={null}
       />,
     )
-    expect(screen.queryByText('First by')).not.toBeInTheDocument()
+    expect(screen.queryByText('FIRST BY')).not.toBeInTheDocument()
   })
 })

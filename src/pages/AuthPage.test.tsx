@@ -33,7 +33,7 @@ describe('AuthPage', () => {
   it('renders email input and submit button', () => {
     setupAuth({ error: null })
     render(<AuthPage />)
-    expect(screen.getByLabelText(/electronic mail/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/correspondence address/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /send magic link/i })).toBeInTheDocument()
   })
 
@@ -47,7 +47,7 @@ describe('AuthPage', () => {
     setupAuth({ error: null })
     render(<AuthPage />)
 
-    fireEvent.change(screen.getByLabelText(/electronic mail/i), {
+    fireEvent.change(screen.getByLabelText(/correspondence address/i), {
       target: { value: '  naturalist@example.com  ' },
     })
     fireEvent.click(screen.getByRole('button', { name: /send magic link/i }))
@@ -61,7 +61,7 @@ describe('AuthPage', () => {
     setupAuth({ error: null })
     render(<AuthPage />)
 
-    fireEvent.change(screen.getByLabelText(/electronic mail/i), {
+    fireEvent.change(screen.getByLabelText(/correspondence address/i), {
       target: { value: 'naturalist@example.com' },
     })
     fireEvent.click(screen.getByRole('button', { name: /send magic link/i }))
@@ -76,7 +76,7 @@ describe('AuthPage', () => {
     setupAuth({ error: 'Rate limit exceeded' })
     render(<AuthPage />)
 
-    fireEvent.change(screen.getByLabelText(/electronic mail/i), {
+    fireEvent.change(screen.getByLabelText(/correspondence address/i), {
       target: { value: 'naturalist@example.com' },
     })
     fireEvent.click(screen.getByRole('button', { name: /send magic link/i }))
@@ -90,7 +90,7 @@ describe('AuthPage', () => {
     setupAuth({ error: null })
     render(<AuthPage />)
 
-    fireEvent.change(screen.getByLabelText(/electronic mail/i), {
+    fireEvent.change(screen.getByLabelText(/correspondence address/i), {
       target: { value: 'naturalist@example.com' },
     })
     fireEvent.click(screen.getByRole('button', { name: /send magic link/i }))
@@ -99,7 +99,7 @@ describe('AuthPage', () => {
 
     fireEvent.click(screen.getByText(/use a different address/i))
 
-    expect(screen.getByLabelText(/electronic mail/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/correspondence address/i)).toBeInTheDocument()
   })
 
   it('shows dispatching state while sending', async () => {
@@ -110,7 +110,7 @@ describe('AuthPage', () => {
     })
     render(<AuthPage />)
 
-    fireEvent.change(screen.getByLabelText(/electronic mail/i), {
+    fireEvent.change(screen.getByLabelText(/correspondence address/i), {
       target: { value: 'naturalist@example.com' },
     })
     fireEvent.click(screen.getByRole('button', { name: /send magic link/i }))

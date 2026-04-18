@@ -2,6 +2,7 @@
 // ABOUT: Publicly readable; profile creation and discovery posting requires auth
 
 import { useNavigate } from 'react-router-dom'
+import { Compass } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useCommunityFeed, useExplorerShowcase, useCommunityStats, useCreateProfile, useUpdateProfile, useExplorerProfile } from '@/hooks/useCommunity'
 import type { ExplorerProfile } from '@/hooks/useCommunity'
@@ -51,6 +52,25 @@ export function GazettePage() {
 
         {/* Community stats */}
         <CommunityStats stats={stats.data} isLoading={stats.isLoading} />
+
+        {/* Sign-in CTA for unauthenticated visitors */}
+        {!isAuthenticated && (
+          <div className="bg-card border rounded-sm p-6 text-center space-y-3">
+            <Compass className="h-10 w-10 mx-auto text-muted-foreground/40" />
+            <div>
+              <p className="font-serif text-base font-medium">A fellowship of curious naturalists</p>
+              <p className="font-serif text-sm text-muted-foreground italic mt-1">
+                Sign in to discover QRious specimens, earn badges, and join the Gazette
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/enter')}
+              className="font-mono text-xs tracking-widest px-4 py-2 border border-border rounded hover:bg-accent transition-colors"
+            >
+              START EXPLORING
+            </button>
+          </div>
+        )}
 
         {/* Join prompt — authenticated users without a profile */}
         {isAuthenticated && !hasProfile && explorerProfile.data !== undefined && (
