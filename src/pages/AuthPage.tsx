@@ -1,6 +1,7 @@
 // ABOUT: Magic link authentication page — email entry and confirmation states
 // ABOUT: No password fields; uses Supabase OTP (one-time password) via email
 import { useState } from 'react'
+import { Scan } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,12 +37,12 @@ export function AuthPage() {
       <div className="flex min-h-screen flex-col items-center justify-center p-6">
         <div className="w-full max-w-sm text-center space-y-4">
           <h1 className="font-serif text-2xl">Check your correspondence</h1>
-          <p className="text-muted-foreground">
-            A dispatch has been sent to <strong>{email}</strong>.
+          <p className="font-serif text-sm text-muted-foreground italic">
+            A dispatch has been sent to <strong className="not-italic text-foreground">{email}</strong>.
             Follow the link within to gain entry to the Cabinet.
           </p>
           <button
-            className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+            className="font-serif text-sm italic text-muted-foreground underline underline-offset-4 hover:text-foreground"
             onClick={() => {
               setPageState('idle')
               setEmail('')
@@ -56,26 +57,34 @@ export function AuthPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-6">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="space-y-2 text-center">
-          <h1 className="font-serif text-3xl">QRious Specimens</h1>
-          <p className="text-sm text-muted-foreground">
-            Enter your address to receive a magic link
+      <div className="w-full max-w-sm space-y-8">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <div className="flex items-center justify-center gap-2.5 mb-4">
+            <div className="h-10 w-10 rounded-sm bg-foreground flex items-center justify-center">
+              <Scan className="h-5 w-5 text-background" />
+            </div>
+          </div>
+          <h1 className="font-serif text-3xl font-medium">QRious Specimens</h1>
+          <p className="font-serif text-sm italic text-muted-foreground">A Digital Cabinet of Curiosities</p>
+          <p className="font-mono text-[10px] text-muted-foreground/50 tracking-wider">
+            EST. MDCCXCIX &middot; MATRIX COAST
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Electronic mail address</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="email" className="font-serif text-sm">Correspondence Address</Label>
             <Input
               id="email"
               type="email"
-              placeholder="naturalist@example.com"
+              placeholder="anning@lymeregis.org"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={pageState === 'sending'}
               required
               autoFocus
+              className="font-mono text-sm"
             />
           </div>
 
@@ -85,7 +94,7 @@ export function AuthPage() {
 
           <Button
             type="submit"
-            className="w-full"
+            className="w-full font-mono tracking-wider"
             disabled={pageState === 'sending' || !email.trim()}
           >
             {pageState === 'sending' ? 'Dispatching…' : 'Send magic link'}
