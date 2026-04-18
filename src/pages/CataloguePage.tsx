@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef, useCallback, type ChangeEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { BookOpen, ChevronDown, ChevronRight, Search, SlidersHorizontal, X } from 'lucide-react'
+import { BookOpen, ChevronDown, ChevronRight, Compass, Search, SlidersHorizontal, X } from 'lucide-react'
 import { useCatalogue, useCatalogueTaxonomy } from '@/hooks/useCatalogue'
 import type { CatalogueFilters, CatalogueEntry } from '@/hooks/useCatalogue'
 import { useAuth } from '@/hooks/useAuth'
@@ -165,15 +165,20 @@ export function CataloguePage() {
           {/* Sign-in CTA for visitors */}
           {!isAuthenticated && (
             <div className="px-4 pt-2 shrink-0">
-              <div className="mx-auto max-w-[688px] border border-border rounded p-3 text-center font-mono text-[11px] text-muted-foreground bg-accent/30">
-                Browse freely —{' '}
+              <div className="bg-card border rounded-sm p-6 text-center space-y-3">
+                <Compass className="h-10 w-10 mx-auto text-muted-foreground/40" />
+                <div>
+                  <p className="font-serif text-base font-medium">A fellowship of curious naturalists</p>
+                  <p className="font-serif text-sm text-muted-foreground italic mt-1">
+                    Sign in to discover QRious specimens, earn badges, and join the Gazette
+                  </p>
+                </div>
                 <button
                   onClick={() => navigate('/enter')}
-                  className="underline hover:text-foreground transition-colors"
+                  className="font-mono text-xs tracking-widest px-5 py-2.5 bg-foreground text-background rounded hover:opacity-90 transition-opacity"
                 >
-                  sign in
+                  START EXPLORING
                 </button>
-                {' '}to scan QR codes, collect specimens, and read complete field notes.
               </div>
             </div>
           )}
