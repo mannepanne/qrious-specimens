@@ -74,14 +74,11 @@ function TimelineEntry({ entry, onViewSpecies }: { entry: FeedEntry; onViewSpeci
 
   const content = (
     <div className="flex items-start gap-3">
-      {/* Colour-coded dot */}
-      <span
-        className={[
-          'mt-1.5 shrink-0 w-2 h-2 rounded-full',
-          EVENT_DOT[entry.event_type],
-        ].join(' ')}
-        aria-hidden="true"
-      />
+      {/* Colour-coded dot + connector line */}
+      <div className="mt-1.5 shrink-0 flex flex-col items-center gap-0.5" aria-hidden="true">
+        <span className={['w-2 h-2 rounded-full', EVENT_DOT[entry.event_type]].join(' ')} />
+        <span className="w-px h-4 bg-border" />
+      </div>
 
       {/* Thumbnail (discoveries only) */}
       {entry.species_image_url && (

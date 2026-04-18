@@ -139,7 +139,7 @@ export function CataloguePage() {
   return (
     <main className="flex flex-col h-full">
       {/* Page title */}
-      <div className="px-4 pt-4 pb-3 shrink-0">
+      <div className="px-4 pt-4 pb-3 shrink-0 border-b border-border">
         <h1 className="font-serif text-2xl">Catalogue of Known Species</h1>
         <p className="font-mono text-xs text-muted-foreground mt-0.5">
           {taxonomy.isLoading ? 'Loading…' : `${taxonomyTotal} species documented`}
