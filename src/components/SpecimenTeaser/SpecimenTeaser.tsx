@@ -20,7 +20,8 @@ export default function SpecimenTeaser({ creature, discoveryCount, onClick }: Pr
   const rarityColor = getRarityColor(rarity)
 
   // Check for cached AI thumbnail; do not trigger generation (generation happens via SpecimenPage)
-  const { imageUrl256 } = useSpeciesImage(creature.qr_hash, null)
+  // Use dna.hash (16-char) — species_images.qr_hash stores the 16-char DNA hash, not creatures.qr_hash (8-char)
+  const { imageUrl256 } = useSpeciesImage(creature.dna.hash, null)
 
   return (
     <button

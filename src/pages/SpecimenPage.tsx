@@ -59,7 +59,7 @@ export function SpecimenPage() {
   const rarityColor = getRarityColor(rarity)
 
   const { imageUrl512, fieldNotes, isLoading: imageLoading } = useSpeciesImage(
-    creature?.qr_hash ?? '',
+    creature?.dna.hash ?? '',
     creature?.dna ?? null,
   )
 
