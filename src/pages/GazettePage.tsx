@@ -40,22 +40,6 @@ export function GazettePage() {
 
   return (
     <main className="flex flex-col h-full overflow-y-auto">
-      {/* Sign-up CTA for visitors */}
-      {!isAuthenticated && (
-        <div className="bg-accent/40 border-b border-border px-4 py-2 text-center shrink-0">
-          <span className="font-mono text-xs text-muted-foreground">
-            Reading the Gazette.{' '}
-            <button
-              onClick={() => navigate('/enter')}
-              className="underline hover:text-foreground transition-colors"
-            >
-              Sign in
-            </button>
-            {' '}to contribute your own discoveries.
-          </span>
-        </div>
-      )}
-
       <div className="px-4 pt-4 pb-6 space-y-6">
         {/* Page title */}
         <div>

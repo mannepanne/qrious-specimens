@@ -5,7 +5,6 @@ import { useState, useEffect, useRef, useCallback, type ChangeEvent } from 'reac
 import { useNavigate } from 'react-router-dom'
 import { useCatalogue, useCatalogueTaxonomy } from '@/hooks/useCatalogue'
 import type { CatalogueFilters, CatalogueEntry } from '@/hooks/useCatalogue'
-import { useAuth } from '@/hooks/useAuth'
 import SpeciesCard from '@/components/SpeciesCard/SpeciesCard'
 import TaxonomicSidebar from '@/components/TaxonomicSidebar/TaxonomicSidebar'
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver'
@@ -45,9 +44,6 @@ function FilterChip({
 
 export function CataloguePage() {
   const navigate = useNavigate()
-  const { authState } = useAuth()
-  const isAuthenticated = authState.status === 'authenticated'
-
   const [filters, setFilters] = useState<CatalogueFilters>({})
   const [searchInput, setSearchInput] = useState('')
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
@@ -98,22 +94,6 @@ export function CataloguePage() {
 
   return (
     <main className="flex flex-col h-full">
-      {/* Sign-up CTA for visitors */}
-      {!isAuthenticated && (
-        <div className="bg-accent/40 border-b border-border px-4 py-2 text-center shrink-0">
-          <span className="font-mono text-xs text-muted-foreground">
-            Browse freely.{' '}
-            <button
-              onClick={() => navigate('/enter')}
-              className="underline hover:text-foreground transition-colors"
-            >
-              Sign in
-            </button>
-            {' '}to scan QR codes, collect specimens, and read complete field notes.
-          </span>
-        </div>
-      )}
-
       {/* Page title */}
       <div className="px-4 pt-4 pb-3 shrink-0">
         <h1 className="font-serif text-2xl">The Species Catalogue</h1>

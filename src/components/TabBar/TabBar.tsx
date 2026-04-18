@@ -25,7 +25,7 @@ export function TabBar({ hidden = false }: TabBarProps) {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background pb-[env(safe-area-inset-bottom)]"
+      className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background pb-[env(safe-area-inset-bottom)] md:left-10"
       aria-label="Main navigation"
     >
       <div className="flex justify-center">
