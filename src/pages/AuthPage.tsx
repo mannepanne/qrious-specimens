@@ -101,7 +101,7 @@ export function AuthPage() {
         </form>
 
         <p className="font-serif text-sm italic text-muted-foreground text-center">
-          New to the Coastal Matrices? Join the expedition
+          New to the Coastal Matrices? Your first dispatch opens the Cabinet.
         </p>
       </div>
     </div>

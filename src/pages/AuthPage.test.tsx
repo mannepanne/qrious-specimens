@@ -102,6 +102,12 @@ describe('AuthPage', () => {
     expect(screen.getByLabelText(/correspondence address/i)).toBeInTheDocument()
   })
 
+  it('renders new-user tagline', () => {
+    setupAuth({ error: null })
+    render(<AuthPage />)
+    expect(screen.getByText(/new to the coastal matrices/i)).toBeInTheDocument()
+  })
+
   it('shows dispatching state while sending', async () => {
     mockUseAuth.mockReturnValue({
       authState: { status: 'unauthenticated' },

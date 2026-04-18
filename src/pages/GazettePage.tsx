@@ -48,7 +48,7 @@ export function GazettePage() {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-      <div className="px-4 pt-4 pb-6 space-y-6 max-w-2xl mx-auto">
+        <div className="px-4 pt-4 pb-6 space-y-6 max-w-2xl mx-auto">
         {/* Community stats */}
         <CommunityStats stats={stats.data} isLoading={stats.isLoading} />
 
@@ -120,7 +120,7 @@ export function GazettePage() {
             isLoading={showcase.isLoading}
           />
         </section>
-      </div>
+        </div>
       </div>
     </main>
   )

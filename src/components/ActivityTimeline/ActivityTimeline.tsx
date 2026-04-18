@@ -68,16 +68,16 @@ function EntryText({ entry }: { entry: FeedEntry }) {
   }
 }
 
-function TimelineEntry({ entry, onViewSpecies }: { entry: FeedEntry; onViewSpecies?: (qrHash: string) => void }) {
+function TimelineEntry({ entry, isLast, onViewSpecies }: { entry: FeedEntry; isLast: boolean; onViewSpecies?: (qrHash: string) => void }) {
   const isDiscovery = entry.event_type !== 'badge_earned'
   const isClickable = isDiscovery && !!entry.qr_hash && !!onViewSpecies
 
   const content = (
     <div className="flex items-start gap-3">
-      {/* Colour-coded dot + connector line */}
+      {/* Colour-coded dot + connector line (suppressed on last entry) */}
       <div className="mt-1.5 shrink-0 flex flex-col items-center gap-0.5" aria-hidden="true">
         <span className={['w-2 h-2 rounded-full', EVENT_DOT[entry.event_type]].join(' ')} />
-        <span className="w-px h-4 bg-border" />
+        {!isLast && <span className="w-px h-4 bg-border" />}
       </div>
 
       {/* Thumbnail (discoveries only) */}
@@ -141,9 +141,9 @@ export default function ActivityTimeline({ entries, isLoading, onViewSpecies }: 
 
   return (
     <ol aria-label="Activity timeline" className="space-y-0.5">
-      {entries.map(entry => (
+      {entries.map((entry, i) => (
         <li key={entry.id}>
-          <TimelineEntry entry={entry} onViewSpecies={onViewSpecies} />
+          <TimelineEntry entry={entry} isLast={i === entries.length - 1} onViewSpecies={onViewSpecies} />
         </li>
       ))}
     </ol>

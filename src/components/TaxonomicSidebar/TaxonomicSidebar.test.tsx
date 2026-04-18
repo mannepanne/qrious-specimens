@@ -160,6 +160,24 @@ describe('TaxonomicSidebar', () => {
     expect(screen.queryByText('Cristidae')).not.toBeInTheDocument()
   })
 
+  it('calls onSelectFamily(null) when the active order is deselected', () => {
+    const onSelectOrder = vi.fn()
+    const onSelectFamily = vi.fn()
+    render(
+      <TaxonomicSidebar
+        taxonomy={makeTaxonomy(['Arachnoida', [['Plexidae', 3]]])}
+        selectedOrder="Arachnoida"
+        selectedFamily="Plexidae"
+        totalCount={3}
+        onSelectOrder={onSelectOrder}
+        onSelectFamily={onSelectFamily}
+      />,
+    )
+    fireEvent.click(screen.getByText('Arachnoida').closest('button')!)
+    expect(onSelectOrder).toHaveBeenCalledWith(null)
+    expect(onSelectFamily).toHaveBeenCalledWith(null)
+  })
+
   it('calls onSelectOrder(null) when "All Species" is clicked', () => {
     const onSelectOrder = vi.fn()
     render(

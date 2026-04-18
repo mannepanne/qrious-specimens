@@ -138,11 +138,6 @@ export function CataloguePage() {
   const hasActiveFilters = !!(orderParam || familyFilter || traitFilterCount > 0 || filters.search)
   const hasActiveTraitFilters = traitFilterCount > 0
 
-  // Total entries shown — from the last page's metadata or the flat list length
-  const totalCount = catalogue.data?.pages[catalogue.data.pages.length - 1]?.length !== undefined
-    ? allEntries.length
-    : allEntries.length
-
   return (
     <main className="flex flex-col h-full">
       {/* Page title */}
