@@ -186,7 +186,7 @@ describe('App', () => {
     unmount()
 
     renderApp({ initialPath: '/contact' })
-    await waitFor(() => expect(screen.getByRole('heading', { name: /correspondence/i })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('heading', { name: /contact/i })).toBeInTheDocument())
   })
 
   it('shows Cabinet content when authenticated', async () => {
