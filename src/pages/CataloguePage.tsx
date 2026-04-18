@@ -2,7 +2,7 @@
 // ABOUT: Accessible to unauthenticated visitors; clicking a species navigates to /species/:qrHash
 
 import { useState, useEffect, useRef, useCallback, type ChangeEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useCatalogue, useCatalogueTaxonomy } from '@/hooks/useCatalogue'
 import type { CatalogueFilters, CatalogueEntry } from '@/hooks/useCatalogue'
 import SpeciesCard from '@/components/SpeciesCard/SpeciesCard'
@@ -44,10 +44,19 @@ function FilterChip({
 
 export function CataloguePage() {
   const navigate = useNavigate()
-  const [filters, setFilters] = useState<CatalogueFilters>({})
+  // Order comes from the URL path (/catalogue/:order) — other filters remain local state
+  const { order: orderParam } = useParams<{ order?: string }>()
+  const [filters, setFilters] = useState<CatalogueFilters>({
+    order: orderParam,
+  })
   const [searchInput, setSearchInput] = useState('')
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+
+  // Keep filters.order in sync with the URL param whenever navigation changes it
+  useEffect(() => {
+    setFilters(prev => ({ ...prev, order: orderParam }))
+  }, [orderParam])
 
   const catalogue = useCatalogue(filters)
   const taxonomy = useCatalogueTaxonomy()
@@ -85,6 +94,7 @@ export function CataloguePage() {
   function clearAllFilters() {
     setFilters({})
     setSearchInput('')
+    if (orderParam) navigate('/catalogue')
   }
 
   const hasActiveFilters = Object.values(filters).some(Boolean)
@@ -112,9 +122,12 @@ export function CataloguePage() {
         >
           <TaxonomicSidebar
             taxonomy={taxonomyData}
-            selectedOrder={filters.order ?? null}
+            selectedOrder={orderParam ?? null}
             totalCount={taxonomyTotal}
-            onSelectOrder={order => setFilters(prev => ({ ...prev, order: order ?? undefined }))}
+            onSelectOrder={order => {
+              if (order) navigate(`/catalogue/${encodeURIComponent(order)}`)
+              else navigate('/catalogue')
+            }}
           />
         </aside>
 
@@ -229,7 +242,7 @@ export function CataloguePage() {
             {/* Active filter chips */}
             {hasActiveFilters && (
               <div className="flex flex-wrap gap-1.5">
-                {filters.order      && <FilterChip label="Order"     value={filters.order}      onRemove={() => setFilters(p => ({ ...p, order: undefined }))} />}
+                {orderParam         && <FilterChip label="Order"     value={orderParam}          onRemove={() => navigate('/catalogue')} />}
                 {filters.habitat    && <FilterChip label="Habitat"   value={filters.habitat}    onRemove={() => setFilters(p => ({ ...p, habitat: undefined }))} />}
                 {filters.symmetry   && <FilterChip label="Symmetry"  value={filters.symmetry}   onRemove={() => setFilters(p => ({ ...p, symmetry: undefined }))} />}
                 {filters.bodyShape  && <FilterChip label="Body form" value={filters.bodyShape}   onRemove={() => setFilters(p => ({ ...p, bodyShape: undefined }))} />}
@@ -246,10 +259,11 @@ export function CataloguePage() {
             <div className="md:hidden border-b border-border bg-background px-4 py-3 shrink-0">
               <TaxonomicSidebar
                 taxonomy={taxonomyData}
-                selectedOrder={filters.order ?? null}
+                selectedOrder={orderParam ?? null}
                 totalCount={taxonomyTotal}
                 onSelectOrder={order => {
-                  setFilters(prev => ({ ...prev, order: order ?? undefined }))
+                  if (order) navigate(`/catalogue/${encodeURIComponent(order)}`)
+                  else navigate('/catalogue')
                   setShowMobileSidebar(false)
                 }}
               />

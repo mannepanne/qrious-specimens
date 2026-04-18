@@ -15,9 +15,9 @@ interface TabBarProps {
 }
 
 const TABS: { to: string; label: string; Icon: LucideIcon }[] = [
-  { to: '/',        label: 'Catalogue', Icon: LayoutGrid },
-  { to: '/gazette', label: 'Gazette',   Icon: Newspaper },
-  { to: '/cabinet', label: 'Cabinet',   Icon: BookOpen },
+  { to: '/catalogue', label: 'Catalogue', Icon: LayoutGrid },
+  { to: '/gazette',   label: 'Gazette',   Icon: Newspaper },
+  { to: '/cabinet',   label: 'Cabinet',   Icon: BookOpen },
 ]
 
 export function TabBar({ hidden = false }: TabBarProps) {
@@ -33,7 +33,6 @@ export function TabBar({ hidden = false }: TabBarProps) {
           <NavLink
             key={to}
             to={to}
-            end={to === '/'}  // exact match for root so /gazette doesn't also activate Catalogue
             className={({ isActive }) =>
               cn(
                 'flex w-24 flex-col items-center gap-1 py-2 font-mono text-[10px] tracking-widest transition-colors',

@@ -32,6 +32,10 @@ import { CabinetPage } from '@/pages/CabinetPage'
 import { SpecimenPage } from '@/pages/SpecimenPage'
 import { SpeciesPage } from '@/pages/SpeciesPage'
 import { FrameworkPage } from '@/pages/FrameworkPage'
+import { AboutPage } from '@/pages/AboutPage'
+import { PrivacyPage } from '@/pages/PrivacyPage'
+import { ContactPage } from '@/pages/ContactPage'
+import { SettingsPage } from '@/pages/SettingsPage'
 import QrScanner from '@/components/QrScanner/QrScanner'
 import ExcavationAnimation from '@/components/ExcavationAnimation/ExcavationAnimation'
 import type { ExcavationWorkerResult } from '@/components/ExcavationAnimation/ExcavationAnimation'
@@ -53,7 +57,7 @@ export function useScanOverlay(): ScanOverlayContextValue {
 }
 
 // Protected routes: unauthenticated access is redirected to /enter by AppShell
-const PROTECTED_PREFIXES = ['/cabinet', '/specimen/']
+const PROTECTED_PREFIXES = ['/cabinet', '/specimen/', '/settings']
 
 // ── Route definitions ──────────────────────────────────────────────────────
 // Exported so tests can create a MemoryRouter with the same routes.
@@ -303,15 +307,21 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route element={<AppShell />}>
-        <Route path="/"                 element={<CataloguePage />} />
-        <Route path="/species/:qrHash"  element={<SpeciesPage />} />
-        <Route path="/gazette"          element={<GazettePage />} />
-        <Route path="/cabinet"          element={<CabinetPage />} />
-        <Route path="/specimen/:id"     element={<SpecimenPage />} />
-        <Route path="/enter"            element={<AuthPage />} />
+        <Route path="/"                    element={<Navigate to="/catalogue" replace />} />
+        <Route path="/catalogue"           element={<CataloguePage />} />
+        <Route path="/catalogue/:order"    element={<CataloguePage />} />
+        <Route path="/species/:qrHash"     element={<SpeciesPage />} />
+        <Route path="/gazette"             element={<GazettePage />} />
+        <Route path="/cabinet"             element={<CabinetPage />} />
+        <Route path="/specimen/:id"        element={<SpecimenPage />} />
+        <Route path="/enter"               element={<AuthPage />} />
+        <Route path="/about"               element={<AboutPage />} />
+        <Route path="/privacy"             element={<PrivacyPage />} />
+        <Route path="/contact"             element={<ContactPage />} />
+        <Route path="/settings"            element={<SettingsPage />} />
       </Route>
       {/* Temporary design prototype — standalone, outside AppShell. Remove once layout is approved. */}
-      <Route path="/framework"          element={<FrameworkPage />} />
+      <Route path="/framework"             element={<FrameworkPage />} />
     </Routes>
   )
 }

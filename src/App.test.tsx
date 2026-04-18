@@ -116,9 +116,9 @@ describe('App', () => {
     expect(screen.getByText('Storage corrupted')).toBeInTheDocument()
   })
 
-  it('shows Catalogue at root path (public) when unauthenticated — no auth wall', async () => {
+  it('shows Catalogue at /catalogue (public) when unauthenticated — no auth wall', async () => {
     setupUnauthenticated()
-    renderApp({ initialPath: '/' })
+    renderApp({ initialPath: '/catalogue' })
 
     await waitFor(() => {
       expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
@@ -136,12 +136,13 @@ describe('App', () => {
     expect(screen.getByText('CABINET')).toBeInTheDocument()
   })
 
-  it('defaults to Catalogue at root path', async () => {
+  it('root path redirects to /catalogue and shows Catalogue', async () => {
     setupUnauthenticated()
     renderApp({ initialPath: '/' })
 
-    await waitFor(() => screen.getByRole('navigation', { name: /main navigation/i }))
-    expect(screen.getByRole('heading', { name: /the species catalogue/i })).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /the species catalogue/i })).toBeInTheDocument()
+    })
   })
 
   it('unauthenticated user can browse Gazette', async () => {
@@ -162,6 +163,30 @@ describe('App', () => {
       () => { expect(screen.getByRole('heading', { name: /qrious specimens/i })).toBeInTheDocument() },
       { timeout: 3000 }
     )
+  })
+
+  it('unauthenticated user visiting /settings is redirected to /enter', async () => {
+    setupUnauthenticated()
+    renderApp({ initialPath: '/settings' })
+
+    await waitFor(
+      () => { expect(screen.getByRole('heading', { name: /qrious specimens/i })).toBeInTheDocument() },
+      { timeout: 3000 }
+    )
+  })
+
+  it('stub pages render at /about, /privacy, /contact', async () => {
+    setupUnauthenticated()
+    const { unmount } = renderApp({ initialPath: '/about' })
+    await waitFor(() => expect(screen.getByRole('heading', { name: /about/i })).toBeInTheDocument())
+    unmount()
+
+    renderApp({ initialPath: '/privacy' })
+    await waitFor(() => expect(screen.getByRole('heading', { name: /privacy/i })).toBeInTheDocument())
+    unmount()
+
+    renderApp({ initialPath: '/contact' })
+    await waitFor(() => expect(screen.getByRole('heading', { name: /correspondence/i })).toBeInTheDocument())
   })
 
   it('shows Cabinet content when authenticated', async () => {
@@ -189,7 +214,7 @@ describe('App', () => {
     await waitFor(() => screen.getByRole('navigation', { name: /main navigation/i }))
 
     // NavLink renders as <a>, not <button>
-    expect(screen.getByText('CATALOGUE').closest('a')).toHaveAttribute('href', '/')
+    expect(screen.getByText('CATALOGUE').closest('a')).toHaveAttribute('href', '/catalogue')
     expect(screen.getByText('GAZETTE').closest('a')).toHaveAttribute('href', '/gazette')
     expect(screen.getByText('CABINET').closest('a')).toHaveAttribute('href', '/cabinet')
   })
