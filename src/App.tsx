@@ -262,9 +262,17 @@ function AppShell() {
 
   const hideTabBar = overlay !== null || NO_TABBAR_PREFIXES.some(p => location.pathname.startsWith(p))
 
+  // Left strip is hidden on the auth page — it's a full-bleed centred layout
+  const hideStrip = location.pathname.startsWith('/enter')
+
   return (
     <ScanOverlayContext.Provider value={{ openScanner: () => setOverlay('scanner') }}>
-      <div className="flex min-h-screen flex-col">
+      {/* Fixed left decorative margin strip — journal-spine motif */}
+      {!hideStrip && (
+        <div className="hidden md:block fixed left-0 top-0 h-full w-10 border-r border-border bg-[hsl(36,20%,88%)] z-20 pointer-events-none" />
+      )}
+
+      <div className="flex min-h-screen flex-col md:ml-10">
         <div className="flex-1 pb-16">
           <Outlet />
         </div>
