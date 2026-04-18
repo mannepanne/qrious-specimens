@@ -65,7 +65,7 @@ export function GazettePage() {
             </div>
             <button
               onClick={() => navigate('/enter')}
-              className="font-mono text-xs tracking-widest px-4 py-2 border border-border rounded hover:bg-accent transition-colors"
+              className="font-mono text-xs tracking-widest px-5 py-2.5 bg-foreground text-background rounded hover:opacity-90 transition-opacity"
             >
               START EXPLORING
             </button>

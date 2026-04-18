@@ -1,6 +1,7 @@
 // ABOUT: Full species detail view for the catalogue
 // ABOUT: Shows illustration, taxonomy, field notes (auth-gated teaser), and discovery metadata
 
+import { ArrowLeft } from 'lucide-react'
 import { generateCreatureDNA } from '@/lib/creatureEngine'
 import { getRarityFromCount, getRarityLabel, getRarityColor } from '@/lib/rarity'
 import CreatureRenderer from '@/components/CreatureRenderer/CreatureRenderer'
@@ -52,46 +53,23 @@ export default function SpeciesDetail({ entry, isAuthenticated, onPrev, onNext, 
   const showNav = onPrev !== null || onNext !== null
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
-      {/* Header: prev/next navigation + close button */}
-      <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
-        {showNav ? (
-          <div className="flex gap-2">
-            <button
-              onClick={onPrev ?? undefined}
-              disabled={!onPrev}
-              aria-label="Previous species"
-              className="w-8 h-8 flex items-center justify-center rounded border border-border font-mono text-sm disabled:opacity-30 hover:bg-accent transition-colors"
-            >
-              ‹
-            </button>
-            <button
-              onClick={onNext ?? undefined}
-              disabled={!onNext}
-              aria-label="Next species"
-              className="w-8 h-8 flex items-center justify-center rounded border border-border font-mono text-sm disabled:opacity-30 hover:bg-accent transition-colors"
-            >
-              ›
-            </button>
-          </div>
-        ) : <div />}
+    <div className="flex flex-col overflow-y-auto">
+      {/* Sticky header: back arrow + italic species name */}
+      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur px-4 py-3 flex items-center gap-3 shrink-0">
         <button
           onClick={onClose}
-          aria-label="Close species detail"
-          className="w-8 h-8 flex items-center justify-center rounded border border-border font-mono text-sm hover:bg-accent transition-colors"
+          aria-label="Go back"
+          className="p-1 rounded hover:bg-accent transition-colors shrink-0"
         >
-          ✕
+          <ArrowLeft className="h-4 w-4" />
         </button>
-      </div>
+        <h2 className="font-serif text-lg font-medium italic truncate">
+          {entry.genus} {entry.species}
+        </h2>
+      </header>
 
-      <div className="max-w-lg mx-auto w-full px-4 pb-6 space-y-6">
-        {/* Binomial name */}
-        <div className="text-center">
-          <h2 className="font-serif text-2xl italic">{entry.genus} {entry.species}</h2>
-          <p className="font-mono text-xs text-muted-foreground mt-1">{entry.family}</p>
-        </div>
-
-        {/* Illustration — full width */}
+      <div className="max-w-lg mx-auto w-full px-4 pt-4 pb-6 space-y-6">
+        {/* Illustration — full width within max-w-lg container */}
         <div className="rounded-sm overflow-hidden border bg-muted/20">
           {entry.image_url_512 ? (
             <img
@@ -105,6 +83,28 @@ export default function SpeciesDetail({ entry, isAuthenticated, onPrev, onNext, 
             </div>
           ) : null}
         </div>
+
+        {/* Inline prev/next navigation — only when navigation is available */}
+        {showNav && (
+          <div className="flex items-center justify-between px-2 -mt-3">
+            <button
+              onClick={onPrev ?? undefined}
+              disabled={!onPrev}
+              aria-label="Previous species"
+              className="font-mono text-[9px] tracking-[1.5px] text-muted-foreground hover:text-foreground disabled:opacity-0 transition-all"
+            >
+              ← PREV
+            </button>
+            <button
+              onClick={onNext ?? undefined}
+              disabled={!onNext}
+              aria-label="Next species"
+              className="font-mono text-[9px] tracking-[1.5px] text-muted-foreground hover:text-foreground disabled:opacity-0 transition-all"
+            >
+              NEXT →
+            </button>
+          </div>
+        )}
 
         {/* Classification */}
         <div className="space-y-3">

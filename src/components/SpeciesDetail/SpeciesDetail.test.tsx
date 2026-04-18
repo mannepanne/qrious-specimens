@@ -185,7 +185,7 @@ describe('SpeciesDetail', () => {
     expect(screen.getByText('1 explorer')).toBeInTheDocument()
   })
 
-  it('calls onClose when close button is clicked', () => {
+  it('calls onClose when back button is clicked', () => {
     const onClose = vi.fn()
     render(
       <SpeciesDetail
@@ -196,7 +196,7 @@ describe('SpeciesDetail', () => {
         onClose={onClose}
       />,
     )
-    fireEvent.click(screen.getByLabelText('Close species detail'))
+    fireEvent.click(screen.getByLabelText('Go back'))
     expect(onClose).toHaveBeenCalledOnce()
   })
 
