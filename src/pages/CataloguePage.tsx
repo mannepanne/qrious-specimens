@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef, useCallback, type ChangeEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Search } from 'lucide-react'
+import { BookOpen, ChevronDown, ChevronRight, Search, SlidersHorizontal, X } from 'lucide-react'
 import { useCatalogue, useCatalogueTaxonomy } from '@/hooks/useCatalogue'
 import type { CatalogueFilters, CatalogueEntry } from '@/hooks/useCatalogue'
 import { useAuth } from '@/hooks/useAuth'
@@ -19,28 +19,38 @@ const BODY_SHAPE_OPTIONS = ['bell', 'diamond', 'elongated', 'ovoid', 'spherical'
 const LIMB_STYLE_OPTIONS = ['branching', 'flowing', 'jointed', 'spike', 'tentacle'] as const
 const PATTERN_TYPE_OPTIONS = ['dots', 'mesh', 'none', 'rings', 'scales', 'stripes'] as const
 
-// Filter chip for a single active filter value
-function FilterChip({
+// Row of toggle pill buttons for a single filter dimension
+function FilterRow({
   label,
+  options,
   value,
-  onRemove,
+  onChange,
 }: {
   label: string
-  value: string
-  onRemove: () => void
+  options: readonly string[]
+  value: string | undefined
+  onChange: (v: string | undefined) => void
 }) {
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-border font-mono text-[11px] bg-accent/50">
-      <span className="text-muted-foreground">{label}:</span>
-      <span>{value}</span>
-      <button
-        onClick={onRemove}
-        aria-label={`Remove ${label} filter`}
-        className="ml-0.5 opacity-60 hover:opacity-100"
-      >
-        ✕
-      </button>
-    </span>
+    <div className="space-y-1.5">
+      <p className="font-mono text-[9px] tracking-[2px] text-muted-foreground">{label.toUpperCase()}</p>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((opt) => (
+          <button
+            key={opt}
+            onClick={() => onChange(value === opt ? undefined : opt)}
+            className={[
+              'px-2 py-1 rounded-sm text-xs font-serif transition-colors border',
+              value === opt
+                ? 'bg-foreground text-background border-foreground'
+                : 'bg-card border-border hover:border-foreground/30',
+            ].join(' ')}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -90,7 +100,6 @@ export function CataloguePage() {
   useEffect(() => () => clearTimeout(debounceRef.current), [])
 
   function handleSpeciesClick(entry: CatalogueEntry) {
-    // Pass the entry in navigation state so SpeciesPage can render immediately
     navigate(`/species/${entry.qr_hash}`, { state: { entry } })
   }
 
@@ -100,15 +109,32 @@ export function CataloguePage() {
     if (orderParam) navigate('/catalogue')
   }
 
+  function clearTraitFilters() {
+    setFilters(prev => ({
+      ...prev,
+      rarity: undefined,
+      habitat: undefined,
+      symmetry: undefined,
+      bodyShape: undefined,
+      limbStyle: undefined,
+      patternType: undefined,
+    }))
+  }
+
   const taxonomyData = taxonomy.data ?? new Map()
-  // Total across all orders — used in the header; does not change when filters are applied
   const taxonomyTotal = [...taxonomyData.values()].reduce((s, v) => s + v.count, 0)
 
-  const nonOrderFilterCount = [
+  const traitFilterCount = [
     filters.rarity, filters.habitat, filters.symmetry,
-    filters.bodyShape, filters.limbStyle, filters.patternType, filters.search,
+    filters.bodyShape, filters.limbStyle, filters.patternType,
   ].filter(Boolean).length
-  const hasActiveFilters = !!(orderParam || nonOrderFilterCount > 0)
+  const hasActiveFilters = !!(orderParam || traitFilterCount > 0 || filters.search)
+  const hasActiveTraitFilters = traitFilterCount > 0
+
+  // Total entries shown — from the last page's metadata or the flat list length
+  const totalCount = catalogue.data?.pages[catalogue.data.pages.length - 1]?.length !== undefined
+    ? allEntries.length
+    : allEntries.length
 
   return (
     <main className="flex flex-col h-full">
@@ -121,7 +147,7 @@ export function CataloguePage() {
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Taxonomic sidebar — desktop always visible, mobile behind toggle */}
+        {/* Taxonomic sidebar — desktop always visible */}
         <aside className="hidden md:block shrink-0 border-r border-border overflow-y-auto w-48 px-3 py-2">
           <TaxonomicSidebar
             taxonomy={taxonomyData}
@@ -136,7 +162,7 @@ export function CataloguePage() {
 
         {/* Main column */}
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Sign-in CTA for visitors — above search/filter controls, width matches 4-col grid */}
+          {/* Sign-in CTA for visitors */}
           {!isAuthenticated && (
             <div className="px-4 pt-2 shrink-0">
               <div className="mx-auto max-w-[688px] border border-border rounded p-3 text-center font-mono text-[11px] text-muted-foreground bg-accent/30">
@@ -153,148 +179,158 @@ export function CataloguePage() {
           )}
 
           {/* Search + filter controls */}
-          <div className="px-4 pb-3 pt-1 space-y-2 shrink-0">
-            <div className="flex gap-2">
-              {/* Mobile taxonomy toggle */}
+          <div className="px-4 pb-3 pt-2 space-y-2 shrink-0">
+            {/* Search bar */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+              <input
+                type="search"
+                value={searchInput}
+                onChange={handleSearchChange}
+                placeholder="Search by name, order, or family…"
+                className="w-full pl-8 pr-3 py-2 border border-border rounded font-mono text-xs bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+
+            {/* Taxonomic index accordion — mobile only */}
+            <div className="md:hidden">
               <button
-                onClick={() => setShowMobileSidebar(prev => !prev)}
-                className="md:hidden px-3 py-2 border border-border rounded font-mono text-xs hover:bg-accent transition-colors shrink-0"
-                aria-label="Toggle taxonomy"
+                onClick={() => { setShowMobileSidebar(p => !p); if (!showMobileSidebar) setShowFilters(false) }}
+                className={[
+                  'w-full flex items-center justify-between px-3 py-2.5 rounded-sm border transition-colors',
+                  showMobileSidebar || orderParam
+                    ? 'bg-foreground/5 border-foreground/20'
+                    : 'bg-card border-border hover:border-foreground/20',
+                ].join(' ')}
               >
-                Orders
+                <span className="flex items-center gap-2">
+                  <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="font-mono text-[10px] tracking-[2px]">TAXONOMIC INDEX</span>
+                  {orderParam && !showMobileSidebar && (
+                    <span className="font-serif text-xs text-muted-foreground italic ml-1">
+                      — {orderParam}
+                    </span>
+                  )}
+                </span>
+                {showMobileSidebar
+                  ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                  : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                }
               </button>
 
-              {/* Search input with icon */}
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-                <input
-                  type="search"
-                  value={searchInput}
-                  onChange={handleSearchChange}
-                  placeholder="Search by name, order, or family…"
-                  className="w-full pl-8 pr-3 py-2 border border-border rounded font-mono text-xs bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                />
-              </div>
+              {showMobileSidebar && (
+                <div className="mt-2 border rounded-sm bg-muted/20 p-3">
+                  <TaxonomicSidebar
+                    taxonomy={taxonomyData}
+                    selectedOrder={orderParam ?? null}
+                    totalCount={taxonomyTotal}
+                    onSelectOrder={order => {
+                      if (order) navigate(`/catalogue/${encodeURIComponent(order)}`)
+                      else navigate('/catalogue')
+                      setShowMobileSidebar(false)
+                    }}
+                  />
+                </div>
+              )}
+            </div>
 
-              {/* Filter toggle */}
+            {/* Filter by traits accordion */}
+            <div>
               <button
-                onClick={() => setShowFilters(f => !f)}
+                onClick={() => { setShowFilters(p => !p); if (!showFilters) setShowMobileSidebar(false) }}
                 className={[
-                  'flex items-center gap-1.5 px-3 py-2 border border-border rounded font-mono text-[11px] tracking-widest transition-colors shrink-0',
-                  showFilters ? 'bg-accent' : 'hover:bg-accent',
+                  'w-full flex items-center justify-between px-3 py-2.5 rounded-sm border transition-colors',
+                  showFilters || hasActiveTraitFilters
+                    ? 'bg-foreground/5 border-foreground/20'
+                    : 'bg-card border-border hover:border-foreground/20',
                 ].join(' ')}
                 aria-expanded={showFilters}
               >
-                <span>FILTERS</span>
-                {nonOrderFilterCount > 0 && (
-                  <span className="bg-foreground text-background rounded-full w-4 h-4 text-[10px] flex items-center justify-center">
-                    {nonOrderFilterCount}
-                  </span>
-                )}
-                <span className="text-[10px] opacity-60" aria-hidden="true">{showFilters ? '▲' : '▼'}</span>
+                <span className="flex items-center gap-2">
+                  <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="font-mono text-[10px] tracking-[2px]">FILTER BY TRAITS</span>
+                  {!showFilters && hasActiveTraitFilters && (
+                    <span className="bg-foreground text-background text-[9px] rounded-full px-1.5 py-0.5 leading-none font-mono">
+                      {traitFilterCount}
+                    </span>
+                  )}
+                </span>
+                {showFilters
+                  ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                  : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                }
               </button>
+
+              {showFilters && (
+                <div className="mt-2 space-y-3 bg-muted/20 rounded-sm p-3 border border-border">
+                  <FilterRow
+                    label="Rarity"
+                    options={RARITY_OPTIONS}
+                    value={filters.rarity}
+                    onChange={v => setFilters(prev => ({ ...prev, rarity: v as Rarity | undefined }))}
+                  />
+                  <FilterRow
+                    label="Habitat"
+                    options={HABITAT_OPTIONS}
+                    value={filters.habitat}
+                    onChange={v => setFilters(prev => ({ ...prev, habitat: v }))}
+                  />
+                  <FilterRow
+                    label="Symmetry"
+                    options={SYMMETRY_OPTIONS}
+                    value={filters.symmetry}
+                    onChange={v => setFilters(prev => ({ ...prev, symmetry: v }))}
+                  />
+                  <FilterRow
+                    label="Body form"
+                    options={BODY_SHAPE_OPTIONS}
+                    value={filters.bodyShape}
+                    onChange={v => setFilters(prev => ({ ...prev, bodyShape: v }))}
+                  />
+                  <FilterRow
+                    label="Appendages"
+                    options={LIMB_STYLE_OPTIONS}
+                    value={filters.limbStyle}
+                    onChange={v => setFilters(prev => ({ ...prev, limbStyle: v }))}
+                  />
+                  <FilterRow
+                    label="Pattern"
+                    options={PATTERN_TYPE_OPTIONS}
+                    value={filters.patternType}
+                    onChange={v => setFilters(prev => ({ ...prev, patternType: v }))}
+                  />
+                  {hasActiveTraitFilters && (
+                    <button
+                      onClick={clearTraitFilters}
+                      className="flex items-center gap-1 font-mono text-[10px] tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <X className="h-3 w-3" /> CLEAR TRAITS
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Collapsible trait filter dropdowns */}
-            {showFilters && (
-              <div className="flex flex-wrap gap-2">
-                <select
-                  value={filters.rarity ?? ''}
-                  onChange={e => setFilters(prev => ({ ...prev, rarity: (e.target.value as Rarity) || undefined }))}
-                  className="px-2 py-1 border border-border rounded font-mono text-[11px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                >
-                  <option value="">Rarity</option>
-                  {RARITY_OPTIONS.map(r => (
-                    <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
-                  ))}
-                </select>
-
-                <select
-                  value={filters.habitat ?? ''}
-                  onChange={e => setFilters(prev => ({ ...prev, habitat: e.target.value || undefined }))}
-                  className="px-2 py-1 border border-border rounded font-mono text-[11px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                >
-                  <option value="">Habitat</option>
-                  {HABITAT_OPTIONS.map(h => <option key={h} value={h}>{h}</option>)}
-                </select>
-
-                <select
-                  value={filters.symmetry ?? ''}
-                  onChange={e => setFilters(prev => ({ ...prev, symmetry: e.target.value || undefined }))}
-                  className="px-2 py-1 border border-border rounded font-mono text-[11px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                >
-                  <option value="">Symmetry</option>
-                  {SYMMETRY_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-
-                <select
-                  value={filters.bodyShape ?? ''}
-                  onChange={e => setFilters(prev => ({ ...prev, bodyShape: e.target.value || undefined }))}
-                  className="px-2 py-1 border border-border rounded font-mono text-[11px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                >
-                  <option value="">Body form</option>
-                  {BODY_SHAPE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-
-                <select
-                  value={filters.limbStyle ?? ''}
-                  onChange={e => setFilters(prev => ({ ...prev, limbStyle: e.target.value || undefined }))}
-                  className="px-2 py-1 border border-border rounded font-mono text-[11px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                >
-                  <option value="">Appendages</option>
-                  {LIMB_STYLE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-
-                <select
-                  value={filters.patternType ?? ''}
-                  onChange={e => setFilters(prev => ({ ...prev, patternType: e.target.value || undefined }))}
-                  className="px-2 py-1 border border-border rounded font-mono text-[11px] bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                >
-                  <option value="">Pattern</option>
-                  {PATTERN_TYPE_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-
-                {hasActiveFilters && (
-                  <button
-                    onClick={clearAllFilters}
-                    className="px-2 py-1 border border-border rounded font-mono text-[11px] text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                  >
-                    Clear all
-                  </button>
+            {/* Results count + clear all */}
+            <div className="flex items-center justify-between">
+              <p className="font-mono text-[10px] tracking-[2px] text-muted-foreground">
+                {catalogue.isLoading ? 'LOADING…' : (
+                  <>
+                    {totalCount} SPECIMEN{totalCount !== 1 ? 'S' : ''}
+                    {hasActiveFilters && ' MATCHING'}
+                  </>
                 )}
-              </div>
-            )}
-
-            {/* Active filter chips — visible whether filters bar is open or closed */}
-            {hasActiveFilters && (
-              <div className="flex flex-wrap gap-1.5">
-                {orderParam          && <FilterChip label="Order"      value={orderParam}           onRemove={() => navigate('/catalogue')} />}
-                {filters.habitat     && <FilterChip label="Habitat"    value={filters.habitat}      onRemove={() => setFilters(p => ({ ...p, habitat: undefined }))} />}
-                {filters.symmetry    && <FilterChip label="Symmetry"   value={filters.symmetry}     onRemove={() => setFilters(p => ({ ...p, symmetry: undefined }))} />}
-                {filters.bodyShape   && <FilterChip label="Body form"  value={filters.bodyShape}    onRemove={() => setFilters(p => ({ ...p, bodyShape: undefined }))} />}
-                {filters.limbStyle   && <FilterChip label="Appendages" value={filters.limbStyle}    onRemove={() => setFilters(p => ({ ...p, limbStyle: undefined }))} />}
-                {filters.patternType && <FilterChip label="Pattern"    value={filters.patternType}  onRemove={() => setFilters(p => ({ ...p, patternType: undefined }))} />}
-                {filters.rarity      && <FilterChip label="Rarity"     value={filters.rarity}       onRemove={() => setFilters(p => ({ ...p, rarity: undefined }))} />}
-                {filters.search      && <FilterChip label="Search"     value={filters.search}       onRemove={() => { setSearchInput(''); setFilters(p => ({ ...p, search: undefined })) }} />}
-              </div>
-            )}
-          </div>
-
-          {/* Mobile sidebar overlay */}
-          {showMobileSidebar && (
-            <div className="md:hidden border-b border-border bg-background px-4 py-3 shrink-0">
-              <TaxonomicSidebar
-                taxonomy={taxonomyData}
-                selectedOrder={orderParam ?? null}
-                totalCount={taxonomyTotal}
-                onSelectOrder={order => {
-                  if (order) navigate(`/catalogue/${encodeURIComponent(order)}`)
-                  else navigate('/catalogue')
-                  setShowMobileSidebar(false)
-                }}
-              />
+              </p>
+              {hasActiveFilters && (
+                <button
+                  onClick={clearAllFilters}
+                  className="font-mono text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Clear all
+                </button>
+              )}
             </div>
-          )}
+          </div>
 
           {/* Species grid — centred, fixed card widths, max 4 columns */}
           <div className="flex-1 overflow-y-auto px-4 pb-4">
