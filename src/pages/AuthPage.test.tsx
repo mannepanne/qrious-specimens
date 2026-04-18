@@ -34,13 +34,13 @@ describe('AuthPage', () => {
     setupAuth({ error: null })
     render(<AuthPage />)
     expect(screen.getByLabelText(/correspondence address/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /send magic link/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /enter the field/i })).toBeInTheDocument()
   })
 
   it('submit button is disabled when email is empty', () => {
     setupAuth({ error: null })
     render(<AuthPage />)
-    expect(screen.getByRole('button', { name: /send magic link/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /enter the field/i })).toBeDisabled()
   })
 
   it('calls sendMagicLink with trimmed email on submit', async () => {
@@ -50,7 +50,7 @@ describe('AuthPage', () => {
     fireEvent.change(screen.getByLabelText(/correspondence address/i), {
       target: { value: '  naturalist@example.com  ' },
     })
-    fireEvent.click(screen.getByRole('button', { name: /send magic link/i }))
+    fireEvent.click(screen.getByRole('button', { name: /enter the field/i }))
 
     await waitFor(() => {
       expect(getSendMagicLink()).toHaveBeenCalledWith('naturalist@example.com')
@@ -64,7 +64,7 @@ describe('AuthPage', () => {
     fireEvent.change(screen.getByLabelText(/correspondence address/i), {
       target: { value: 'naturalist@example.com' },
     })
-    fireEvent.click(screen.getByRole('button', { name: /send magic link/i }))
+    fireEvent.click(screen.getByRole('button', { name: /enter the field/i }))
 
     await waitFor(() => {
       expect(screen.getByText(/check your correspondence/i)).toBeInTheDocument()
@@ -79,7 +79,7 @@ describe('AuthPage', () => {
     fireEvent.change(screen.getByLabelText(/correspondence address/i), {
       target: { value: 'naturalist@example.com' },
     })
-    fireEvent.click(screen.getByRole('button', { name: /send magic link/i }))
+    fireEvent.click(screen.getByRole('button', { name: /enter the field/i }))
 
     await waitFor(() => {
       expect(screen.getByText(/rate limit exceeded/i)).toBeInTheDocument()
@@ -93,13 +93,19 @@ describe('AuthPage', () => {
     fireEvent.change(screen.getByLabelText(/correspondence address/i), {
       target: { value: 'naturalist@example.com' },
     })
-    fireEvent.click(screen.getByRole('button', { name: /send magic link/i }))
+    fireEvent.click(screen.getByRole('button', { name: /enter the field/i }))
 
     await waitFor(() => screen.getByText(/check your correspondence/i))
 
     fireEvent.click(screen.getByText(/use a different address/i))
 
     expect(screen.getByLabelText(/correspondence address/i)).toBeInTheDocument()
+  })
+
+  it('renders new-user tagline', () => {
+    setupAuth({ error: null })
+    render(<AuthPage />)
+    expect(screen.getByText(/new to the coastal matrices/i)).toBeInTheDocument()
   })
 
   it('shows dispatching state while sending', async () => {
@@ -113,7 +119,7 @@ describe('AuthPage', () => {
     fireEvent.change(screen.getByLabelText(/correspondence address/i), {
       target: { value: 'naturalist@example.com' },
     })
-    fireEvent.click(screen.getByRole('button', { name: /send magic link/i }))
+    fireEvent.click(screen.getByRole('button', { name: /enter the field/i }))
 
     expect(await screen.findByRole('button', { name: /dispatching/i })).toBeDisabled()
   })

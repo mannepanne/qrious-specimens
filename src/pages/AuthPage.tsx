@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { Scan } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
@@ -34,7 +33,7 @@ export function AuthPage() {
 
   if (pageState === 'sent') {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-6">
+      <div className="flex h-full flex-col items-center justify-center p-6 overflow-y-auto">
         <div className="w-full max-w-sm text-center space-y-4">
           <h1 className="font-serif text-2xl">Check your correspondence</h1>
           <p className="font-serif text-sm text-muted-foreground italic">
@@ -56,7 +55,7 @@ export function AuthPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center p-6">
+    <div className="flex h-full flex-col items-center justify-center p-6 overflow-y-auto">
       <div className="w-full max-w-sm space-y-8">
         {/* Header */}
         <div className="text-center space-y-2">
@@ -92,14 +91,18 @@ export function AuthPage() {
             <p className="text-sm text-destructive">{errorMessage}</p>
           )}
 
-          <Button
+          <button
             type="submit"
-            className="w-full font-mono tracking-wider"
+            className="w-full font-mono tracking-wider py-2.5 bg-foreground text-background rounded hover:opacity-90 transition-opacity disabled:opacity-50"
             disabled={pageState === 'sending' || !email.trim()}
           >
-            {pageState === 'sending' ? 'Dispatching…' : 'Send magic link'}
-          </Button>
+            {pageState === 'sending' ? 'Dispatching…' : 'Enter the Field'}
+          </button>
         </form>
+
+        <p className="font-serif text-sm italic text-muted-foreground text-center">
+          New to the Coastal Matrices? Your first dispatch opens the Cabinet.
+        </p>
       </div>
     </div>
   )

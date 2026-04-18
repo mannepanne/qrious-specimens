@@ -23,12 +23,12 @@ export default function CommunityStats({ stats, isLoading }: Props) {
   }
 
   return (
-    <div className="flex justify-center gap-5 font-mono text-[10px] tracking-wider text-muted-foreground">
-      <span><span className="text-foreground">{stats.total_explorers}</span> Explorers</span>
+    <div className="flex justify-center gap-5 font-mono text-[10px] tracking-widest text-muted-foreground">
+      <span><span className="text-foreground">{stats.total_explorers}</span> EXPLORERS</span>
       <span aria-hidden="true">·</span>
-      <span><span className="text-foreground">{stats.total_specimens}</span> Specimens</span>
+      <span><span className="text-foreground">{stats.total_specimens}</span> SPECIMENS</span>
       <span aria-hidden="true">·</span>
-      <span><span className="text-foreground">{stats.total_species}</span> Species</span>
+      <span><span className="text-foreground">{stats.total_species}</span> SPECIES</span>
     </div>
   )
 }

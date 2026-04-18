@@ -227,6 +227,16 @@ describe('App', () => {
     expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
   })
 
+  it('tab bar is visible on the auth page /enter', async () => {
+    setupUnauthenticated()
+    renderApp({ initialPath: '/enter' })
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /qrious specimens/i })).toBeInTheDocument()
+    })
+    expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
+  })
+
   it('Gazette route renders The Explorer\'s Gazette heading', async () => {
     setupAuthenticated()
     renderApp({ initialPath: '/gazette' })

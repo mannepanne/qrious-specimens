@@ -1,6 +1,7 @@
 // ABOUT: Taxonomic Index sidebar for the species catalogue
-// ABOUT: Lists all Orders with species counts; selected order expands to show families
+// ABOUT: Expandable order tree with clickable family entries for drill-down filtering
 
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import type { OrderTaxonomy } from '@/hooks/useCatalogue'
 
 interface Props {
@@ -8,15 +9,25 @@ interface Props {
   taxonomy: Map<string, OrderTaxonomy>
   /** Currently active order filter, or null for all species */
   selectedOrder: string | null
+  /** Currently active family filter within the selected order */
+  selectedFamily?: string | null
   /** Total species count across all orders */
   totalCount: number
   onSelectOrder: (order: string | null) => void
+  onSelectFamily?: (family: string | null) => void
 }
 
-export default function TaxonomicSidebar({ taxonomy, selectedOrder, totalCount, onSelectOrder }: Props) {
+export default function TaxonomicSidebar({
+  taxonomy,
+  selectedOrder,
+  selectedFamily = null,
+  totalCount,
+  onSelectOrder,
+  onSelectFamily,
+}: Props) {
   return (
     <nav aria-label="Taxonomic index" className="flex flex-col gap-0.5">
-      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2 px-2">
+      <p className="font-mono text-[9px] uppercase tracking-[2px] text-muted-foreground mb-2 px-2">
         Taxonomic Index
       </p>
 
@@ -24,54 +35,74 @@ export default function TaxonomicSidebar({ taxonomy, selectedOrder, totalCount, 
       <button
         onClick={() => onSelectOrder(null)}
         className={[
-          'w-full text-left px-2 py-1.5 rounded text-sm font-mono transition-colors',
+          'w-full text-left px-2 py-1.5 rounded-sm text-sm font-serif transition-colors',
           selectedOrder === null
-            ? 'bg-accent/60 text-foreground font-medium'
-            : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
+            ? 'bg-foreground/10 font-medium'
+            : 'hover:bg-muted text-muted-foreground hover:text-foreground',
         ].join(' ')}
       >
-        <span className="flex items-center justify-between">
-          <span>All species</span>
-          <span className="text-[11px] opacity-60">{totalCount}</span>
+        All Species
+        <span className="font-mono text-[10px] text-muted-foreground ml-1">
+          ({totalCount})
         </span>
       </button>
 
       {/* Per-order entries */}
-      {[...taxonomy.entries()].map(([order, { count, families }]) => (
-        <div key={order}>
-          <button
-            onClick={() => onSelectOrder(order)}
-            className={[
-              'w-full text-left px-2 py-1.5 rounded text-sm font-mono transition-colors',
-              selectedOrder === order
-                ? 'bg-accent/60 text-foreground font-medium'
-                : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
-            ].join(' ')}
-          >
-            <span className="flex items-center justify-between gap-2">
+      {[...taxonomy.entries()].map(([order, { count, families }]) => {
+        const isSelected = selectedOrder === order
+        return (
+          <div key={order}>
+            <button
+              onClick={() => {
+                if (isSelected) {
+                  // Clicking selected order again clears it
+                  onSelectOrder(null)
+                  onSelectFamily?.(null)
+                } else {
+                  onSelectOrder(order)
+                  onSelectFamily?.(null)
+                }
+              }}
+              className={[
+                'w-full text-left px-2 py-1.5 rounded-sm text-sm font-serif flex items-center gap-1 transition-colors',
+                isSelected
+                  ? 'bg-foreground/10 font-medium'
+                  : 'hover:bg-muted text-muted-foreground hover:text-foreground',
+              ].join(' ')}
+            >
+              {isSelected
+                ? <ChevronDown className="h-3 w-3 shrink-0" />
+                : <ChevronRight className="h-3 w-3 shrink-0" />
+              }
               <span className="truncate italic">{order}</span>
-              <span className="text-[11px] opacity-60 shrink-0">{count}</span>
-            </span>
-          </button>
+              <span className="font-mono text-[10px] text-muted-foreground ml-auto shrink-0">{count}</span>
+            </button>
 
-          {/* Family breakdown — shown when this order is selected */}
-          {selectedOrder === order && (
-            <div className="ml-3 mt-0.5 flex flex-col gap-0.5">
-              {[...families.entries()]
-                .sort(([a], [b]) => a.localeCompare(b))
-                .map(([family, familyCount]) => (
-                  <span
-                    key={family}
-                    className="flex items-center justify-between px-2 py-1 font-mono text-[11px] text-muted-foreground"
-                  >
-                    <span className="truncate">{family}</span>
-                    <span className="opacity-60 shrink-0 ml-1">{familyCount}</span>
-                  </span>
-                ))}
-            </div>
-          )}
-        </div>
-      ))}
+            {/* Family breakdown — shown when this order is selected */}
+            {isSelected && (
+              <div className="ml-5 mt-0.5 flex flex-col gap-0.5">
+                {[...families.entries()]
+                  .sort(([a], [b]) => a.localeCompare(b))
+                  .map(([family, familyCount]) => (
+                    <button
+                      key={family}
+                      onClick={() => onSelectFamily?.(selectedFamily === family ? null : family)}
+                      className={[
+                        'w-full text-left px-2 py-1 rounded-sm text-xs font-serif transition-colors flex items-center justify-between',
+                        selectedFamily === family
+                          ? 'bg-foreground/10 font-medium'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                      ].join(' ')}
+                    >
+                      <span className="truncate">{family}</span>
+                      <span className="font-mono text-[9px] ml-1 shrink-0">{familyCount}</span>
+                    </button>
+                  ))}
+              </div>
+            )}
+          </div>
+        )
+      })}
     </nav>
   )
 }

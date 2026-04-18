@@ -65,7 +65,7 @@ const PROTECTED_PREFIXES = ['/cabinet', '/specimen/', '/settings']
 type Overlay = 'scanner' | 'excavating' | null
 
 // Paths on which the TabBar is hidden — detail and auth pages
-const NO_TABBAR_PREFIXES = ['/species/', '/specimen/', '/enter']
+const NO_TABBAR_PREFIXES = ['/species/', '/specimen/']
 
 function AppShell() {
   const { authState } = useAuth()

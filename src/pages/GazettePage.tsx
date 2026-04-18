@@ -40,16 +40,15 @@ export function GazettePage() {
   const profile = explorerProfile.data as ExplorerProfile | null | undefined
 
   return (
-    <main className="flex flex-col h-full overflow-y-auto">
-      <div className="px-4 pt-4 pb-6 space-y-6">
-        {/* Page title */}
-        <div>
-          <h1 className="font-serif text-2xl">The Explorer's Gazette</h1>
-          <p className="font-mono text-xs text-muted-foreground mt-0.5">
-            Field reports from naturalists across the expedition
-          </p>
-        </div>
+    <main className="flex flex-col h-full">
+      {/* Page title */}
+      <div className="px-4 pt-4 pb-3 shrink-0 border-b border-border">
+        <p className="font-mono text-[9px] tracking-[2px] text-muted-foreground uppercase">Field Dispatches</p>
+        <h1 className="font-serif text-2xl font-medium mt-0.5">The Explorer's Gazette</h1>
+      </div>
 
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-4 pt-4 pb-6 space-y-6 max-w-2xl mx-auto">
         {/* Community stats */}
         <CommunityStats stats={stats.data} isLoading={stats.isLoading} />
 
@@ -121,6 +120,7 @@ export function GazettePage() {
             isLoading={showcase.isLoading}
           />
         </section>
+        </div>
       </div>
     </main>
   )
