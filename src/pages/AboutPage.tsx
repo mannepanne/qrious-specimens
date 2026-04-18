@@ -18,7 +18,7 @@ export function AboutPage() {
       <div className="space-y-4 font-serif text-base leading-relaxed">
         <p>
           Here is a truth that most people have forgotten, or perhaps never knew: the world is full
-          of invisible things. Not ghosts. Not dark matter. QR codes. They are everywhere — stuck to
+          of invisible things. Not ghosts. Not dark matter. In the QR codes. They are everywhere — stuck to
           lampposts, printed on menus, hiding on the backs of name badges — and almost nobody looks
           at them twice.
         </p>
