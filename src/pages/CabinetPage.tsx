@@ -3,7 +3,6 @@
 
 import { useNavigate } from 'react-router-dom'
 import { BookOpen, LogOut, Scan, ScanLine } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { useCreatures, useDiscoveryCounts } from '@/hooks/useCreatures'
 import { useAuth } from '@/hooks/useAuth'
 import { useScanOverlay } from '@/App'
@@ -71,12 +70,6 @@ export function CabinetPage() {
 
       <div className="flex-1 overflow-y-auto">
         <div className="px-4 py-4 space-y-4 max-w-2xl mx-auto">
-          {/* Scan CTA */}
-          <Button className="w-full gap-2 font-mono tracking-wider" onClick={openScanner}>
-            <ScanLine className="h-4 w-4" />
-            EXCAVATE NEW SPECIMEN
-          </Button>
-
           {/* Rarity stats bar */}
           {allCreatures.length > 0 && (
             <div className="flex gap-4 font-mono text-[10px] tracking-wider text-muted-foreground">
@@ -151,6 +144,16 @@ export function CabinetPage() {
           )}
         </div>
       </div>
+
+      {/* Floating action button — excavate new specimen */}
+      <button
+        onClick={openScanner}
+        aria-label="Excavate new specimen"
+        className="fixed bottom-20 right-5 z-50 flex items-center gap-2 bg-foreground text-background font-mono text-[11px] tracking-widest px-4 py-3 rounded-full shadow-lg hover:opacity-90 active:scale-95 transition-all"
+      >
+        <ScanLine className="h-4 w-4 shrink-0" />
+        EXCAVATE
+      </button>
     </main>
   )
 }
