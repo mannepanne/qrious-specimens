@@ -172,7 +172,7 @@ export function CataloguePage() {
           {/* Sign-in CTA for visitors */}
           {!isAuthenticated && (
             <div className="px-4 pt-2 shrink-0">
-              <div className="bg-card border rounded-sm p-6 text-center space-y-3">
+              <div className="max-w-2xl mx-auto bg-card border rounded-sm p-6 text-center space-y-3">
                 <Compass className="h-10 w-10 mx-auto text-muted-foreground/40" />
                 <div>
                   <p className="font-serif text-base font-medium">A fellowship of curious naturalists</p>
@@ -191,7 +191,8 @@ export function CataloguePage() {
           )}
 
           {/* Search + filter controls */}
-          <div className="px-4 pb-3 pt-2 space-y-2 shrink-0">
+          <div className="px-4 pb-3 pt-2 shrink-0">
+          <div className="space-y-2 max-w-2xl mx-auto">
             {/* Search bar */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
@@ -345,9 +346,11 @@ export function CataloguePage() {
               )}
             </div>
           </div>
+          </div>
 
           {/* Species grid — centred, fixed card widths, max 4 columns */}
           <div className="flex-1 overflow-y-auto px-4 pb-4">
+          <div className="max-w-2xl mx-auto">
             {catalogue.isLoading ? (
               <div className="grid grid-cols-[repeat(2,160px)] sm:grid-cols-[repeat(3,160px)] lg:grid-cols-[repeat(4,160px)] gap-4 justify-center pt-2">
                 {Array.from({ length: 12 }).map((_, i) => (
@@ -390,6 +393,7 @@ export function CataloguePage() {
                 )}
               </>
             )}
+          </div>
           </div>
         </div>
       </div>
