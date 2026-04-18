@@ -23,18 +23,16 @@ const FIELD_NOTES_TEASER_LENGTH = 120
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-GB', {
     day: 'numeric',
-    month: 'long',
+    month: 'short',
     year: 'numeric',
   })
 }
 
-function MetaRow({ label, value }: { label: string; value: string }) {
+function GridCell({ label, value, style }: { label: string; value: string; style?: React.CSSProperties }) {
   return (
-    <div className="flex justify-between gap-4 py-1.5 border-b border-border/40 last:border-0">
-      <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground shrink-0">
-        {label}
-      </span>
-      <span className="font-mono text-xs text-right">{value}</span>
+    <div>
+      <p className="font-mono text-[9px] text-muted-foreground">{label}</p>
+      <p className="font-serif text-sm" style={style}>{value}</p>
     </div>
   )
 }
@@ -48,15 +46,16 @@ export default function SpeciesDetail({ entry, isAuthenticated, onPrev, onNext, 
 
   // Field notes: full text for authenticated users; teaser for visitors
   const fieldNotesFull = entry.field_notes ?? ''
-  // Slice at nearest word boundary so the teaser doesn't cut mid-word
   const fieldNotesTeaserText = fieldNotesFull.slice(0, FIELD_NOTES_TEASER_LENGTH).replace(/\s\S+$/, '')
   const showTeaser = !isAuthenticated && fieldNotesFull.length > FIELD_NOTES_TEASER_LENGTH
 
+  const showNav = onPrev !== null || onNext !== null
+
   return (
     <div className="flex flex-col h-full overflow-y-auto">
-      {/* Header: close + prev/next navigation (prev/next hidden when both unavailable) */}
+      {/* Header: prev/next navigation + close button */}
       <div className="flex items-center justify-between px-4 pt-4 pb-2 shrink-0">
-        {(onPrev || onNext) ? (
+        {showNav ? (
           <div className="flex gap-2">
             <button
               onClick={onPrev ?? undefined}
@@ -85,107 +84,101 @@ export default function SpeciesDetail({ entry, isAuthenticated, onPrev, onNext, 
         </button>
       </div>
 
-      <div className="px-4 pb-6 flex flex-col gap-6">
-        {/* Illustration */}
-        <div className="flex justify-center pt-2">
+      <div className="max-w-lg mx-auto w-full px-4 pb-6 space-y-6">
+        {/* Binomial name */}
+        <div className="text-center">
+          <h2 className="font-serif text-2xl italic">{entry.genus} {entry.species}</h2>
+          <p className="font-mono text-xs text-muted-foreground mt-1">{entry.family}</p>
+        </div>
+
+        {/* Illustration — full width */}
+        <div className="rounded-sm overflow-hidden border bg-muted/20">
           {entry.image_url_512 ? (
             <img
               src={entry.image_url_512}
               alt={`${entry.genus} ${entry.species}`}
-              width={280}
-              height={280}
-              loading="lazy"
-              className="w-[240px] h-[240px] sm:w-[280px] sm:h-[280px] object-contain"
+              className="w-full"
             />
           ) : sketchDna ? (
-            <CreatureRenderer dna={sketchDna} size={240} showAnnotations />
+            <div className="flex justify-center p-6">
+              <CreatureRenderer dna={sketchDna} size={240} showAnnotations />
+            </div>
           ) : null}
         </div>
 
-        {/* Binomial name + rarity */}
-        <div className="text-center">
-          <h2 className="font-serif text-2xl italic">
-            {entry.genus} {entry.species}
-          </h2>
-          <div className="flex items-center justify-center gap-3 mt-1">
-            <span className="font-mono text-xs text-muted-foreground">{entry.family}</span>
-            <span
-              className="font-mono text-[10px] tracking-widest px-1.5 py-0.5 rounded-sm"
-              style={{ color: rarityColor, borderColor: rarityColor, border: '1px solid' }}
-            >
-              {getRarityLabel(rarity)}
-            </span>
+        {/* Classification */}
+        <div className="space-y-3">
+          <h3 className="font-mono text-[10px] tracking-[2px] text-muted-foreground">CLASSIFICATION</h3>
+          <div className="bg-card border rounded-sm p-4">
+            <div className="grid grid-cols-2 gap-y-3 gap-x-4">
+              <GridCell label="ORDER"       value={entry.order} />
+              <GridCell label="FAMILY"      value={entry.family} />
+              <GridCell label="HABITAT"     value={entry.habitat} />
+              <GridCell label="TEMPERAMENT" value={entry.temperament} />
+              <GridCell label="EST. SIZE"   value={entry.estimated_size} />
+            </div>
           </div>
         </div>
 
-        {/* Taxonomy table */}
-        <section>
-          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2">
-            Classification
-          </p>
-          <div className="border border-border rounded-md px-3">
-            <MetaRow label="Order"       value={entry.order} />
-            <MetaRow label="Family"      value={entry.family} />
-            <MetaRow label="Habitat"     value={entry.habitat} />
-            <MetaRow label="Temperament" value={entry.temperament} />
-            <MetaRow label="Est. size"   value={entry.estimated_size} />
+        {/* Observed traits */}
+        <div className="space-y-3">
+          <h3 className="font-mono text-[10px] tracking-[2px] text-muted-foreground">OBSERVED TRAITS</h3>
+          <div className="bg-card border rounded-sm p-4">
+            <div className="grid grid-cols-2 gap-y-3 gap-x-4">
+              <GridCell label="SYMMETRY"   value={entry.symmetry} />
+              <GridCell label="BODY FORM"  value={entry.body_shape} />
+              <GridCell label="APPENDAGES" value={entry.limb_style} />
+              <GridCell label="PATTERN"    value={entry.pattern_type} />
+            </div>
           </div>
-        </section>
+        </div>
 
-        {/* Physical traits */}
-        <section>
-          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2">
-            Morphological traits
-          </p>
-          <div className="border border-border rounded-md px-3">
-            <MetaRow label="Symmetry"    value={entry.symmetry} />
-            <MetaRow label="Body form"   value={entry.body_shape} />
-            <MetaRow label="Appendages"  value={entry.limb_style} />
-            <MetaRow label="Pattern"     value={entry.pattern_type} />
+        {/* Discovery record */}
+        <div className="space-y-3">
+          <h3 className="font-mono text-[10px] tracking-[2px] text-muted-foreground">DISCOVERY RECORD</h3>
+          <div className="bg-card border rounded-sm p-4">
+            <div className="grid grid-cols-2 gap-y-3 gap-x-4">
+              <GridCell
+                label="RARITY"
+                value={getRarityLabel(rarity)}
+                style={{ color: rarityColor }}
+              />
+              <GridCell
+                label="DISCOVERERS"
+                value={`${entry.discovery_count} explorer${entry.discovery_count !== 1 ? 's' : ''}`}
+              />
+              <GridCell label="FIRST CATALOGUED" value={formatDate(entry.first_discovered_at)} />
+              {isAuthenticated && firstDiscovererName && (
+                <GridCell label="First by" value={firstDiscovererName} />
+              )}
+            </div>
           </div>
-        </section>
+        </div>
 
-        {/* Field notes */}
+        {/* Field notes — auth-gated teaser for visitors */}
         {fieldNotesFull && (
-          <section>
-            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2">
-              Field notes
-            </p>
-            {showTeaser ? (
-              <div>
-                <p className="font-serif text-sm leading-relaxed text-muted-foreground">
-                  {fieldNotesTeaserText}
-                  <span className="text-muted-foreground/60">…</span>
-                </p>
-                <p className="mt-3 font-mono text-[11px] text-muted-foreground border border-border rounded px-3 py-2">
-                  Sign in to read the complete field notes.
-                </p>
-              </div>
-            ) : (
-              <p className="font-serif text-sm leading-relaxed">{fieldNotesFull}</p>
-            )}
-          </section>
-        )}
-
-        {/* Discovery metadata */}
-        <section>
-          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2">
-            Discovery record
-          </p>
-          <div className="border border-border rounded-md px-3">
-            <MetaRow
-              label="First catalogued"
-              value={formatDate(entry.first_discovered_at)}
-            />
-            <MetaRow
-              label="Discoverers"
-              value={`${entry.discovery_count} explorer${entry.discovery_count !== 1 ? 's' : ''}`}
-            />
-            {isAuthenticated && firstDiscovererName && (
-              <MetaRow label="First by" value={firstDiscovererName} />
-            )}
+          <div className="space-y-3">
+            <h3 className="font-mono text-[10px] tracking-[2px] text-muted-foreground">FIELD NOTES</h3>
+            <div className="bg-card border rounded-sm p-4 space-y-3">
+              {showTeaser ? (
+                <>
+                  <p className="font-serif text-sm leading-relaxed text-foreground/80 italic">
+                    {fieldNotesTeaserText}<span className="text-muted-foreground/60">…</span>
+                  </p>
+                  <p className="font-mono text-[11px] text-muted-foreground border border-border rounded px-3 py-2">
+                    Sign in to read the complete field notes.
+                  </p>
+                </>
+              ) : (
+                fieldNotesFull.split('\n\n').map((para, i) => (
+                  <p key={i} className="font-serif text-sm leading-relaxed text-foreground/80 italic">
+                    {para}
+                  </p>
+                ))
+              )}
+            </div>
           </div>
-        </section>
+        )}
       </div>
     </div>
   )
