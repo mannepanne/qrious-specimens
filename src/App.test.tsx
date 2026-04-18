@@ -178,7 +178,7 @@ describe('App', () => {
   it('stub pages render at /about, /privacy, /contact', async () => {
     setupUnauthenticated()
     const { unmount } = renderApp({ initialPath: '/about' })
-    await waitFor(() => expect(screen.getByRole('heading', { name: /about/i })).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('heading', { name: /qrious specimens/i })).toBeInTheDocument())
     unmount()
 
     renderApp({ initialPath: '/privacy' })
