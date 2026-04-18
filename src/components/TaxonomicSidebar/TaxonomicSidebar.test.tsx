@@ -16,7 +16,7 @@ function makeTaxonomy(...entries: [string, [string, number][]][]): Map<string, O
 }
 
 describe('TaxonomicSidebar', () => {
-  it('renders "All species" entry with total count', () => {
+  it('renders "All Species" entry with total count', () => {
     render(
       <TaxonomicSidebar
         taxonomy={makeTaxonomy(['Arachnoida', [['Plexidae', 3]]], ['Molluscia', [['Cristidae', 5]]])}
@@ -25,8 +25,8 @@ describe('TaxonomicSidebar', () => {
         onSelectOrder={vi.fn()}
       />,
     )
-    expect(screen.getByText('All species')).toBeInTheDocument()
-    expect(screen.getByText('8')).toBeInTheDocument()
+    expect(screen.getByText('All Species')).toBeInTheDocument()
+    expect(screen.getByText('(8)')).toBeInTheDocument()
   })
 
   it('renders each order with its count', () => {
@@ -44,7 +44,7 @@ describe('TaxonomicSidebar', () => {
     expect(screen.getByText('5')).toBeInTheDocument()
   })
 
-  it('highlights "All species" with accent background when selectedOrder is null', () => {
+  it('highlights "All Species" with accent background when selectedOrder is null', () => {
     render(
       <TaxonomicSidebar
         taxonomy={makeTaxonomy(['Arachnoida', [['Plexidae', 3]]])}
@@ -53,8 +53,8 @@ describe('TaxonomicSidebar', () => {
         onSelectOrder={vi.fn()}
       />,
     )
-    const allButton = screen.getByText('All species').closest('button')!
-    expect(allButton.className).toContain('bg-accent')
+    const allButton = screen.getByText('All Species').closest('button')!
+    expect(allButton.className).toContain('bg-foreground')
   })
 
   it('highlights the selected order with accent background', () => {
@@ -67,10 +67,10 @@ describe('TaxonomicSidebar', () => {
       />,
     )
     const arachButton = screen.getByText('Arachnoida').closest('button')!
-    expect(arachButton.className).toContain('bg-accent')
+    expect(arachButton.className).toContain('bg-foreground')
 
     const mollButton = screen.getByText('Molluscia').closest('button')!
-    expect(mollButton.className).not.toContain('bg-accent/60')
+    expect(mollButton.className).not.toContain('bg-foreground')
   })
 
   it('shows family breakdown when an order is selected', () => {
@@ -86,6 +86,67 @@ describe('TaxonomicSidebar', () => {
     expect(screen.getByText('Vexidae')).toBeInTheDocument()
   })
 
+  it('families are rendered as clickable buttons', () => {
+    render(
+      <TaxonomicSidebar
+        taxonomy={makeTaxonomy(['Arachnoida', [['Plexidae', 2]]])}
+        selectedOrder="Arachnoida"
+        totalCount={2}
+        onSelectOrder={vi.fn()}
+      />,
+    )
+    const familyEl = screen.getByText('Plexidae')
+    expect(familyEl.closest('button')).not.toBeNull()
+  })
+
+  it('calls onSelectFamily when a family is clicked', () => {
+    const onSelectFamily = vi.fn()
+    render(
+      <TaxonomicSidebar
+        taxonomy={makeTaxonomy(['Arachnoida', [['Plexidae', 2], ['Vexidae', 1]]])}
+        selectedOrder="Arachnoida"
+        selectedFamily={null}
+        totalCount={3}
+        onSelectOrder={vi.fn()}
+        onSelectFamily={onSelectFamily}
+      />,
+    )
+    fireEvent.click(screen.getByText('Plexidae').closest('button')!)
+    expect(onSelectFamily).toHaveBeenCalledWith('Plexidae')
+  })
+
+  it('calls onSelectFamily with null when the active family is clicked again', () => {
+    const onSelectFamily = vi.fn()
+    render(
+      <TaxonomicSidebar
+        taxonomy={makeTaxonomy(['Arachnoida', [['Plexidae', 2]]])}
+        selectedOrder="Arachnoida"
+        selectedFamily="Plexidae"
+        totalCount={2}
+        onSelectOrder={vi.fn()}
+        onSelectFamily={onSelectFamily}
+      />,
+    )
+    fireEvent.click(screen.getByText('Plexidae').closest('button')!)
+    expect(onSelectFamily).toHaveBeenCalledWith(null)
+  })
+
+  it('highlights the selected family', () => {
+    render(
+      <TaxonomicSidebar
+        taxonomy={makeTaxonomy(['Arachnoida', [['Plexidae', 2], ['Vexidae', 1]]])}
+        selectedOrder="Arachnoida"
+        selectedFamily="Plexidae"
+        totalCount={3}
+        onSelectOrder={vi.fn()}
+      />,
+    )
+    const plexButton = screen.getByText('Plexidae').closest('button')!
+    expect(plexButton.className).toContain('bg-foreground')
+    const vexButton = screen.getByText('Vexidae').closest('button')!
+    expect(vexButton.className).not.toContain('bg-foreground')
+  })
+
   it('does not show families for unselected orders', () => {
     render(
       <TaxonomicSidebar
@@ -99,7 +160,7 @@ describe('TaxonomicSidebar', () => {
     expect(screen.queryByText('Cristidae')).not.toBeInTheDocument()
   })
 
-  it('calls onSelectOrder(null) when "All species" is clicked', () => {
+  it('calls onSelectOrder(null) when "All Species" is clicked', () => {
     const onSelectOrder = vi.fn()
     render(
       <TaxonomicSidebar
@@ -109,7 +170,7 @@ describe('TaxonomicSidebar', () => {
         onSelectOrder={onSelectOrder}
       />,
     )
-    fireEvent.click(screen.getByText('All species').closest('button')!)
+    fireEvent.click(screen.getByText('All Species').closest('button')!)
     expect(onSelectOrder).toHaveBeenCalledWith(null)
   })
 

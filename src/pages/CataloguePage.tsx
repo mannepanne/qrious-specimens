@@ -62,20 +62,26 @@ export function CataloguePage() {
   // Order comes from the URL path (/catalogue/:order) — other filters remain local state
   const { order: orderParam } = useParams<{ order?: string }>()
   const [filters, setFilters] = useState<CatalogueFilters>({ order: orderParam })
+  const [familyFilter, setFamilyFilter] = useState<string | null>(null)
   const [searchInput, setSearchInput] = useState('')
   const [showMobileSidebar, setShowMobileSidebar] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>()
 
-  // Keep filters.order in sync with the URL param whenever navigation changes it
+  // Keep filters.order in sync with the URL param; clear family when order changes
   useEffect(() => {
     setFilters(prev => ({ ...prev, order: orderParam }))
+    setFamilyFilter(null)
   }, [orderParam])
 
   const catalogue = useCatalogue(filters)
   const taxonomy = useCatalogueTaxonomy()
 
   const allEntries: CatalogueEntry[] = catalogue.data?.pages.flatMap(p => p) ?? []
+  // Family filtering is client-side on top of the server-side order filter
+  const displayEntries = familyFilter
+    ? allEntries.filter(e => e.family === familyFilter)
+    : allEntries
 
   // Infinite scroll sentinel
   const sentinelRef = useIntersectionObserver(
@@ -105,6 +111,7 @@ export function CataloguePage() {
 
   function clearAllFilters() {
     setFilters({})
+    setFamilyFilter(null)
     setSearchInput('')
     if (orderParam) navigate('/catalogue')
   }
@@ -128,7 +135,7 @@ export function CataloguePage() {
     filters.rarity, filters.habitat, filters.symmetry,
     filters.bodyShape, filters.limbStyle, filters.patternType,
   ].filter(Boolean).length
-  const hasActiveFilters = !!(orderParam || traitFilterCount > 0 || filters.search)
+  const hasActiveFilters = !!(orderParam || familyFilter || traitFilterCount > 0 || filters.search)
   const hasActiveTraitFilters = traitFilterCount > 0
 
   // Total entries shown — from the last page's metadata or the flat list length
@@ -152,11 +159,13 @@ export function CataloguePage() {
           <TaxonomicSidebar
             taxonomy={taxonomyData}
             selectedOrder={orderParam ?? null}
+            selectedFamily={familyFilter}
             totalCount={taxonomyTotal}
             onSelectOrder={order => {
               if (order) navigate(`/catalogue/${encodeURIComponent(order)}`)
               else navigate('/catalogue')
             }}
+            onSelectFamily={setFamilyFilter}
           />
         </aside>
 
@@ -228,12 +237,14 @@ export function CataloguePage() {
                   <TaxonomicSidebar
                     taxonomy={taxonomyData}
                     selectedOrder={orderParam ?? null}
+                    selectedFamily={familyFilter}
                     totalCount={taxonomyTotal}
                     onSelectOrder={order => {
                       if (order) navigate(`/catalogue/${encodeURIComponent(order)}`)
                       else navigate('/catalogue')
                       setShowMobileSidebar(false)
                     }}
+                    onSelectFamily={f => { setFamilyFilter(f); setShowMobileSidebar(false) }}
                   />
                 </div>
               )}
@@ -321,7 +332,7 @@ export function CataloguePage() {
               <p className="font-mono text-[10px] tracking-[2px] text-muted-foreground">
                 {catalogue.isLoading ? 'LOADING…' : (
                   <>
-                    {totalCount} SPECIMEN{totalCount !== 1 ? 'S' : ''}
+                    {displayEntries.length} SPECIMEN{displayEntries.length !== 1 ? 'S' : ''}
                     {hasActiveFilters && ' MATCHING'}
                   </>
                 )}
@@ -345,7 +356,7 @@ export function CataloguePage() {
                   <div key={i} className="w-[160px] h-52 rounded-lg border border-border animate-pulse bg-accent/20" />
                 ))}
               </div>
-            ) : allEntries.length === 0 ? (
+            ) : displayEntries.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <p className="font-serif text-lg text-muted-foreground italic">No specimens match your criteria.</p>
                 {hasActiveFilters && (
@@ -360,7 +371,7 @@ export function CataloguePage() {
             ) : (
               <>
                 <div className="grid grid-cols-[repeat(2,160px)] sm:grid-cols-[repeat(3,160px)] lg:grid-cols-[repeat(4,160px)] gap-4 justify-center pt-2">
-                  {allEntries.map(entry => (
+                  {displayEntries.map(entry => (
                     <SpeciesCard
                       key={entry.qr_hash}
                       entry={entry}
