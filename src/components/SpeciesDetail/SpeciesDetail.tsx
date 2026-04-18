@@ -149,7 +149,7 @@ export default function SpeciesDetail({ entry, isAuthenticated, onPrev, onNext, 
               />
               <GridCell label="FIRST CATALOGUED" value={formatDate(entry.first_discovered_at)} />
               {isAuthenticated && firstDiscovererName && (
-                <GridCell label="First by" value={firstDiscovererName} />
+                <GridCell label="FIRST BY" value={firstDiscovererName} />
               )}
             </div>
           </div>
