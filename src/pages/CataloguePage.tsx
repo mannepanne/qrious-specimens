@@ -155,7 +155,7 @@ export function CataloguePage() {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Taxonomic sidebar — desktop always visible */}
-        <aside className="hidden md:block shrink-0 border-r border-border overflow-y-auto w-48 px-3 py-2">
+        <aside className="hidden md:block shrink-0 overflow-y-auto w-48 px-3 py-2">
           <TaxonomicSidebar
             taxonomy={taxonomyData}
             selectedOrder={orderParam ?? null}
@@ -168,6 +168,9 @@ export function CataloguePage() {
             onSelectFamily={setFamilyFilter}
           />
         </aside>
+
+        {/* Full-height divider between sidebar and content — a dedicated div always stretches */}
+        <div className="hidden md:block w-px bg-border shrink-0" />
 
         {/* Main column */}
         <div className="flex-1 flex flex-col overflow-hidden">
