@@ -198,12 +198,12 @@ describe('App', () => {
     })
   })
 
-  it('shows email on Cabinet page when authenticated', async () => {
+  it('shows scan CTA on Cabinet page when authenticated', async () => {
     setupAuthenticated()
     renderApp({ initialPath: '/cabinet' })
 
     await waitFor(() => {
-      expect(screen.getByText('naturalist@example.com')).toBeInTheDocument()
+      expect(screen.getByText(/excavate new specimen/i)).toBeInTheDocument()
     })
   })
 
