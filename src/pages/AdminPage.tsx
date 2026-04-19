@@ -384,10 +384,11 @@ function UserRow({ user }: { user: AdminUser }) {
             size="sm"
             onClick={handleExport}
             disabled={gdprExport.isPending}
-            className="h-7 px-2"
+            className="h-7 px-2 font-mono text-[9px] tracking-wider gap-1.5"
             title="Export user data"
           >
             <Download className="h-3.5 w-3.5" />
+            Export
           </Button>
 
           <AlertDialog>
@@ -395,10 +396,11 @@ function UserRow({ user }: { user: AdminUser }) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2 text-destructive hover:text-destructive"
+                className="h-7 px-2 font-mono text-[9px] tracking-wider gap-1.5 text-destructive hover:text-destructive"
                 title="Delete user data"
               >
                 <Trash2 className="h-3.5 w-3.5" />
+                Delete Data
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>

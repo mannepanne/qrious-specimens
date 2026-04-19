@@ -15,7 +15,10 @@ export function useIsAdmin(userId: string | null | undefined) {
         .select('is_admin')
         .eq('id', userId)
         .single()
-      if (error) return false
+      if (error) {
+        console.error('[useIsAdmin] Failed to check admin status:', error)
+        return false
+      }
       return data?.is_admin === true
     },
     enabled: !!userId,

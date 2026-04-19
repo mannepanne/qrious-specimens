@@ -68,7 +68,7 @@ export function SettingsPage() {
     <main className="flex flex-col h-full">
       <div className="px-4 pt-4 pb-3 shrink-0 border-b border-border flex items-center gap-3">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/cabinet')}
           className="text-muted-foreground hover:text-foreground transition-colors"
           aria-label="Go back"
         >

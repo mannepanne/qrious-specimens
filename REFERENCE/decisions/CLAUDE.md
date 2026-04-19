@@ -131,6 +131,7 @@ grep -r "authentication" REFERENCE/decisions/
 
 **Format:** Listed chronologically (newest first)
 
+- [2026-04-19 — Retain contact messages on GDPR delete](./2026-04-19-retain-contact-messages-on-gdpr-delete.md) — Contact messages kept after erasure requests; GDPR Art. 17(3) legal basis, provability of acting on user requests
 - [2026-04-09 — Layered navigation model](./2026-04-09-layered-navigation-model.md) — Tab/overlay/subpage state, why no URL router, auth gate per destination
 - [2026-04-09 — CSP before Phase 4](./2026-04-09-csp-before-phase-4.md) — CSP delivery via Cloudflare Worker, report-only in Phase 3, enforce before Phase 4 merges
 

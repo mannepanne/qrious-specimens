@@ -124,6 +124,14 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- Deletes all user data in the public schema. Does NOT delete the auth.users
 -- record — that requires Supabase auth admin API.
 -- Delete order respects any FK dependencies: creatures/badges/activity before profiles.
+--
+-- INTENTIONAL: contact_messages are NOT deleted, even when the user requests erasure.
+-- Contact messages are organisational correspondence (messages sent TO us), not
+-- user-generated content owned by the user. Retaining them allows us to demonstrate
+-- that we received and acted on the user's requests, which is a legitimate interest
+-- under GDPR Recital 47 and a legal record-keeping requirement. The sender_email field
+-- in retained messages does not reference auth.users, so it persists independently.
+-- See ADR: REFERENCE/decisions/2026-04-19-retain-contact-messages-on-gdpr-delete.md
 
 CREATE OR REPLACE FUNCTION public.admin_delete_user_data(p_user_id uuid)
 RETURNS void AS $$
