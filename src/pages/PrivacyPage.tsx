@@ -89,7 +89,10 @@ export function PrivacyPage() {
               <span>
                 <span className="font-medium">Delete your account</span> — request complete removal
                 of your account and all associated data, including specimens, illustrations, and
-                field notes
+                field notes. Note: if you have previously contacted us via the contact form, those
+                messages may be retained as a record of our correspondence, in accordance with our
+                legitimate interest in demonstrating that we received and acted on your
+                communications (GDPR Article 17(3))
               </span>
             </li>
             <li className="flex gap-2">

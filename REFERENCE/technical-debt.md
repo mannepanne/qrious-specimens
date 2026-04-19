@@ -159,6 +159,17 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
+### TD-016: Contact form captcha is client-side only
+
+- **Location:** `src/components/VictorianCaptcha/VictorianCaptcha.tsx`; `workers/contact/index.ts`
+- **Issue:** The VictorianCaptcha and honeypot field are validated in the browser only. A bot POSTing directly to `/api/contact` bypasses both. Server-side rate limiting (5 req/IP/min via `CONTACT_RATE_LIMITER`) is in place and limits quota abuse, but captcha itself is not verified server-side.
+- **Why accepted:** Cloudflare's edge provides default bot protection. The rate limiter limits blast radius. Client-side captcha blocks opportunistic spam scripts. Server-side captcha verification (e.g. Cloudflare Turnstile) would require a separate token exchange and is overkill for current traffic.
+- **Risk:** Low — rate limiter caps damage; Cloudflare edge handles large-scale abuse.
+- **Future fix:** Cloudflare Turnstile for true server-verified captcha, if targeted abuse becomes a real issue.
+- **Phase introduced:** Phase 9
+
+---
+
 ### Example Format: TD-001: Description
 - **Location:** `src/path/to/file.ts` - `functionName()`
 - **Issue:** Clear description of the limitation or shortcut

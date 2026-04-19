@@ -18,10 +18,15 @@ enabled = true
 binding = "IMAGES"
 bucket_name = "qrious-specimens-images"
 
-# Public R2 URL — set to your bucket's r2.dev URL or custom domain
-# Find this in the Cloudflare dashboard under R2 → qrious-specimens-images → Settings
 [vars]
+# Legacy R2 URL — used only for images uploaded before CF Images migration
+# Find in: Cloudflare dashboard → R2 → qrious-specimens-images → Settings
 PUBLIC_R2_URL = "https://pub-PLACEHOLDER.r2.dev"
+
+# Cloudflare Images delivery hash — NOT a secret (appears in every image URL)
+# Find in: Cloudflare dashboard → Images → Overview → "Your images are served from"
+# e.g. https://imagedelivery.net/XXXXXX/<image_id>/<variant>  ← XXXXXX is the hash
+CF_IMAGES_DELIVERY_HASH = "PLACEHOLDER"
 
 # Secrets — set via `wrangler secret put <NAME>` (never in this file):
 #   GEMINI_API_KEY
@@ -29,3 +34,15 @@ PUBLIC_R2_URL = "https://pub-PLACEHOLDER.r2.dev"
 #   SUPABASE_URL
 #   SUPABASE_SERVICE_ROLE_KEY
 #   SUPABASE_JWT_SECRET
+#   RESEND_API_KEY            (contact form admin notification emails)
+#   CF_ACCOUNT_ID             (Cloudflare account ID — right sidebar on any CF dashboard page)
+#   CF_IMAGES_TOKEN           (CF API token with Images:Edit permission)
+
+# Rate limiting — /api/contact: max 5 requests per IP per 60 seconds
+# namespace_id is an arbitrary unique integer that scopes this limiter
+# In local dev (wrangler dev), this binding is simulated and always succeeds
+[[unsafe.bindings]]
+name = "CONTACT_RATE_LIMITER"
+type = "ratelimit"
+namespace_id = "1001"
+simple = { limit = 5, period = 60 }

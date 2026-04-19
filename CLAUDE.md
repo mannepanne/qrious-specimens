@@ -57,10 +57,10 @@ Development is organised into 9 sequential phases.
 5. ~~[05-catalogue.md](./SPECIFICATIONS/ARCHIVE/05-catalogue.md)~~ ✓ — Public species catalogue, taxonomic index, search and filters
 6. ~~[06-gazette.md](./SPECIFICATIONS/ARCHIVE/06-gazette.md)~~ ✓ — Community activity feed, explorer showcase, Gazette profiles
 7. ~~[07-gamification.md](./SPECIFICATIONS/ARCHIVE/07-gamification.md)~~ ✓ — Badges, explorer rank, achievement notifications
-8. [08-settings-admin.md](./SPECIFICATIONS/08-settings-admin.md) — Account settings, admin dashboard, GDPR tools
+8. ~~[08-settings-admin.md](./SPECIFICATIONS/ARCHIVE/08-settings-admin.md)~~ ✓ — Account settings, admin dashboard, GDPR tools
 9. [09-polish-launch.md](./SPECIFICATIONS/09-polish-launch.md) — Mary Anning references, About/Privacy/Contact, error handling, production launch
 
-**Current phase:** Phase 8 — Settings & admin
+**Current phase:** Phase 9 — Polish & launch
 
 ### SPECIFICATIONS/
 - **Implementation phases** (numbered files) — Active work-in-progress

@@ -103,6 +103,10 @@ export function AuthPage() {
         <p className="font-serif text-sm italic text-muted-foreground text-center">
           New to the Coastal Matrices? Your first dispatch opens the Cabinet.
         </p>
+
+        <p className="font-serif text-xs italic text-muted-foreground/60 text-center leading-relaxed border-t pt-4">
+          She persisted in finding things the learned men had not thought to look for.
+        </p>
       </div>
     </div>
   )

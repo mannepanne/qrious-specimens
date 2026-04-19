@@ -37,6 +37,7 @@ export default function SpecimenTeaser({ creature, discoveryCount, onClick }: Pr
           <img
             src={imageUrl256}
             alt={`${dna.genus} ${dna.species}`}
+            loading="lazy"
             className="w-full h-full object-contain"
           />
         ) : (

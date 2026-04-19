@@ -1,7 +1,7 @@
 // ABOUT: Full-detail specimen view — AI illustration, taxonomy, observations, discovery record
 // ABOUT: Reads creature from navigation state (fast path) or fetches by ID for direct URL access
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useCreatureById, useDiscoveryCounts, useUpdateNickname } from '@/hooks/useCreatures'
@@ -73,23 +73,39 @@ export function SpecimenPage() {
   const hasPrev = cabinetIndex > 0
   const hasNext = cabinetIndex >= 0 && cabinetIndex < cabinetCreatures.length - 1
 
-  function handlePrev() {
+  const handlePrev = useCallback(() => {
     if (!hasPrev) return
     flipDirRef.current = -1
     const prev = cabinetCreatures[cabinetIndex - 1]
     navigate(`/specimen/${prev.id}`, {
       state: { creature: prev, cabinetCreatures, cabinetIndex: cabinetIndex - 1 },
     })
-  }
+  }, [hasPrev, cabinetCreatures, cabinetIndex, navigate])
 
-  function handleNext() {
+  const handleNext = useCallback(() => {
     if (!hasNext) return
     flipDirRef.current = 1
     const next = cabinetCreatures[cabinetIndex + 1]
     navigate(`/specimen/${next.id}`, {
       state: { creature: next, cabinetCreatures, cabinetIndex: cabinetIndex + 1 },
     })
-  }
+  }, [hasNext, cabinetCreatures, cabinetIndex, navigate])
+
+  // Touch swipe — left swipe → next, right swipe → prev (min 50px threshold)
+  const touchStartXRef = useRef<number | null>(null)
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX
+  }, [])
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartXRef.current === null) return
+    const delta = touchStartXRef.current - e.changedTouches[0].clientX
+    touchStartXRef.current = null
+    if (Math.abs(delta) < 50) return
+    if (delta > 0) handleNext()
+    else handlePrev()
+  }, [handleNext, handlePrev])
 
   function handleSaveNickname() {
     if (!creature) return
@@ -131,7 +147,11 @@ export function SpecimenPage() {
   })
 
   return (
-    <div className="min-h-screen bg-background">
+    <div
+      className="min-h-screen bg-background"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Header */}
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur px-4 py-3 flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => location.key !== 'default' ? navigate(-1) : navigate('/cabinet')}>

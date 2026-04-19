@@ -107,7 +107,10 @@ export function CataloguePage() {
   useEffect(() => () => clearTimeout(debounceRef.current), [])
 
   function handleSpeciesClick(entry: CatalogueEntry) {
-    navigate(`/species/${entry.qr_hash}`, { state: { entry } })
+    const catalogueIndex = displayEntries.findIndex(e => e.qr_hash === entry.qr_hash)
+    navigate(`/species/${entry.qr_hash}`, {
+      state: { entry, catalogueEntries: displayEntries, catalogueIndex },
+    })
   }
 
   function clearAllFilters() {

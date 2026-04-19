@@ -14,24 +14,18 @@ Move completed specs to **ARCHIVE/** when a phase is merged to main.
 
 Development is organised into 9 sequential phases. Work through them in order — each builds on the previous.
 
-**Current phase:** Phase 8 — Settings & admin
+**Current phase:** Phase 9 — Polish & launch
 
 ### Phase files
 
 - ~~01-foundation-infrastructure.md~~ → [ARCHIVE](./ARCHIVE/01-foundation-infrastructure.md)
 - ~~02-auth-design-system.md~~ → [ARCHIVE](./ARCHIVE/02-auth-design-system.md)
 - ~~03-creature-engine-cabinet.md~~ → [ARCHIVE](./ARCHIVE/03-creature-engine-cabinet.md)
-
 - ~~04-ai-generation-workers.md~~ → [ARCHIVE](./ARCHIVE/04-ai-generation-workers.md)
-
 - ~~05-catalogue.md~~ → [ARCHIVE](./ARCHIVE/05-catalogue.md)
-
 - ~~06-gazette.md~~ → [ARCHIVE](./ARCHIVE/06-gazette.md)
-
 - ~~07-gamification.md~~ → [ARCHIVE](./ARCHIVE/07-gamification.md)
-
-8. **[08-settings-admin.md](./08-settings-admin.md)**
-   Settings subpage (rank card, badge collection, Gazette profile, account), admin dashboard, GDPR export/delete
+- ~~08-settings-admin.md~~ → [ARCHIVE](./ARCHIVE/08-settings-admin.md)
 
 9. **[09-polish-launch.md](./09-polish-launch.md)**
    Mary Anning references, About/Privacy/Contact pages, Victorian captcha, analytics, error handling, production deployment

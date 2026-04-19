@@ -1,6 +1,8 @@
 // ABOUT: Standalone species detail page — route /species/:qrHash
 // ABOUT: Reads entry from navigation state (fast path) or fetches via get_species_by_hash RPC
+// ABOUT: Supports prev/next catalogue navigation by index (passed in state from CataloguePage)
 
+import { useRef, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useCatalogueEntry } from '@/hooks/useCatalogue'
 import type { CatalogueEntry } from '@/hooks/useCatalogue'
@@ -8,14 +10,22 @@ import { useFirstDiscoverer } from '@/hooks/useCommunity'
 import { useAuth } from '@/hooks/useAuth'
 import SpeciesDetail from '@/components/SpeciesDetail/SpeciesDetail'
 
+interface LocationState {
+  entry?: CatalogueEntry
+  catalogueEntries?: CatalogueEntry[]
+  catalogueIndex?: number
+}
+
 export function SpeciesPage() {
   const { qrHash } = useParams<{ qrHash: string }>()
   const navigate = useNavigate()
   const location = useLocation()
   const { authState } = useAuth()
 
-  // Navigation state carries the entry when coming from the catalogue list (fast path)
-  const stateEntry = (location.state as { entry?: CatalogueEntry } | null)?.entry
+  const state = (location.state as LocationState | null) ?? {}
+  const stateEntry = state.entry
+  const catalogueEntries = state.catalogueEntries ?? []
+  const catalogueIndex = state.catalogueIndex ?? -1
 
   const { data: fetchedEntry, isLoading, error } = useCatalogueEntry(
     stateEntry ? undefined : qrHash
@@ -28,6 +38,41 @@ export function SpeciesPage() {
     entry?.first_discoverer_id ?? null,
     isAuthenticated && !!entry,
   )
+
+  const hasPrev = catalogueIndex > 0
+  const hasNext = catalogueIndex >= 0 && catalogueIndex < catalogueEntries.length - 1
+
+  const handlePrev = useCallback(() => {
+    if (!hasPrev) return
+    const prev = catalogueEntries[catalogueIndex - 1]
+    navigate(`/species/${prev.qr_hash}`, {
+      state: { entry: prev, catalogueEntries, catalogueIndex: catalogueIndex - 1 },
+    })
+  }, [hasPrev, catalogueEntries, catalogueIndex, navigate])
+
+  const handleNext = useCallback(() => {
+    if (!hasNext) return
+    const next = catalogueEntries[catalogueIndex + 1]
+    navigate(`/species/${next.qr_hash}`, {
+      state: { entry: next, catalogueEntries, catalogueIndex: catalogueIndex + 1 },
+    })
+  }, [hasNext, catalogueEntries, catalogueIndex, navigate])
+
+  // Touch swipe — left swipe → next, right swipe → prev (min 50px threshold)
+  const touchStartXRef = useRef<number | null>(null)
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX
+  }, [])
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartXRef.current === null) return
+    const delta = touchStartXRef.current - e.changedTouches[0].clientX
+    touchStartXRef.current = null
+    if (Math.abs(delta) < 50) return
+    if (delta > 0) handleNext()
+    else handlePrev()
+  }, [handleNext, handlePrev])
 
   if (isLoading) {
     return (
@@ -57,12 +102,16 @@ export function SpeciesPage() {
   const canGoBack = location.key !== 'default'
 
   return (
-    <div className="min-h-screen bg-background">
+    <div
+      className="min-h-screen bg-background"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       <SpeciesDetail
         entry={entry}
         isAuthenticated={isAuthenticated}
-        onPrev={null}
-        onNext={null}
+        onPrev={hasPrev ? handlePrev : null}
+        onNext={hasNext ? handleNext : null}
         onClose={() => canGoBack ? navigate(-1) : navigate('/')}
         firstDiscovererName={firstDiscoverer.data}
       />
