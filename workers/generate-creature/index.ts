@@ -8,17 +8,21 @@ import { buildGeminiPrompt, buildClaudePrompt } from './prompt'
 import { generateIllustration } from './gemini'
 import { generateFieldNotes } from './claude'
 import { uploadToR2 } from './r2'
+import { uploadToCloudflareImages } from '../cloudflare-images/index'
 
 export interface Env {
   ASSETS: Fetcher
-  IMAGES: R2Bucket
+  IMAGES: R2Bucket           // kept for backward-compat with existing R2 images
   SUPABASE_URL: string
   SUPABASE_SERVICE_ROLE_KEY: string
   SUPABASE_JWT_SECRET: string
   GEMINI_API_KEY: string
   ANTHROPIC_API_KEY: string
-  PUBLIC_R2_URL: string
+  PUBLIC_R2_URL: string      // used only by legacy R2 images
   RESEND_API_KEY: string
+  CF_ACCOUNT_ID: string
+  CF_IMAGES_TOKEN: string
+  CF_IMAGES_DELIVERY_HASH: string
 }
 
 interface SpeciesImageRow {
@@ -247,11 +251,25 @@ export async function handleGenerateCreature(request: Request, env: Env): Promis
     return json({ error: 'Illustration generation failed', detail: (err as Error).message }, 500, origin)
   }
 
-  // Step 5: Upload to R2 (original + 512px + 256px variants)
+  // Step 5: Upload to Cloudflare Images (single upload; CDN serves named variants)
+  // Named variants "original", "512", "256" must be configured in the CF Images dashboard.
+  // Falls back to R2 if CF Images credentials are not set (local dev without secrets).
   const imageBytes = Uint8Array.from(atob(imageBase64), (c) => c.charCodeAt(0))
   let r2Urls: { original: string; url512: string; url256: string }
   try {
-    r2Urls = await uploadToR2(env.IMAGES, env.PUBLIC_R2_URL, qrHash, imageBytes, imageMimeType)
+    if (env.CF_ACCOUNT_ID && env.CF_IMAGES_TOKEN && env.CF_IMAGES_DELIVERY_HASH) {
+      r2Urls = await uploadToCloudflareImages(
+        env.CF_ACCOUNT_ID,
+        env.CF_IMAGES_TOKEN,
+        env.CF_IMAGES_DELIVERY_HASH,
+        qrHash,
+        imageBytes,
+        imageMimeType,
+      )
+    } else {
+      // Local dev fallback: R2 upload (requires IMAGES binding and PUBLIC_R2_URL)
+      r2Urls = await uploadToR2(env.IMAGES, env.PUBLIC_R2_URL, qrHash, imageBytes, imageMimeType)
+    }
   } catch (err) {
     return json({ error: 'Image upload failed', detail: (err as Error).message }, 500, origin)
   }
