@@ -161,4 +161,3 @@ Added in Phase 7. Separate from `useCommunity.ts` to keep badge/rank logic cohes
 - **TD-012** — `rare_discovery` event type defined but never posted
 - **TD-013** — Cross-tab auto-open fails for species beyond loaded catalogue pages
 - **TD-014** — `activity_feed` has no DELETE RLS policy (GDPR gap for Phase 8)
-- **TD-015** — `finishExcavation` badge-toast and rank-up logic lacks integration tests

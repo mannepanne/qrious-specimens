@@ -21,9 +21,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { TabBar } from '@/components/TabBar/TabBar'
 import { SiteFooter } from '@/components/SiteFooter/SiteFooter'
 import { useAddCreature } from '@/hooks/useCreatures'
-import { useExplorerProfile, useCheckBadges, usePostActivity } from '@/hooks/useCommunity'
-import { useExplorerRank, useBadgeDefinitions, RANK_DISPLAY } from '@/hooks/useBadges'
-import type { ExplorerRank } from '@/hooks/useBadges'
+import { useExplorerProfile } from '@/hooks/useCommunity'
+import { usePostExcavationEffects } from '@/hooks/usePostExcavationEffects'
 import type { CreatureRow } from '@/types/creature'
 import type { WorkerResponse } from '@/types/worker'
 import { generateCreatureDNA } from '@/lib/creatureEngine'
@@ -85,37 +84,10 @@ function AppShell() {
   const userId = isAuthenticated ? authState.session.user.id : ''
 
   const explorerProfile = useExplorerProfile(isAuthenticated ? userId : null)
-  const checkBadges = useCheckBadges()
-  const postActivity = usePostActivity()
-  const explorerRank = useExplorerRank(isAuthenticated ? userId : null)
-  const badgeDefs = useBadgeDefinitions()
-
-  // Stable refs so finishExcavation dep array stays lean
-  const checkBadgesRef = useRef(checkBadges)
-  const postActivityRef = useRef(postActivity)
-  const explorerProfileDataRef = useRef(explorerProfile.data)
-  const badgeDefsRef = useRef(badgeDefs.data)
-  checkBadgesRef.current = checkBadges
-  postActivityRef.current = postActivity
-  explorerProfileDataRef.current = explorerProfile.data
-  badgeDefsRef.current = badgeDefs.data
-
-  // Detect rank-up and fire a toast only when the tier increases (cumulative scoring means
-  // rank can only go up, but guard against any unexpected regression to avoid false toasts)
-  const RANK_ORDER: Array<ExplorerRank['rank']> = ['unranked', 'bronze', 'silver', 'gold', 'platinum']
-  const prevRankRef = useRef<ExplorerRank['rank'] | undefined>(undefined)
-  useEffect(() => {
-    if (!explorerRank.data) return
-    const prev = prevRankRef.current
-    prevRankRef.current = explorerRank.data.rank
-    const prevIdx = prev ? RANK_ORDER.indexOf(prev) : -1
-    const newIdx = RANK_ORDER.indexOf(explorerRank.data.rank)
-    if (prev && newIdx > prevIdx) {
-      toast(RANK_DISPLAY[explorerRank.data.rank]?.name ?? explorerRank.data.rank, {
-        description: 'You have been promoted to a new rank.',
-      })
-    }
-  }, [explorerRank.data]) // eslint-disable-line react-hooks/exhaustive-deps
+  const { fireEffects } = usePostExcavationEffects(
+    isAuthenticated ? userId : null,
+    explorerProfile.data,
+  )
 
   const excavationResultRef = useRef<CreatureRow | null>(null)
   const excavationErrorRef = useRef<string | null>(null)
@@ -146,42 +118,7 @@ function AppShell() {
         })
       }
 
-      const currentUserId = authState.status === 'authenticated' ? authState.session.user.id : null
-
-      if (currentUserId && explorerProfileDataRef.current?.is_public) {
-        const speciesName = `${creature.dna.genus} ${creature.dna.species}`.trim()
-        const eventType = isFirstDiscoverer ? 'first_discovery' : 'discovery'
-        postActivityRef.current.mutate({
-          event_type: eventType,
-          species_name: speciesName,
-          qr_hash: creature.qr_hash,
-        })
-      }
-
-      if (currentUserId) {
-        checkBadgesRef.current.mutate(currentUserId, {
-          onSuccess: (badges) => {
-            const newBadges = badges.filter(b => b.r_is_new)
-            const defMap = new Map(badgeDefsRef.current?.map(d => [d.slug, d]) ?? [])
-            for (const badge of newBadges) {
-              const tier = defMap.get(badge.r_badge_slug)?.tier
-              const tierLabel = tier ? ` · ${tier.toUpperCase()}` : ''
-              toast(`${badge.r_badge_icon} ${badge.r_badge_name}${tierLabel}`, {
-                description: 'New badge earned!',
-              })
-              // Write badge activity to the Gazette feed for public profiles
-              if (explorerProfileDataRef.current?.is_public) {
-                postActivityRef.current.mutate({
-                  event_type: 'badge_earned',
-                  badge_slug: badge.r_badge_slug,
-                })
-              }
-            }
-            // Re-evaluate rank now that new badges may have been awarded
-            queryClient.invalidateQueries({ queryKey: ['explorer-rank'] })
-          },
-        })
-      }
+      fireEffects(creature, isFirstDiscoverer)
 
       // Navigate to the new specimen — pass the creature in state so SpecimenPage
       // can render immediately without waiting for a DB round-trip.
@@ -195,7 +132,7 @@ function AppShell() {
     } else if (excavationErrorRef.current) {
       toast('Could not add specimen', { description: 'Please try again.' })
     }
-  }, [authState, navigate])
+  }, [navigate, fireEffects])
 
   useEffect(() => {
     if (animationDoneRef.current && !addCreature.isPending) {

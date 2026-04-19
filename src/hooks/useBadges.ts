@@ -43,6 +43,9 @@ export interface ExplorerBadge {
 // Constants
 // ============================================================
 
+/** Ordered rank tiers from lowest to highest. Used for directional rank-up detection. */
+export const RANK_ORDER: ReadonlyArray<ExplorerRank['rank']> = ['unranked', 'bronze', 'silver', 'gold', 'platinum']
+
 /** Rank display names in Victorian naturalist style. */
 export const RANK_DISPLAY: Record<string, { name: string; label: string }> = {
   unranked:  { name: 'Unranked',             label: 'UNRANKED'  },

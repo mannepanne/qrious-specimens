@@ -159,17 +159,6 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
-### TD-015: `finishExcavation` badge-toast and rank-up logic lacks integration tests
-
-- **Location:** `src/App.tsx` — `finishExcavation()` callback
-- **Issue:** The badge-toast flow (tier lookup via `badgeDefsRef`, activity post for badge events, `explorer-rank` invalidation) and the rank-up detection effect are tested only implicitly through unit-level mutation/hook tests. There are no integration tests that render `AppShell` through a full excavation cycle and assert that toasts fire or that the rank-up `useEffect` triggers correctly. The logic lives inside a `useCallback` that depends on multiple refs, making it hard to test without wiring up the full auth + query client stack.
-- **Why accepted:** Testing this properly requires a full `MemoryRouter + QueryClientProvider + supabase mock` render with controlled async timings across two mutations. The unit tests for `useCheckBadges`, `useExplorerRank`, and `ExplorerRankCard` cover individual pieces thoroughly. The integration gap is a pragmatic shortcut to avoid a complex test harness for Phase 7.
-- **Risk:** Low — the component-level tests catch shape mismatches; the gap is only in the orchestration logic. A regression here would likely surface immediately in manual testing.
-- **Future fix:** Extract the badge-toast side-effect logic from `finishExcavation` into a testable helper or custom hook (e.g., `usePostExcavationEffects`). That hook can be tested in isolation with a mock query client.
-- **Phase introduced:** Phase 7
-
----
-
 ### Example Format: TD-001: Description
 - **Location:** `src/path/to/file.ts` - `functionName()`
 - **Issue:** Clear description of the limitation or shortcut
@@ -182,7 +171,9 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ## Resolved items
 
-*(Move items here when addressed, with resolution notes)*
+### ~~TD-015~~: `finishExcavation` badge-toast and rank-up logic lacks integration tests
+- **Resolved in:** Phase 7 (same branch)
+- **Resolution:** Extracted all badge/rank side-effect logic from `finishExcavation` into `src/hooks/usePostExcavationEffects.ts`. The hook is tested by `usePostExcavationEffects.test.ts` (14 tests) using mocked inner hooks — covers discovery activity posting, badge toasts with tier labels, badge activity, rank invalidation, and the rank-up detection effect. `App.tsx` is now a thin caller.
 
 ---
 
