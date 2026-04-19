@@ -27,7 +27,7 @@ export function AppHeader({ title, eyebrow, subtitle, actions }: AppHeaderProps)
               {eyebrow}
             </p>
           )}
-          <h1 className="font-serif text-2xl font-medium leading-tight">{title}</h1>
+          <h1 className="font-serif text-lg font-medium leading-tight">{title}</h1>
           {subtitle && (
             <p className="font-mono text-[9px] tracking-[2px] text-muted-foreground mt-0.5">
               {subtitle}
