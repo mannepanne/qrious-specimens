@@ -1,16 +1,20 @@
-// ABOUT: Shared branded page header — viewfinder logo, app name, and page subtitle
-// ABOUT: Matches the Cabinet header style; used across Catalogue, Gazette, and Field Kit
+// ABOUT: Shared branded page header — viewfinder logo mark + page-specific title and subtitle
+// ABOUT: Used across Catalogue, Gazette, and Field Kit; logo mark matches the Cabinet header
 
 import { Scan } from 'lucide-react'
 
 interface AppHeaderProps {
-  /** Short uppercase descriptor shown below the app name, e.g. "SPECIES CATALOGUE" */
-  subtitle: string
-  /** Extra content rendered to the right of the title block (optional) */
+  /** Main page title rendered as h1 */
+  title: string
+  /** Optional eyebrow label shown above the title */
+  eyebrow?: string
+  /** Optional subtitle shown below the title */
+  subtitle?: string
+  /** Extra content rendered to the right (e.g. action buttons) */
   actions?: React.ReactNode
 }
 
-export function AppHeader({ subtitle, actions }: AppHeaderProps) {
+export function AppHeader({ title, eyebrow, subtitle, actions }: AppHeaderProps) {
   return (
     <div className="px-4 pt-4 pb-3 shrink-0 border-b border-border">
       <div className="flex items-center gap-3">
@@ -18,8 +22,17 @@ export function AppHeader({ subtitle, actions }: AppHeaderProps) {
           <Scan className="h-4 w-4 text-background" />
         </div>
         <div className="flex-1 min-w-0">
-          <h1 className="font-serif text-lg font-medium leading-tight">QRious Specimens</h1>
-          <p className="font-mono text-[9px] tracking-[2px] text-muted-foreground">{subtitle}</p>
+          {eyebrow && (
+            <p className="font-mono text-[9px] tracking-[2px] text-muted-foreground uppercase">
+              {eyebrow}
+            </p>
+          )}
+          <h1 className="font-serif text-2xl font-medium leading-tight">{title}</h1>
+          {subtitle && (
+            <p className="font-mono text-[9px] tracking-[2px] text-muted-foreground mt-0.5">
+              {subtitle}
+            </p>
+          )}
         </div>
         {actions}
       </div>

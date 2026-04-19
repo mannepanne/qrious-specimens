@@ -65,7 +65,7 @@ export function SettingsPage() {
 
   return (
     <main className="flex flex-col h-full">
-      <AppHeader subtitle="FIELD KIT" />
+      <AppHeader title="Field Kit" />
 
       <div className="max-w-3xl mx-auto w-full px-4 py-8 pb-24 overflow-y-auto flex-1">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

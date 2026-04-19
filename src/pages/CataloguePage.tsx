@@ -142,7 +142,8 @@ export function CataloguePage() {
   return (
     <main className="flex flex-col h-full">
       <AppHeader
-        subtitle={taxonomy.isLoading ? 'LOADING…' : `${taxonomyTotal} SPECIES DOCUMENTED`}
+        title="Catalogue of Known Species"
+        subtitle={taxonomy.isLoading ? 'Loading…' : `${taxonomyTotal} species documented`}
       />
 
       <div className="flex flex-1 overflow-hidden">

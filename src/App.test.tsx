@@ -123,7 +123,7 @@ describe('App', () => {
     await waitFor(() => {
       expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
     })
-    expect(screen.getByRole('heading', { name: /qrious specimens/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /catalogue of known species/i })).toBeInTheDocument()
   })
 
   it('shows tab navigation with spec-defined three tabs', async () => {
@@ -141,7 +141,7 @@ describe('App', () => {
     renderApp({ initialPath: '/' })
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /qrious specimens/i })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: /catalogue of known species/i })).toBeInTheDocument()
     })
   })
 
@@ -150,7 +150,7 @@ describe('App', () => {
     renderApp({ initialPath: '/gazette' })
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /qrious specimens/i })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: /the explorer's gazette/i })).toBeInTheDocument()
     })
   })
 
@@ -237,12 +237,12 @@ describe('App', () => {
     expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
   })
 
-  it('Gazette route renders the branded app header', async () => {
+  it("Gazette route renders The Explorer's Gazette heading", async () => {
     setupAuthenticated()
     renderApp({ initialPath: '/gazette' })
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /qrious specimens/i })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: /the explorer's gazette/i })).toBeInTheDocument()
     })
   })
 })

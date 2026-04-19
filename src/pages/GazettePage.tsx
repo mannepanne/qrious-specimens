@@ -42,7 +42,7 @@ export function GazettePage() {
 
   return (
     <main className="flex flex-col h-full">
-      <AppHeader subtitle="EXPLORER'S GAZETTE" />
+      <AppHeader eyebrow="Field Dispatches" title="The Explorer's Gazette" />
 
       <div className="flex-1 overflow-y-auto">
         <div className="px-4 pt-4 pb-6 space-y-6 max-w-2xl mx-auto">
