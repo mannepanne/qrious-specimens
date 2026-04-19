@@ -26,7 +26,7 @@ PUBLIC_R2_URL = "https://pub-PLACEHOLDER.r2.dev"
 # Cloudflare Images delivery hash — NOT a secret (appears in every image URL)
 # Find in: Cloudflare dashboard → Images → Overview → "Your images are served from"
 # e.g. https://imagedelivery.net/XXXXXX/<image_id>/<variant>  ← XXXXXX is the hash
-CF_IMAGES_DELIVERY_HASH = "PLACEHOLDER"
+CF_IMAGES_DELIVERY_HASH = "3c8s33-8vy1yKLZpGBolkQ"
 
 # Secrets — set via `wrangler secret put <NAME>` (never in this file):
 #   GEMINI_API_KEY
