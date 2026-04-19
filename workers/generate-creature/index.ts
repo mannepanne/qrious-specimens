@@ -10,6 +10,10 @@ import { generateFieldNotes } from './claude'
 import { uploadToR2 } from './r2'
 import { uploadToCloudflareImages } from '../cloudflare-images/index'
 
+interface RateLimiter {
+  limit(options: { key: string }): Promise<{ success: boolean }>
+}
+
 export interface Env {
   ASSETS: Fetcher
   IMAGES: R2Bucket           // kept for backward-compat with existing R2 images
@@ -23,6 +27,7 @@ export interface Env {
   CF_ACCOUNT_ID: string
   CF_IMAGES_TOKEN: string
   CF_IMAGES_DELIVERY_HASH: string
+  CONTACT_RATE_LIMITER?: RateLimiter  // CF Rate Limiting binding — optional so local dev without it still works
 }
 
 interface SpeciesImageRow {

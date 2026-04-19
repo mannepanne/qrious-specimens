@@ -76,10 +76,29 @@ export async function handleContact(request: Request, env: Env): Promise<Respons
     })
   }
 
+  // Per-IP rate limit: 5 submissions per minute — skipped in local dev (binding not configured)
+  if (env.CONTACT_RATE_LIMITER) {
+    const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown'
+    const { success } = await env.CONTACT_RATE_LIMITER.limit({ key: ip })
+    if (!success) {
+      return new Response(JSON.stringify({ error: 'Too many requests — please wait before submitting again.' }), {
+        status: 429,
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      })
+    }
+  }
+
   const { sender_email, sender_name, message } = body
 
   if (!sender_email || !message) {
     return new Response(JSON.stringify({ error: 'sender_email and message are required' }), {
+      status: 400,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
+  // Basic email format check — Resend validates further on their end
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sender_email)) {
+    return new Response(JSON.stringify({ error: 'Invalid email address' }), {
       status: 400,
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
