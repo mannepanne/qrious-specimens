@@ -118,7 +118,7 @@ export function ContactPage() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="your@email.com"
+            placeholder="your.address@correspondence.com"
             required
             className="font-serif"
           />
@@ -150,7 +150,7 @@ export function ContactPage() {
           className="w-full font-mono text-xs tracking-widest"
           disabled={submitContact.isPending}
         >
-          {submitContact.isPending ? 'SENDING...' : 'SEND CORRESPONDENCE'}
+          {submitContact.isPending ? 'DISPATCHING...' : 'SEND CORRESPONDENCE'}
         </Button>
       </form>
     </main>

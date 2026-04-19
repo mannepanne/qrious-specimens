@@ -31,6 +31,7 @@ import {
   User,
   CircleHelp,
   FileText,
+  Mail,
   LogOut,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -386,6 +387,14 @@ function InformationSection({
         >
           <FileText className="h-4 w-4 text-muted-foreground" />
           <span className="font-serif text-sm">Privacy Policy</span>
+        </button>
+
+        <button
+          onClick={() => onNavigate('/contact')}
+          className="w-full bg-card border rounded-sm p-4 flex items-center gap-3 hover:bg-muted/50 transition-colors text-left"
+        >
+          <Mail className="h-4 w-4 text-muted-foreground" />
+          <span className="font-serif text-sm">Contact the Curators</span>
         </button>
 
         {isAdmin && (

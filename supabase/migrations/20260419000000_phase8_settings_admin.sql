@@ -4,6 +4,19 @@
 -- migration is safe to apply against an already-populated Supabase project
 -- where these objects were created directly from the prototype.
 
+-- ── is_admin() helper ─────────────────────────────────────────────────────────
+-- Defined first so RLS policies on contact_messages can reference it.
+-- Returns true when the currently authenticated user has is_admin = true
+-- in the profiles table. Used by RLS policies and admin RPCs.
+
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean AS $$
+  SELECT COALESCE(
+    (SELECT is_admin FROM public.profiles WHERE id = (SELECT auth.uid())),
+    false
+  );
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
 -- ── contact_messages ──────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS public.contact_messages (
@@ -11,6 +24,7 @@ CREATE TABLE IF NOT EXISTS public.contact_messages (
   sender_email text        NOT NULL,
   sender_name  text,
   message      text        NOT NULL,
+  CHECK (length(message) <= 5000 AND length(sender_email) <= 320 AND (sender_name IS NULL OR length(sender_name) <= 200)),
   created_at   timestamptz DEFAULT now(),
   read         boolean     DEFAULT false
 );
@@ -32,18 +46,6 @@ CREATE POLICY "Admin can update messages" ON public.contact_messages
   FOR UPDATE TO authenticated
   USING (public.is_admin())
   WITH CHECK (public.is_admin());
-
--- ── is_admin() helper ─────────────────────────────────────────────────────────
--- Returns true when the currently authenticated user has is_admin = true
--- in the profiles table. Used by RLS policies and admin RPCs.
-
-CREATE OR REPLACE FUNCTION public.is_admin()
-RETURNS boolean AS $$
-  SELECT COALESCE(
-    (SELECT is_admin FROM public.profiles WHERE id = (SELECT auth.uid())),
-    false
-  );
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
 
 -- ── admin_list_users() ────────────────────────────────────────────────────────
 
@@ -76,21 +78,39 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ── admin_export_user_data() ──────────────────────────────────────────────────
+-- Exports all personal data for a user (GDPR Article 15 right of access).
+-- Covers the same tables as admin_delete_user_data, plus contact_messages by email.
 
 CREATE OR REPLACE FUNCTION public.admin_export_user_data(p_user_id uuid)
 RETURNS jsonb AS $$
 DECLARE
   result jsonb;
+  user_email text;
 BEGIN
   IF NOT public.is_admin() THEN
     RAISE EXCEPTION 'Unauthorized';
   END IF;
 
+  SELECT u.email INTO user_email FROM auth.users u WHERE u.id = p_user_id;
+
   SELECT jsonb_build_object(
-    'profile',   (SELECT to_jsonb(p) FROM profiles p WHERE p.id = p_user_id),
-    'email',     (SELECT u.email FROM auth.users u WHERE u.id = p_user_id),
-    'creatures', COALESCE(
+    'profile',          (SELECT to_jsonb(p) FROM profiles p WHERE p.id = p_user_id),
+    'email',            user_email,
+    'creatures',        COALESCE(
       (SELECT jsonb_agg(to_jsonb(c)) FROM creatures c WHERE c.user_id = p_user_id),
+      '[]'::jsonb
+    ),
+    'explorer_profile', (SELECT to_jsonb(ep) FROM explorer_profiles ep WHERE ep.user_id = p_user_id),
+    'explorer_badges',  COALESCE(
+      (SELECT jsonb_agg(to_jsonb(eb)) FROM explorer_badges eb WHERE eb.user_id = p_user_id),
+      '[]'::jsonb
+    ),
+    'activity',         COALESCE(
+      (SELECT jsonb_agg(to_jsonb(af)) FROM activity_feed af WHERE af.user_id = p_user_id),
+      '[]'::jsonb
+    ),
+    'contact_messages', COALESCE(
+      (SELECT jsonb_agg(to_jsonb(cm)) FROM contact_messages cm WHERE cm.sender_email = user_email),
       '[]'::jsonb
     ),
     'exported_at', now()
@@ -103,6 +123,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- ── admin_delete_user_data() ──────────────────────────────────────────────────
 -- Deletes all user data in the public schema. Does NOT delete the auth.users
 -- record — that requires Supabase auth admin API.
+-- Delete order respects any FK dependencies: creatures/badges/activity before profiles.
 
 CREATE OR REPLACE FUNCTION public.admin_delete_user_data(p_user_id uuid)
 RETURNS void AS $$
@@ -111,11 +132,11 @@ BEGIN
     RAISE EXCEPTION 'Unauthorized';
   END IF;
 
-  DELETE FROM creatures       WHERE user_id = p_user_id;
-  DELETE FROM explorer_badges WHERE user_id = p_user_id;
-  DELETE FROM activity_feed   WHERE user_id = p_user_id;
+  DELETE FROM creatures         WHERE user_id = p_user_id;
+  DELETE FROM explorer_badges   WHERE user_id = p_user_id;
+  DELETE FROM activity_feed     WHERE user_id = p_user_id;
   DELETE FROM explorer_profiles WHERE user_id = p_user_id;
-  DELETE FROM profiles        WHERE id      = p_user_id;
+  DELETE FROM profiles          WHERE id      = p_user_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -123,17 +144,24 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION public.admin_get_stats()
 RETURNS json AS $$
-  SELECT json_build_object(
+BEGIN
+  IF NOT public.is_admin() THEN
+    RAISE EXCEPTION 'Unauthorized';
+  END IF;
+
+  RETURN (SELECT json_build_object(
     'total_users',           (SELECT COUNT(*) FROM auth.users),
     'users_with_specimens',  (SELECT COUNT(DISTINCT user_id) FROM public.creatures),
     'unique_specimens',      (SELECT COUNT(DISTINCT qr_hash) FROM public.creatures),
     'total_discoveries',     (SELECT COUNT(*) FROM public.creatures),
     'total_field_notes',     (SELECT COUNT(*) FROM public.species_images WHERE field_notes IS NOT NULL),
     'contact_submissions',   (SELECT COUNT(*) FROM public.contact_messages)
-  );
-$$ LANGUAGE sql SECURITY DEFINER STABLE;
+  ));
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
 
--- Grant execute to authenticated users (RPC enforces is_admin() internally)
+-- Grant execute to authenticated users (each RPC enforces is_admin() internally)
+GRANT EXECUTE ON FUNCTION public.is_admin()                        TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_list_users()               TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_export_user_data(uuid)     TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_delete_user_data(uuid)     TO authenticated;

@@ -24,6 +24,7 @@ import { useIsAdmin } from '@/hooks/useIsAdmin'
 import {
   useAdminMessages,
   useAdminUsers,
+  useAdminStats,
   useMarkMessageRead,
   useGdprExport,
   useGdprDelete,
@@ -118,19 +119,52 @@ export function AdminPage() {
 // ── Stats tab ─────────────────────────────────────────────────────────────────
 
 function StatsTab() {
+  const { data: stats, isLoading } = useAdminStats()
+
+  const statCards = stats
+    ? [
+        { label: 'Total naturalists', value: stats.total_users },
+        { label: 'Collectors', value: stats.users_with_specimens },
+        { label: 'Unique species', value: stats.unique_specimens },
+        { label: 'Total discoveries', value: stats.total_discoveries },
+        { label: 'Field notes generated', value: stats.total_field_notes },
+        { label: 'Contact submissions', value: stats.contact_submissions },
+      ]
+    : []
+
   return (
     <div className="space-y-4">
-      <div className="bg-card border rounded-sm p-6 space-y-3">
+      {isLoading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="bg-card border rounded-sm p-4 space-y-1 animate-pulse">
+              <div className="h-6 w-16 bg-muted rounded" />
+              <div className="h-3 w-24 bg-muted rounded" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {statCards.map(({ label, value }) => (
+            <div key={label} className="bg-card border rounded-sm p-4">
+              <p className="font-serif text-2xl font-medium">{value.toLocaleString()}</p>
+              <p className="font-mono text-[9px] tracking-wider text-muted-foreground mt-0.5">
+                {label.toUpperCase()}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="bg-card border rounded-sm p-4 space-y-2">
         <div className="flex items-center gap-2">
-          <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          <p className="font-mono text-[10px] tracking-[2px] text-muted-foreground uppercase">
+          <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
+          <p className="font-mono text-[9px] tracking-[2px] text-muted-foreground uppercase">
             Visitor Analytics
           </p>
         </div>
-        <p className="font-serif text-sm leading-relaxed text-muted-foreground">
-          Visitor analytics for QRious Specimens are provided by Cloudflare Web Analytics. Visit
-          your Cloudflare dashboard to view detailed statistics on page views, unique visitors, and
-          geographic distribution.
+        <p className="font-serif text-xs leading-relaxed text-muted-foreground">
+          Page views and visitor analytics are provided by Cloudflare Web Analytics.
         </p>
         <p className="font-mono text-[9px] tracking-wider text-muted-foreground/60">
           CLOUDFLARE DASHBOARD → ANALYTICS & LOGS → WEB ANALYTICS
