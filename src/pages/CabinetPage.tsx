@@ -7,6 +7,7 @@ import { useCreatures, useDiscoveryCounts } from '@/hooks/useCreatures'
 import { useAuth } from '@/hooks/useAuth'
 import { useScanOverlay } from '@/App'
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver'
+import { useExplorerRank, RANK_DISPLAY } from '@/hooks/useBadges'
 import SpecimenTeaser from '@/components/SpecimenTeaser/SpecimenTeaser'
 import type { CreatureRow } from '@/types/creature'
 import { getRarityFromCount } from '@/lib/rarity'
@@ -18,6 +19,7 @@ export function CabinetPage() {
 
   // Cabinet is only rendered inside RequireAuth, so authState is always 'authenticated' here
   const userId = authState.status === 'authenticated' ? authState.session.user.id : ''
+  const { data: explorerRank } = useExplorerRank(userId || null)
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } = useCreatures(userId)
   const sentinelRef = useIntersectionObserver(() => {
@@ -57,6 +59,15 @@ export function CabinetPage() {
                 : 'YOUR CABINET OF CURIOSITIES'}
             </p>
           </div>
+          {explorerRank && explorerRank.rank && explorerRank.rank !== 'unranked' && (
+            <span
+              className="font-mono text-[9px] tracking-wider text-muted-foreground shrink-0"
+              title={RANK_DISPLAY[explorerRank.rank]?.name}
+              aria-label={`Rank: ${RANK_DISPLAY[explorerRank.rank]?.name ?? explorerRank.rank}`}
+            >
+              {explorerRank.rank_icon} {explorerRank.rank.toUpperCase()}
+            </span>
+          )}
           <button
             onClick={signOut}
             className="flex items-center gap-1.5 font-mono text-[10px] tracking-wider text-muted-foreground hover:text-foreground transition-colors shrink-0"

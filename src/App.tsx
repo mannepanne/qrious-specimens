@@ -22,6 +22,8 @@ import { TabBar } from '@/components/TabBar/TabBar'
 import { SiteFooter } from '@/components/SiteFooter/SiteFooter'
 import { useAddCreature } from '@/hooks/useCreatures'
 import { useExplorerProfile, useCheckBadges, usePostActivity } from '@/hooks/useCommunity'
+import { useExplorerRank, RANK_DISPLAY } from '@/hooks/useBadges'
+import type { ExplorerRank } from '@/hooks/useBadges'
 import type { CreatureRow } from '@/types/creature'
 import type { WorkerResponse } from '@/types/worker'
 import { generateCreatureDNA } from '@/lib/creatureEngine'
@@ -85,6 +87,7 @@ function AppShell() {
   const explorerProfile = useExplorerProfile(isAuthenticated ? userId : null)
   const checkBadges = useCheckBadges()
   const postActivity = usePostActivity()
+  const explorerRank = useExplorerRank(isAuthenticated ? userId : null)
 
   // Stable refs so finishExcavation dep array stays lean
   const checkBadgesRef = useRef(checkBadges)
@@ -93,6 +96,19 @@ function AppShell() {
   checkBadgesRef.current = checkBadges
   postActivityRef.current = postActivity
   explorerProfileDataRef.current = explorerProfile.data
+
+  // Detect rank-up and fire a toast when the tier changes
+  const prevRankRef = useRef<ExplorerRank['rank'] | undefined>(undefined)
+  useEffect(() => {
+    if (!explorerRank.data) return
+    const prev = prevRankRef.current
+    prevRankRef.current = explorerRank.data.rank
+    if (prev && prev !== explorerRank.data.rank && explorerRank.data.rank !== 'unranked') {
+      toast(RANK_DISPLAY[explorerRank.data.rank]?.name ?? explorerRank.data.rank, {
+        description: 'You have been promoted to a new rank.',
+      })
+    }
+  }, [explorerRank.data])
 
   const excavationResultRef = useRef<CreatureRow | null>(null)
   const excavationErrorRef = useRef<string | null>(null)
@@ -124,9 +140,6 @@ function AppShell() {
       }
 
       const currentUserId = authState.status === 'authenticated' ? authState.session.user.id : null
-      if (currentUserId) {
-        checkBadgesRef.current.mutate(currentUserId)
-      }
 
       if (currentUserId && explorerProfileDataRef.current?.is_public) {
         const speciesName = `${creature.dna.genus} ${creature.dna.species}`.trim()
@@ -135,6 +148,28 @@ function AppShell() {
           event_type: eventType,
           species_name: speciesName,
           qr_hash: creature.qr_hash,
+        })
+      }
+
+      if (currentUserId) {
+        checkBadgesRef.current.mutate(currentUserId, {
+          onSuccess: (badges) => {
+            const newBadges = badges.filter(b => b.r_is_new)
+            for (const badge of newBadges) {
+              toast(`${badge.r_badge_icon} ${badge.r_badge_name}`, {
+                description: 'New badge earned!',
+              })
+              // Write badge activity to the Gazette feed for public profiles
+              if (explorerProfileDataRef.current?.is_public) {
+                postActivityRef.current.mutate({
+                  event_type: 'badge_earned',
+                  badge_slug: badge.r_badge_slug,
+                })
+              }
+            }
+            // Re-evaluate rank now that new badges may have been awarded
+            queryClient.invalidateQueries({ queryKey: ['explorer-rank'] })
+          },
         })
       }
 
