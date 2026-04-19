@@ -18,6 +18,7 @@ import { queryClient } from '@/lib/queryClient'
 import { Toaster } from '@/components/ui/sonner'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { useTrackPageView } from '@/hooks/useTrackPageView'
 import { TabBar } from '@/components/TabBar/TabBar'
 import { SiteFooter } from '@/components/SiteFooter/SiteFooter'
 import { useAddCreature } from '@/hooks/useCreatures'
@@ -80,6 +81,7 @@ function AppShell() {
 
   const addCreature = useAddCreature()
   const queryClient = useQueryClient()
+  const { trackPageView } = useTrackPageView()
 
   const isAuthenticated = authState.status === 'authenticated'
   const userId = isAuthenticated ? authState.session.user.id : ''
@@ -89,6 +91,12 @@ function AppShell() {
     isAuthenticated ? userId : null,
     explorerProfile.data,
   )
+
+  // Track page views on route change — fire-and-forget, anon visits use null userId
+  useEffect(() => {
+    if (authState.status === 'loading') return
+    trackPageView(location.pathname, isAuthenticated ? userId : null)
+  }, [location.pathname]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const excavationResultRef = useRef<CreatureRow | null>(null)
   const excavationErrorRef = useRef<string | null>(null)
