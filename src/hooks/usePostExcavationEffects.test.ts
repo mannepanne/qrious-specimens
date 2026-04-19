@@ -14,6 +14,10 @@ import type { CreatureRow } from '@/types/creature'
 
 vi.mock('sonner', () => ({ toast: vi.fn() }))
 
+// useBadges imports supabase at module load; mock it before the partial useBadges mock so
+// importOriginal() doesn't trigger the missing env var check in CI
+vi.mock('@/lib/supabase', () => ({ supabase: { rpc: vi.fn(), from: vi.fn() } }))
+
 vi.mock('./useCommunity', () => ({
   useCheckBadges: vi.fn(),
   usePostActivity: vi.fn(),
