@@ -2,10 +2,13 @@
 // ABOUT: Uses static rank data objects; no network calls
 
 import { render, screen } from '@testing-library/react'
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import ExplorerRankCard from './ExplorerRankCard'
 import { RANK_DISPLAY } from '@/hooks/useBadges'
 import type { ExplorerRank } from '@/hooks/useBadges'
+
+// useBadges imports supabase at module load; mock it so CI (no env vars) doesn't throw
+vi.mock('@/lib/supabase', () => ({ supabase: { rpc: vi.fn(), from: vi.fn() } }))
 
 function makeRank(overrides: Partial<ExplorerRank> = {}): ExplorerRank {
   return {
