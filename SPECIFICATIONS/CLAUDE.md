@@ -14,7 +14,7 @@ Move completed specs to **ARCHIVE/** when a phase is merged to main.
 
 Development is organised into 9 sequential phases. Work through them in order — each builds on the previous.
 
-**Current phase:** Phase 7 — Gamification
+**Current phase:** Phase 8 — Settings & admin
 
 ### Phase files
 
@@ -28,11 +28,7 @@ Development is organised into 9 sequential phases. Work through them in order �
 
 - ~~06-gazette.md~~ → [ARCHIVE](./ARCHIVE/06-gazette.md)
 
-7. **[07-gamification.md](./07-gamification.md)**
-   Community activity timeline, explorer showcase, community stats, Gazette profile creation and privacy toggle
-
-7. **[07-gamification.md](./07-gamification.md)**
-   10 badges × 3 tiers, badge-checking RPC integration, explorer rank system, achievement toasts and rank-up notifications
+- ~~07-gamification.md~~ → [ARCHIVE](./ARCHIVE/07-gamification.md)
 
 8. **[08-settings-admin.md](./08-settings-admin.md)**
    Settings subpage (rank card, badge collection, Gazette profile, account), admin dashboard, GDPR export/delete

@@ -44,7 +44,7 @@ When asked to remember anything, add project memory in this CLAUDE.md (project r
 - Anthropic Claude Haiku (field notes generation)
 - Cloudflare R2 (creature image storage — original, 512px, 256px variants)
 
-**Current status:** Phases 1–4 complete and merged to main
+**Current status:** Phases 1–7 complete and merged to main
 
 ## Implementation phases
 
@@ -56,11 +56,11 @@ Development is organised into 9 sequential phases.
 4. ~~[04-ai-generation-workers.md](./SPECIFICATIONS/ARCHIVE/04-ai-generation-workers.md)~~ ✓ — Cloudflare Workers for Gemini + Claude, R2 image uploads, full discovery flow
 5. ~~[05-catalogue.md](./SPECIFICATIONS/ARCHIVE/05-catalogue.md)~~ ✓ — Public species catalogue, taxonomic index, search and filters
 6. ~~[06-gazette.md](./SPECIFICATIONS/ARCHIVE/06-gazette.md)~~ ✓ — Community activity feed, explorer showcase, Gazette profiles
-7. [07-gamification.md](./SPECIFICATIONS/07-gamification.md) — Badges, explorer rank, achievement notifications
+7. ~~[07-gamification.md](./SPECIFICATIONS/ARCHIVE/07-gamification.md)~~ ✓ — Badges, explorer rank, achievement notifications
 8. [08-settings-admin.md](./SPECIFICATIONS/08-settings-admin.md) — Account settings, admin dashboard, GDPR tools
 9. [09-polish-launch.md](./SPECIFICATIONS/09-polish-launch.md) — Mary Anning references, About/Privacy/Contact, error handling, production launch
 
-**Current phase:** Phase 7 — Gamification
+**Current phase:** Phase 8 — Settings & admin
 
 ### SPECIFICATIONS/
 - **Implementation phases** (numbered files) — Active work-in-progress

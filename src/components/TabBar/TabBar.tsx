@@ -1,13 +1,13 @@
-// ABOUT: Bottom navigation tab bar — switches between the three primary app destinations
+// ABOUT: Bottom navigation tab bar — switches between the four primary app destinations
 // ABOUT: Hidden when an overlay (scanner, excavating) or a detail page is active; safe-area aware
 import type { LucideIcon } from 'lucide-react'
-import { LayoutGrid, Newspaper, BookOpen } from 'lucide-react'
+import { LayoutGrid, Newspaper, BookOpen, Settings } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 
-// The three primary destinations. Scanner and excavation are overlays — not tabs.
+// The four primary destinations. Scanner and excavation are overlays — not tabs.
 // Detail pages (/species/:qrHash, /specimen/:id) are sub-routes without the tab bar.
-export type Tab = 'catalogue' | 'gazette' | 'cabinet'
+export type Tab = 'catalogue' | 'gazette' | 'cabinet' | 'settings'
 
 interface TabBarProps {
   /** Pass true when an overlay is open or a detail page is active — hides the tab bar */
@@ -16,8 +16,9 @@ interface TabBarProps {
 
 const TABS: { to: string; label: string; Icon: LucideIcon }[] = [
   { to: '/catalogue', label: 'Catalogue', Icon: LayoutGrid },
-  { to: '/gazette',   label: 'Gazette',   Icon: Newspaper },
-  { to: '/cabinet',   label: 'Cabinet',   Icon: BookOpen },
+  { to: '/gazette',   label: 'Gazette',   Icon: Newspaper  },
+  { to: '/cabinet',   label: 'Cabinet',   Icon: BookOpen   },
+  { to: '/settings',  label: 'Settings',  Icon: Settings   },
 ]
 
 export function TabBar({ hidden = false }: TabBarProps) {

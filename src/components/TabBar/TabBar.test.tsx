@@ -1,5 +1,5 @@
 // ABOUT: Tests for the bottom navigation TabBar component
-// ABOUT: Verifies 3-tab spec layout, active state (via URL), hidden prop, and accessibility
+// ABOUT: Verifies 4-tab spec layout (Catalogue, Gazette, Cabinet, Settings), active state, hidden prop, and accessibility
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
@@ -14,11 +14,12 @@ function renderTabBar(currentPath = '/', hidden?: boolean) {
 }
 
 describe('TabBar', () => {
-  it('renders the three spec-defined navigation tabs', () => {
+  it('renders all four navigation tabs', () => {
     renderTabBar()
     expect(screen.getByText('CATALOGUE')).toBeInTheDocument()
     expect(screen.getByText('GAZETTE')).toBeInTheDocument()
     expect(screen.getByText('CABINET')).toBeInTheDocument()
+    expect(screen.getByText('SETTINGS')).toBeInTheDocument()
   })
 
   it('marks the active tab with aria-current="page" based on current URL', () => {
@@ -46,6 +47,7 @@ describe('TabBar', () => {
     expect(screen.getByText('CATALOGUE').closest('a')).toHaveAttribute('href', '/catalogue')
     expect(screen.getByText('GAZETTE').closest('a')).toHaveAttribute('href', '/gazette')
     expect(screen.getByText('CABINET').closest('a')).toHaveAttribute('href', '/cabinet')
+    expect(screen.getByText('SETTINGS').closest('a')).toHaveAttribute('href', '/settings')
   })
 
   it('renders a nav element with accessible label', () => {
