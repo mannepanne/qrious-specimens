@@ -60,6 +60,41 @@ export function AboutPage() {
         </p>
       </div>
 
+      {/* Mary Anning section */}
+      <div className="border-t pt-6 space-y-4 font-serif text-base leading-relaxed">
+        <h2 className="font-mono text-[10px] tracking-[2px] text-muted-foreground uppercase">
+          The debt we acknowledge
+        </h2>
+
+        <p>
+          This project takes its spirit from Mary Anning (1799–1847), the fossil hunter of Lyme
+          Regis who spent decades walking the Jurassic Coast of Dorset after storms, finding
+          creatures the learned world had not thought to look for.
+        </p>
+
+        <p>
+          She could not afford a formal education. She was not a fellow of any learned society. She
+          was a working-class woman in Regency England — and she found the first ichthyosaur, the
+          first plesiosaur, the first pterosaur ever properly documented in Britain. Specimens that
+          rewrote what scientists understood about the history of life on Earth.
+        </p>
+
+        <p>
+          She was paid for the specimens. Rarely credited for discovering them.
+        </p>
+
+        <p>
+          This is a small project, not a history lesson. But every time you scan a code and find
+          something no one else has found, and the creature remembers that you were first — that is,
+          in its modest way, something of her legacy applied to a world she could not have imagined.
+        </p>
+
+        <p className="italic text-muted-foreground">
+          The geological vocabulary of this app — the strata, the specimens, the cabinet — is her
+          vocabulary. It seemed only right to say so.
+        </p>
+      </div>
+
       {/* Catalogue CTA */}
       <div className="pt-2 text-center">
         <Link

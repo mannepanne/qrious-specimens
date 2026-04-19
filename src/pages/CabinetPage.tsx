@@ -2,6 +2,7 @@
 // ABOUT: Infinite-scroll grid of SpecimenTeaser cards; scan CTA triggers the QR scanner overlay
 
 import { useNavigate } from 'react-router-dom'
+import { useMemo } from 'react'
 import { BookOpen, LogOut, Scan, ScanLine, Settings } from 'lucide-react'
 import { useCreatures, useDiscoveryCounts } from '@/hooks/useCreatures'
 import { useAuth } from '@/hooks/useAuth'
@@ -36,6 +37,20 @@ export function CabinetPage() {
     rare:     allCreatures.filter((c) => getRarityFromCount(discoveryCounts?.[c.qr_hash]) === 'rare').length,
   }
 
+  // Rotating Victorian expedition quotes — one per session, chosen on mount
+  const expeditionQuote = useMemo(() => {
+    const quotes = [
+      'What the strata conceals, perseverance shall reveal.',
+      'Curiosity is the only instrument worth carrying into the field.',
+      'Every specimen tells a story older than memory.',
+      'She walked the beach after every storm, for the sea gives up its secrets slowly.',
+      'One finds not what one expects, but what one is prepared to see.',
+      'The field naturalist knows that the world does not wait to be asked.',
+      'To look is not yet to see; to see is not yet to understand.',
+    ]
+    return quotes[Math.floor(Math.random() * quotes.length)]
+  }, [])
+
   function handleViewCreature(creature: CreatureRow, index: number, allCreatures: CreatureRow[]) {
     // Pass the full cabinet list so SpecimenPage can offer prev/next navigation
     navigate(`/specimen/${creature.id}`, {
@@ -53,6 +68,9 @@ export function CabinetPage() {
           </div>
           <div className="flex-1 min-w-0">
             <h1 className="font-serif text-lg font-medium leading-tight">QRious Specimens</h1>
+            <p className="font-serif text-[10px] italic text-muted-foreground/60 leading-tight truncate">
+              {expeditionQuote}
+            </p>
             <p className="font-mono text-[9px] tracking-[2px] text-muted-foreground">
               {allCreatures.length > 0
                 ? `${allCreatures.length} IN YOUR CABINET`
