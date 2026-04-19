@@ -4,6 +4,7 @@
 import { useState, useEffect, useRef, useCallback, type ChangeEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { BookOpen, ChevronDown, ChevronRight, Compass, Search, SlidersHorizontal, X } from 'lucide-react'
+import { AppHeader } from '@/components/AppHeader/AppHeader'
 import { useCatalogue, useCatalogueTaxonomy } from '@/hooks/useCatalogue'
 import type { CatalogueFilters, CatalogueEntry } from '@/hooks/useCatalogue'
 import { useAuth } from '@/hooks/useAuth'
@@ -140,13 +141,9 @@ export function CataloguePage() {
 
   return (
     <main className="flex flex-col h-full">
-      {/* Page title */}
-      <div className="px-4 pt-4 pb-3 shrink-0 border-b border-border">
-        <h1 className="font-serif text-2xl">Catalogue of Known Species</h1>
-        <p className="font-mono text-xs text-muted-foreground mt-0.5">
-          {taxonomy.isLoading ? 'Loading…' : `${taxonomyTotal} species documented`}
-        </p>
-      </div>
+      <AppHeader
+        subtitle={taxonomy.isLoading ? 'LOADING…' : `${taxonomyTotal} SPECIES DOCUMENTED`}
+      />
 
       <div className="flex flex-1 overflow-hidden">
         {/* Taxonomic sidebar — desktop always visible */}

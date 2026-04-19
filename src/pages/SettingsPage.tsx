@@ -33,6 +33,7 @@ import {
   LogOut,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { AppHeader } from '@/components/AppHeader/AppHeader'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import {
@@ -63,12 +64,10 @@ export function SettingsPage() {
   }
 
   return (
-    <>
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur px-4 py-3 flex items-center gap-3">
-        <h1 className="font-serif text-lg font-medium">Field Kit</h1>
-      </header>
+    <main className="flex flex-col h-full">
+      <AppHeader subtitle="FIELD KIT" />
 
-      <main className="max-w-3xl mx-auto px-4 py-8 pb-24">
+      <div className="max-w-3xl mx-auto w-full px-4 py-8 pb-24 overflow-y-auto flex-1">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left column: Achievements */}
         <RankAndBadges userId={userId} />
@@ -84,8 +83,8 @@ export function SettingsPage() {
           />
         </div>
       </div>
-      </main>
-    </>
+      </div>
+    </main>
   )
 }
 
