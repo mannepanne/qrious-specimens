@@ -61,7 +61,22 @@ Computes specimen count, rare count, first-discovery count, and distinct active 
 
 Uses `FOREACH` loop with `r_`-prefixed return columns to avoid column-name ambiguity.
 
-Called silently after each excavation (Phase 6). Badge toast notifications added in Phase 7.
+Called silently after each excavation. Badge toast notifications (with tier label) fire in Phase 7. On success, invalidates both `['community-showcase']` and `['explorer-badges', userId]` query keys.
+
+### `calculate_explorer_rank(p_user_id uuid)` *(deployed, no migration file)*
+
+Computes a cumulative score for the user and maps it to a rank tier. Deployed directly to Supabase; not in the migrations directory.
+
+Returns a single JSON object: `{ rank, rank_icon, score, next_rank, next_threshold, progress, breakdown }`.
+
+- `rank` — `'unranked' | 'bronze' | 'silver' | 'gold' | 'platinum'`
+- `progress` — float 0–1 representing progress toward `next_threshold`
+- `breakdown` — `{ badges, specimens, species, rare, firsts, days_active }`
+
+Rank thresholds: Bronze = 8, Silver = 35, Gold = 100, Platinum = 250.
+Rank display names and icons live in `RANK_DISPLAY` in `src/hooks/useBadges.ts`.
+
+Fetched via `useExplorerRank(userId)` in `useBadges.ts`. Invalidated after badge check completes (ensures rank reflects newly awarded badges).
 
 ---
 
@@ -76,7 +91,7 @@ Called silently after each excavation (Phase 6). Badge toast notifications added
 | `useExplorerShowcase()` | Public profiles ranked by count, polls 60s | 60s stale |
 | `useCommunityStats()` | Headline stats | 5 min stale |
 | `usePostActivity()` | Mutation: insert into `activity_feed` | Invalidates feed |
-| `useCheckBadges()` | Mutation: call `check_and_award_badges` RPC | Invalidates showcase |
+| `useCheckBadges()` | Mutation: call `check_and_award_badges` RPC | Invalidates showcase + `explorer-badges` |
 | `useFirstDiscoverer(userId, enabled)` | Look up display name of a species' first discoverer | 10 min stale; only fetches when `enabled && !!userId` |
 
 ---
@@ -124,6 +139,20 @@ When a user clicks a discovery entry in the `ActivityTimeline`, the app:
 - `firstDiscovererName` is non-null (only when the first discoverer has a public Gazette profile)
 
 The lookup is done via `useFirstDiscoverer(entry.first_discoverer_id, isAuthenticated && !!selectedEntry)` in `CataloguePage`, which fires a DB query filtered to `is_public = true`. Private profiles produce no row, so their credit is suppressed at the DB layer, not the UI layer.
+
+---
+
+## Gamification hooks (`src/hooks/useBadges.ts`)
+
+Added in Phase 7. Separate from `useCommunity.ts` to keep badge/rank logic cohesive.
+
+| Hook | Purpose | Cache |
+|---|---|---|
+| `useBadgeDefinitions()` | All badge definitions from `badge_definitions` table | 10 min stale |
+| `useExplorerBadges(userId)` | Earned badges for a user from `explorer_badges` table | 5 min stale; disabled when `userId` is null |
+| `useExplorerRank(userId)` | Explorer rank via `calculate_explorer_rank` RPC | 5 min stale; disabled when `userId` is null |
+
+`RANK_DISPLAY` constants (label, name, icon per tier) are exported from `useBadges.ts` — canonical source used by `ExplorerRankCard`, `CabinetPage`, and `App.tsx` rank-up toasts.
 
 ---
 

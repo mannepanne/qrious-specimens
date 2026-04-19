@@ -215,8 +215,10 @@ export function useCheckBadges() {
       if (error) throw error
       return (data ?? []) as BadgeResult[]
     },
-    onSuccess: () => {
+    onSuccess: (_data, userId) => {
       queryClient.invalidateQueries({ queryKey: ['community-showcase'] })
+      // Invalidate the per-user badge cache so BadgeCollection reflects new awards immediately
+      queryClient.invalidateQueries({ queryKey: ['explorer-badges', userId] })
     },
   })
 }

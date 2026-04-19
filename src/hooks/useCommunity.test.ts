@@ -239,6 +239,23 @@ describe('useCheckBadges', () => {
     expect(data).toEqual(badges)
     expect(mockRpc).toHaveBeenCalledWith('check_and_award_badges', { p_user_id: 'u1' })
   })
+
+  it('invalidates explorer-badges cache on success so BadgeCollection reflects new awards', async () => {
+    const badges = [
+      { r_badge_slug: 'first_steps', r_badge_name: 'First Steps', r_badge_icon: '🌱', r_is_new: true },
+    ]
+    mockRpc.mockResolvedValueOnce({ data: badges, error: null })
+
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
+    const invalidateSpy = vi.spyOn(qc, 'invalidateQueries')
+    const wrapper = ({ children }: { children: React.ReactNode }) =>
+      createElement(QueryClientProvider, { client: qc }, children)
+
+    const { result } = renderHook(() => useCheckBadges(), { wrapper })
+    await act(async () => { await result.current.mutateAsync('u1') })
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['explorer-badges', 'u1'] })
+  })
 })
 
 // ============================================================

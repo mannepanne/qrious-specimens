@@ -21,7 +21,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { TabBar } from '@/components/TabBar/TabBar'
 import { SiteFooter } from '@/components/SiteFooter/SiteFooter'
 import { useAddCreature } from '@/hooks/useCreatures'
-import { useExplorerProfile, useCheckBadges, usePostActivity } from '@/hooks/useCommunity'
+import { useExplorerProfile } from '@/hooks/useCommunity'
+import { usePostExcavationEffects } from '@/hooks/usePostExcavationEffects'
 import type { CreatureRow } from '@/types/creature'
 import type { WorkerResponse } from '@/types/worker'
 import { generateCreatureDNA } from '@/lib/creatureEngine'
@@ -83,16 +84,10 @@ function AppShell() {
   const userId = isAuthenticated ? authState.session.user.id : ''
 
   const explorerProfile = useExplorerProfile(isAuthenticated ? userId : null)
-  const checkBadges = useCheckBadges()
-  const postActivity = usePostActivity()
-
-  // Stable refs so finishExcavation dep array stays lean
-  const checkBadgesRef = useRef(checkBadges)
-  const postActivityRef = useRef(postActivity)
-  const explorerProfileDataRef = useRef(explorerProfile.data)
-  checkBadgesRef.current = checkBadges
-  postActivityRef.current = postActivity
-  explorerProfileDataRef.current = explorerProfile.data
+  const { fireEffects } = usePostExcavationEffects(
+    isAuthenticated ? userId : null,
+    explorerProfile.data,
+  )
 
   const excavationResultRef = useRef<CreatureRow | null>(null)
   const excavationErrorRef = useRef<string | null>(null)
@@ -123,20 +118,7 @@ function AppShell() {
         })
       }
 
-      const currentUserId = authState.status === 'authenticated' ? authState.session.user.id : null
-      if (currentUserId) {
-        checkBadgesRef.current.mutate(currentUserId)
-      }
-
-      if (currentUserId && explorerProfileDataRef.current?.is_public) {
-        const speciesName = `${creature.dna.genus} ${creature.dna.species}`.trim()
-        const eventType = isFirstDiscoverer ? 'first_discovery' : 'discovery'
-        postActivityRef.current.mutate({
-          event_type: eventType,
-          species_name: speciesName,
-          qr_hash: creature.qr_hash,
-        })
-      }
+      fireEffects(creature, isFirstDiscoverer)
 
       // Navigate to the new specimen — pass the creature in state so SpecimenPage
       // can render immediately without waiting for a DB round-trip.
@@ -150,7 +132,7 @@ function AppShell() {
     } else if (excavationErrorRef.current) {
       toast('Could not add specimen', { description: 'Please try again.' })
     }
-  }, [authState, navigate])
+  }, [navigate, fireEffects])
 
   useEffect(() => {
     if (animationDoneRef.current && !addCreature.isPending) {

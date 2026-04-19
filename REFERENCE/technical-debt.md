@@ -171,7 +171,9 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ## Resolved items
 
-*(Move items here when addressed, with resolution notes)*
+### ~~TD-015~~: `finishExcavation` badge-toast and rank-up logic lacks integration tests
+- **Resolved in:** Phase 7 (same branch)
+- **Resolution:** Extracted all badge/rank side-effect logic from `finishExcavation` into `src/hooks/usePostExcavationEffects.ts`. The hook is tested by `usePostExcavationEffects.test.ts` (14 tests) using mocked inner hooks — covers discovery activity posting, badge toasts with tier labels, badge activity, rank invalidation, and the rank-up detection effect. `App.tsx` is now a thin caller.
 
 ---
 
