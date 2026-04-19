@@ -18,6 +18,7 @@ export interface Env {
   GEMINI_API_KEY: string
   ANTHROPIC_API_KEY: string
   PUBLIC_R2_URL: string
+  RESEND_API_KEY: string
 }
 
 interface SpeciesImageRow {

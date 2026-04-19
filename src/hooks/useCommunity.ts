@@ -282,12 +282,19 @@ export interface ContactMessageParams {
   message: string
 }
 
-/** Submit a contact message. Available to anonymous and authenticated users. */
+/** Submit a contact message via the Worker API, which handles DB insert and Resend notification. */
 export function useSubmitContact() {
   return useMutation({
     mutationFn: async (params: ContactMessageParams) => {
-      const { error } = await supabase.from('contact_messages').insert(params)
-      if (error) throw error
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      })
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string }
+        throw new Error(body.error ?? 'Contact submission failed')
+      }
     },
   })
 }
