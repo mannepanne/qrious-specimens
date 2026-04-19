@@ -159,6 +159,17 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
+### TD-016: Contact form captcha and honeypot are client-side only
+
+- **Location:** `workers/contact/index.ts` — `handleContact()`; `src/components/VictorianCaptcha/VictorianCaptcha.tsx`
+- **Issue:** The VictorianCaptcha and honeypot field are validated in the browser only. A bot POSTing directly to `/api/contact` bypasses both protections and can insert rows into `contact_messages` and trigger Resend notification emails. The Worker has no captcha verification or per-IP rate limiting.
+- **Why accepted:** The site runs behind Cloudflare's edge, which provides default bot protection and DDoS mitigation. For a small personal project with low traffic, the risk of targeted abuse is low. Client-side captcha meaningfully raises the bar for opportunistic spam scripts.
+- **Risk:** Low while traffic is low. Becomes Medium if the contact form URL is discovered and targeted — Resend quota exhaustion could disrupt admin notifications.
+- **Future fix:** Add per-IP rate limiting using `CF-Connecting-IP` header and a Cloudflare KV counter (e.g. 5 requests per IP per 10 minutes). Alternatively, use Cloudflare's built-in rate limiting rules in the dashboard. Server-side captcha verification (e.g. Cloudflare Turnstile) is an option if spam becomes a real issue.
+- **Phase introduced:** Phase 9
+
+---
+
 ### Example Format: TD-001: Description
 - **Location:** `src/path/to/file.ts` - `functionName()`
 - **Issue:** Clear description of the limitation or shortcut

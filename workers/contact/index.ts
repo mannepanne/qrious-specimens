@@ -84,7 +84,7 @@ export async function handleContact(request: Request, env: Env): Promise<Respons
       headers: { ...cors, 'Content-Type': 'application/json' },
     })
   }
-  if (message.length > 5000 || sender_email.length > 320) {
+  if (message.length > 2000 || sender_email.length > 320 || (sender_name && sender_name.length > 200)) {
     return new Response(JSON.stringify({ error: 'Input too long' }), {
       status: 400,
       headers: { ...cors, 'Content-Type': 'application/json' },

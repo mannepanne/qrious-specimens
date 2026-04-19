@@ -10,6 +10,8 @@ export function SiteFooter() {
         <Link to="/about" className="hover:text-foreground transition-colors">ABOUT</Link>
         <span>·</span>
         <Link to="/privacy" className="hover:text-foreground transition-colors">PRIVACY</Link>
+        <span>·</span>
+        <Link to="/contact" className="hover:text-foreground transition-colors">CONTACT</Link>
       </p>
       <p className="mt-2">BUILT WITH CLAUDE CODE AND INSUFFICIENT CAUTION</p>
       <p className="mt-1">
