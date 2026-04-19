@@ -46,6 +46,14 @@ export interface CommunityStats {
   total_species: number
 }
 
+/** A badge earned by the current user, including its display visibility state. */
+export interface EarnedBadge {
+  id: string
+  badge_slug: string
+  is_public: boolean
+  earned_at: string
+}
+
 export interface BadgeResult {
   r_badge_slug: string
   r_badge_name: string
@@ -219,6 +227,67 @@ export function useCheckBadges() {
       queryClient.invalidateQueries({ queryKey: ['community-showcase'] })
       // Invalidate the per-user badge cache so BadgeCollection reflects new awards immediately
       queryClient.invalidateQueries({ queryKey: ['explorer-badges', userId] })
+    },
+  })
+}
+
+// ============================================================
+// Badge visibility hooks (Field Kit — Settings page)
+// ============================================================
+
+/** All badges earned by the current user, with per-badge visibility state. */
+export function useMyBadges(userId: string | null) {
+  return useQuery({
+    queryKey: ['my-badges', userId],
+    queryFn: async () => {
+      if (!userId) return []
+      const { data, error } = await supabase
+        .from('explorer_badges')
+        .select('id, badge_slug, is_public, earned_at')
+        .eq('user_id', userId)
+      if (error) throw error
+      return (data ?? []) as EarnedBadge[]
+    },
+    enabled: !!userId,
+    staleTime: 60 * 1000,
+  })
+}
+
+/** Toggle the public/private visibility of an earned badge. */
+export function useToggleBadgeVisibility() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { badgeId: string; isPublic: boolean; userId: string }) => {
+      const { error } = await supabase
+        .from('explorer_badges')
+        .update({ is_public: params.isPublic })
+        .eq('id', params.badgeId)
+      if (error) throw error
+      return { userId: params.userId }
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['my-badges', data.userId] })
+      queryClient.invalidateQueries({ queryKey: ['community-showcase'] })
+    },
+  })
+}
+
+// ============================================================
+// Contact form
+// ============================================================
+
+export interface ContactMessageParams {
+  sender_email: string
+  sender_name?: string
+  message: string
+}
+
+/** Submit a contact message. Available to anonymous and authenticated users. */
+export function useSubmitContact() {
+  return useMutation({
+    mutationFn: async (params: ContactMessageParams) => {
+      const { error } = await supabase.from('contact_messages').insert(params)
+      if (error) throw error
     },
   })
 }

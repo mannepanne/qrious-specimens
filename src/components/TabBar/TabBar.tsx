@@ -16,8 +16,8 @@ interface TabBarProps {
 
 const TABS: { to: string; label: string; Icon: LucideIcon }[] = [
   { to: '/catalogue', label: 'Catalogue', Icon: LayoutGrid },
-  { to: '/gazette',   label: 'Gazette',   Icon: Newspaper },
-  { to: '/cabinet',   label: 'Cabinet',   Icon: BookOpen },
+  { to: '/gazette',   label: 'Gazette',   Icon: Newspaper  },
+  { to: '/cabinet',   label: 'Cabinet',   Icon: BookOpen   },
 ]
 
 export function TabBar({ hidden = false }: TabBarProps) {

@@ -2,7 +2,7 @@
 // ABOUT: Infinite-scroll grid of SpecimenTeaser cards; scan CTA triggers the QR scanner overlay
 
 import { useNavigate } from 'react-router-dom'
-import { BookOpen, LogOut, Scan, ScanLine } from 'lucide-react'
+import { BookOpen, LogOut, Scan, ScanLine, Settings } from 'lucide-react'
 import { useCreatures, useDiscoveryCounts } from '@/hooks/useCreatures'
 import { useAuth } from '@/hooks/useAuth'
 import { useScanOverlay } from '@/App'
@@ -57,17 +57,24 @@ export function CabinetPage() {
               {allCreatures.length > 0
                 ? `${allCreatures.length} IN YOUR CABINET`
                 : 'YOUR CABINET OF CURIOSITIES'}
+              {explorerRank?.rank && explorerRank.rank !== 'unranked' && (
+                <span
+                  title={RANK_DISPLAY[explorerRank.rank]?.name}
+                  aria-label={`Rank: ${RANK_DISPLAY[explorerRank.rank]?.name ?? explorerRank.rank}`}
+                >
+                  {' · '}{explorerRank.rank_icon} {explorerRank.rank.toUpperCase()}
+                </span>
+              )}
             </p>
           </div>
-          {explorerRank && explorerRank.rank && explorerRank.rank !== 'unranked' && (
-            <span
-              className="font-mono text-[9px] tracking-wider text-muted-foreground shrink-0"
-              title={RANK_DISPLAY[explorerRank.rank]?.name}
-              aria-label={`Rank: ${RANK_DISPLAY[explorerRank.rank]?.name ?? explorerRank.rank}`}
-            >
-              {explorerRank.rank_icon} {explorerRank.rank.toUpperCase()}
-            </span>
-          )}
+          <button
+            onClick={() => navigate('/settings')}
+            className="flex items-center gap-1.5 font-mono text-[10px] tracking-wider text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            title="Settings"
+          >
+            <Settings className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Settings</span>
+          </button>
           <button
             onClick={signOut}
             className="flex items-center gap-1.5 font-mono text-[10px] tracking-wider text-muted-foreground hover:text-foreground transition-colors shrink-0"

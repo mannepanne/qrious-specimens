@@ -237,7 +237,7 @@ describe('App', () => {
     expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
   })
 
-  it('Gazette route renders The Explorer\'s Gazette heading', async () => {
+  it("Gazette route renders The Explorer's Gazette heading", async () => {
     setupAuthenticated()
     renderApp({ initialPath: '/gazette' })
 

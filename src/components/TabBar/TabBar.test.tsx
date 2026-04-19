@@ -19,6 +19,7 @@ describe('TabBar', () => {
     expect(screen.getByText('CATALOGUE')).toBeInTheDocument()
     expect(screen.getByText('GAZETTE')).toBeInTheDocument()
     expect(screen.getByText('CABINET')).toBeInTheDocument()
+    expect(screen.queryByText('SETTINGS')).not.toBeInTheDocument()
   })
 
   it('marks the active tab with aria-current="page" based on current URL', () => {

@@ -37,6 +37,7 @@ import { AboutPage } from '@/pages/AboutPage'
 import { PrivacyPage } from '@/pages/PrivacyPage'
 import { ContactPage } from '@/pages/ContactPage'
 import { SettingsPage } from '@/pages/SettingsPage'
+import { AdminPage } from '@/pages/AdminPage'
 import QrScanner from '@/components/QrScanner/QrScanner'
 import ExcavationAnimation from '@/components/ExcavationAnimation/ExcavationAnimation'
 import type { ExcavationWorkerResult } from '@/components/ExcavationAnimation/ExcavationAnimation'
@@ -58,7 +59,7 @@ export function useScanOverlay(): ScanOverlayContextValue {
 }
 
 // Protected routes: unauthenticated access is redirected to /enter by AppShell
-const PROTECTED_PREFIXES = ['/cabinet', '/specimen/', '/settings']
+const PROTECTED_PREFIXES = ['/cabinet', '/specimen/', '/settings', '/admin']
 
 // ── Route definitions ──────────────────────────────────────────────────────
 // Exported so tests can create a MemoryRouter with the same routes.
@@ -301,6 +302,7 @@ export function AppRoutes() {
         <Route path="/privacy"             element={<PrivacyPage />} />
         <Route path="/contact"             element={<ContactPage />} />
         <Route path="/settings"            element={<SettingsPage />} />
+        <Route path="/admin"               element={<AdminPage />} />
       </Route>
       {/* Temporary design prototype — standalone, outside AppShell. Remove once layout is approved. */}
       <Route path="/framework"             element={<FrameworkPage />} />

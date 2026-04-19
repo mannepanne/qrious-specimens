@@ -3,6 +3,7 @@
 
 import { useNavigate } from 'react-router-dom'
 import { Compass } from 'lucide-react'
+import { AppHeader } from '@/components/AppHeader/AppHeader'
 import { useAuth } from '@/hooks/useAuth'
 import { useCommunityFeed, useExplorerShowcase, useCommunityStats, useCreateProfile, useUpdateProfile, useExplorerProfile } from '@/hooks/useCommunity'
 import type { ExplorerProfile } from '@/hooks/useCommunity'
@@ -41,11 +42,7 @@ export function GazettePage() {
 
   return (
     <main className="flex flex-col h-full">
-      {/* Page title */}
-      <div className="px-4 pt-4 pb-3 shrink-0 border-b border-border">
-        <p className="font-mono text-[9px] tracking-[2px] text-muted-foreground uppercase">Field Dispatches</p>
-        <h1 className="font-serif text-2xl font-medium mt-0.5">The Explorer's Gazette</h1>
-      </div>
+      <AppHeader eyebrow="Field Dispatches" title="The Explorer's Gazette" />
 
       <div className="flex-1 overflow-y-auto">
         <div className="px-4 pt-4 pb-6 space-y-6 max-w-2xl mx-auto">
