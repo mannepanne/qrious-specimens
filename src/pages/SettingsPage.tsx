@@ -20,6 +20,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import {
+  ArrowLeft,
   Shield,
   Info,
   Newspaper,
@@ -33,7 +34,6 @@ import {
   LogOut,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { AppHeader } from '@/components/AppHeader/AppHeader'
 import { useAuth } from '@/hooks/useAuth'
 import { useIsAdmin } from '@/hooks/useIsAdmin'
 import {
@@ -65,7 +65,24 @@ export function SettingsPage() {
 
   return (
     <main className="flex flex-col h-full">
-      <AppHeader title="Field Kit" />
+      <div className="px-4 pt-4 pb-3 shrink-0 border-b border-border flex items-center gap-3">
+        <button
+          onClick={() => navigate(-1)}
+          className="text-muted-foreground hover:text-foreground transition-colors"
+          aria-label="Go back"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <h1 className="font-serif text-lg font-medium flex-1">Field Kit</h1>
+        <button
+          onClick={handleSignOut}
+          className="flex items-center gap-1.5 font-mono text-[10px] tracking-wider text-muted-foreground hover:text-foreground transition-colors shrink-0"
+          title="Close journal"
+        >
+          <LogOut className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Close journal</span>
+        </button>
+      </div>
 
       <div className="max-w-3xl mx-auto w-full px-4 py-8 pb-24 overflow-y-auto flex-1">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
