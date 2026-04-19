@@ -35,7 +35,24 @@ function makeFromChain(result: { data: unknown; error: null }) {
 
 beforeEach(() => { vi.clearAllMocks() })
 
+function makeErrorFromChain(error: Error) {
+  return {
+    select: vi.fn().mockReturnThis(),
+    order: vi.fn().mockResolvedValue({ data: null, error }),
+    eq: vi.fn().mockReturnThis(),
+  }
+}
+
 describe('useBadgeDefinitions', () => {
+  it('enters error state when the table query fails', async () => {
+    mockFrom.mockReturnValue(makeErrorFromChain(new Error('DB error')))
+
+    const { result } = renderHook(() => useBadgeDefinitions(), { wrapper: createWrapper() })
+
+    await waitFor(() => expect(result.current.isError).toBe(true))
+    expect(result.current.error).toBeInstanceOf(Error)
+  })
+
   it('returns badge definitions from the badge_definitions table', async () => {
     const defs = [
       { slug: 'first-specimen', name: 'First Find', description: 'desc', icon: '🔬', tier: 'bronze', sort_order: 1 },
@@ -60,6 +77,19 @@ describe('useBadgeDefinitions', () => {
 })
 
 describe('useExplorerBadges', () => {
+  it('enters error state when the query fails', async () => {
+    const chain = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockResolvedValue({ data: null, error: new Error('DB error') }),
+    }
+    mockFrom.mockReturnValue(chain)
+
+    const { result } = renderHook(() => useExplorerBadges('user-123'), { wrapper: createWrapper() })
+
+    await waitFor(() => expect(result.current.isError).toBe(true))
+    expect(result.current.error).toBeInstanceOf(Error)
+  })
+
   it('returns earned badges for a user', async () => {
     const badges = [{ badge_slug: 'first-specimen', earned_at: '2026-01-01T00:00:00Z' }]
     const chain = {
@@ -86,6 +116,15 @@ describe('useExplorerBadges', () => {
 })
 
 describe('useExplorerRank', () => {
+  it('enters error state when the RPC fails', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: new Error('RPC error') })
+
+    const { result } = renderHook(() => useExplorerRank('user-123'), { wrapper: createWrapper() })
+
+    await waitFor(() => expect(result.current.isError).toBe(true))
+    expect(result.current.error).toBeInstanceOf(Error)
+  })
+
   it('calls calculate_explorer_rank RPC with the user id', async () => {
     const rank = {
       rank: 'bronze',

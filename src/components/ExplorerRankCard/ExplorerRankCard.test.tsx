@@ -3,7 +3,8 @@
 
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
-import ExplorerRankCard, { RANK_DISPLAY } from './ExplorerRankCard'
+import ExplorerRankCard from './ExplorerRankCard'
+import { RANK_DISPLAY } from '@/hooks/useBadges'
 import type { ExplorerRank } from '@/hooks/useBadges'
 
 function makeRank(overrides: Partial<ExplorerRank> = {}): ExplorerRank {

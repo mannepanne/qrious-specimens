@@ -4,8 +4,6 @@
 import type { ExplorerRank } from '@/hooks/useBadges'
 import { RANK_DISPLAY } from '@/hooks/useBadges'
 
-export { RANK_DISPLAY }
-
 // Tier-specific colour classes
 const TIER_COLOURS: Record<string, string> = {
   unranked: 'text-muted-foreground border-border',
