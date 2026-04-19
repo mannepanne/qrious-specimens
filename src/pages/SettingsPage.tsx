@@ -63,9 +63,12 @@ export function SettingsPage() {
   }
 
   return (
-    <main className="max-w-3xl mx-auto px-4 py-8 pb-24">
-      <h1 className="font-serif text-2xl font-medium mb-8">Field Kit</h1>
+    <>
+      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur px-4 py-3 flex items-center gap-3">
+        <h1 className="font-serif text-lg font-medium">Field Kit</h1>
+      </header>
 
+      <main className="max-w-3xl mx-auto px-4 py-8 pb-24">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left column: Achievements */}
         <RankAndBadges userId={userId} />
@@ -81,7 +84,8 @@ export function SettingsPage() {
           />
         </div>
       </div>
-    </main>
+      </main>
+    </>
   )
 }
 
