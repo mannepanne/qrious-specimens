@@ -20,9 +20,9 @@ interface CloudflareImagesApiResponse {
  * Upload an image to Cloudflare Images and return delivery URLs for three named variants.
  *
  * Requires three named variants to be set up in the Cloudflare Images dashboard:
- *   - "qrious-original" — full-size, no resize
- *   - "qrious-512"      — width 512px
- *   - "qrious-256"      — width 256px
+ *   - "qriousoriginal" — full-size, no resize
+ *   - "qrious512"      — width 512px
+ *   - "qrious256"      — width 256px
  *
  * The account hash for delivery URLs is separate from the account ID used for uploads.
  * Find it in CF dashboard → Images → Overview, in the example delivery URL.
@@ -62,8 +62,8 @@ export async function uploadToCloudflareImages(
 
   const base = `https://imagedelivery.net/${deliveryHash}/${data.result.id}`
   return {
-    original: `${base}/qrious-original`,
-    url512:   `${base}/qrious-512`,
-    url256:   `${base}/qrious-256`,
+    original: `${base}/qriousoriginal`,
+    url512:   `${base}/qrious512`,
+    url256:   `${base}/qrious256`,
   }
 }
