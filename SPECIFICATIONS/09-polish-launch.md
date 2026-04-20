@@ -38,7 +38,7 @@ The finishing phase: Mary Anning references woven deliberately throughout the UI
 - [ ] Post-merge verification pass (site is already live — see below)
   - [ ] Confirm Wrangler secrets audit (any new secrets introduced in Phase 9 set in production)
   - [ ] Confirm Supabase auth redirect URL still valid for `qrious.hultberg.org`
-  - [ ] `wrangler deploy` after merge, then smoke test
+  - [ ] Confirm GitHub Actions deploy run succeeds after merge, then smoke test
 
 ### Out of scope
 - Native mobile app
@@ -110,7 +110,7 @@ The site is already live at `https://qrious.hultberg.org` (DNS, Wrangler secrets
 
 **Cloudflare:**
 - [ ] Any new Wrangler secrets introduced during Phase 9 are set in production
-- [ ] `wrangler deploy` succeeds after merge
+- [ ] GitHub Actions deploy run succeeds after merge (`.github/workflows/deploy.yml`)
 - [ ] Cloudflare Images variants (`qriousoriginal`, `qrious512`, `qrious256`) still serving from `imagedelivery.net`
 
 > **Cloudflare services evaluation:**

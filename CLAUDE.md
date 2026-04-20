@@ -114,6 +114,12 @@ How-it-works documentation for implemented features:
    - **`/review-pr`** — Fast single-reviewer (1–2 min)
    - **`/review-pr-team`** — Multi-perspective team (5–10 min); use for security-sensitive or architectural PRs
 
+## Deployment
+
+**Deployment is automatic on push to main** via `.github/workflows/deploy.yml` — GitHub Actions runs tests, build, and `wrangler deploy`. Never instruct the user to run `wrangler deploy` manually; after a merge, monitor the GitHub Actions run and smoke-test once it's green.
+
+The `bun run deploy` / `wrangler deploy` commands exist for emergency manual deploys only, not normal flow. The only local wrangler commands in normal use are secrets management (`wrangler secret put ...`).
+
 ## TypeScript configuration
 
 - Target: ESNext

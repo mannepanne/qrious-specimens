@@ -204,15 +204,19 @@ Or via Workers Routes: assign `qrious.hultberg.org/*` to the `qrious-specimens` 
 
 ---
 
-## Production deployment checklist
+## Production deployment
 
-Before deploying, verify all secrets are set:
+Deployment is automatic on push to `main` via `.github/workflows/deploy.yml` — GitHub Actions runs tests, build, and `wrangler deploy` using the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repo secrets. **Do not run `wrangler deploy` locally as part of normal flow.** Monitor the Actions run after a merge; smoke-test once it's green.
+
+### Verifying secrets are configured
+
+If a new secret is introduced, it must be set in two places: the Worker (via `wrangler secret put`) and — if referenced in build — the GitHub repo secrets (for CI).
 
 ```bash
 # List current Worker secrets
 wrangler secret list
 
-# Expected secrets:
+# Expected Worker secrets:
 # SUPABASE_URL
 # SUPABASE_SERVICE_ROLE_KEY
 # SUPABASE_JWT_SECRET
@@ -224,13 +228,21 @@ wrangler secret list
 
 # Also verify wrangler.toml [vars]:
 # CF_IMAGES_DELIVERY_HASH  — not a secret, but required
+
+# GitHub repo secrets used by the Actions deploy job:
+# CLOUDFLARE_API_TOKEN
+# CLOUDFLARE_ACCOUNT_ID
+# VITE_SUPABASE_URL
+# VITE_SUPABASE_ANON_KEY
 ```
 
-Full deployment:
+### Emergency manual deploy
+
+In the rare case CI is down and a deploy is urgent:
 ```bash
-bun run build           # Vite production build → dist/
-wrangler deploy         # Deploy SPA + Workers to Cloudflare
+bun run deploy   # bun run build && wrangler deploy
 ```
+Use only as a fallback. Normal flow is always push to main.
 
 ---
 
