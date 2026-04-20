@@ -73,31 +73,20 @@ async function makeJWT(sub: string, secret: string, expOffset = 3600): Promise<s
   return `${header}.${payload}.${sig}`
 }
 
-// ── Mock R2 bucket ────────────────────────────────────────────────────────────
-
-function makeMockR2(): R2Bucket {
-  return {
-    put: vi.fn().mockResolvedValue(undefined),
-    get: vi.fn(),
-    delete: vi.fn(),
-    head: vi.fn(),
-    list: vi.fn(),
-    createMultipartUpload: vi.fn(),
-    resumeMultipartUpload: vi.fn(),
-  } as unknown as R2Bucket
-}
-
 // ── Mock env ──────────────────────────────────────────────────────────────────
 
 function makeEnv(overrides: Partial<Env> = {}): Env {
   return {
-    IMAGES: makeMockR2(),
+    ASSETS: {} as Fetcher,
     SUPABASE_URL: 'https://test.supabase.co',
     SUPABASE_SERVICE_ROLE_KEY: 'service-key',
     SUPABASE_JWT_SECRET: JWT_SECRET,
     GEMINI_API_KEY: 'gemini-key',
     ANTHROPIC_API_KEY: 'anthropic-key',
-    PUBLIC_R2_URL: 'https://pub-test.r2.dev',
+    CF_ACCOUNT_ID: 'cf-account-id',
+    CF_IMAGES_TOKEN: 'cf-images-token',
+    CF_IMAGES_DELIVERY_HASH: 'cf-delivery-hash',
+    RESEND_API_KEY: 'resend-key',
     ...overrides,
   }
 }
@@ -184,9 +173,9 @@ describe('handleGenerateCreature', () => {
 
   it('returns cached data immediately when species_images has an existing entry', async () => {
     const cachedRow = {
-      image_url: 'https://pub-test.r2.dev/species/original/abc.png',
-      image_url_512: 'https://pub-test.r2.dev/species/512/abc.png',
-      image_url_256: 'https://pub-test.r2.dev/species/256/abc.png',
+      image_url: 'https://imagedelivery.net/test-hash/abc/qriousoriginal',
+      image_url_512: 'https://imagedelivery.net/test-hash/abc/qrious512',
+      image_url_256: 'https://imagedelivery.net/test-hash/abc/qrious256',
       field_notes: 'A remarkable specimen indeed.',
       discovery_count: 5,
       first_discoverer_id: 'other-user',
@@ -235,6 +224,8 @@ describe('handleGenerateCreature', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }))
       // Gemini generate preferred model → success (no model list call on happy path)
       .mockResolvedValueOnce(new Response(JSON.stringify(geminiResponse), { status: 200 }))
+      // Cloudflare Images upload
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, result: { id: MOCK_DNA.hash, variants: [] }, errors: [] }), { status: 200 }))
       // Claude field notes
       .mockResolvedValueOnce(new Response(JSON.stringify({ content: [{ type: 'text', text: 'A curious specimen was observed.' }] }), { status: 200 }))
       // species_images INSERT
@@ -248,9 +239,9 @@ describe('handleGenerateCreature', () => {
     expect(res.status).toBe(200)
     const body = await res.json() as Record<string, unknown>
     expect(body.cached).toBe(false)
-    expect(body.imageUrl).toContain('species/original/abc')
-    expect(body.imageUrl512).toContain('species/512/abc')
-    expect(body.imageUrl256).toContain('species/256/abc')
+    expect(body.imageUrl).toContain(`imagedelivery.net/cf-delivery-hash/${MOCK_DNA.hash}/qriousoriginal`)
+    expect(body.imageUrl512).toContain(`${MOCK_DNA.hash}/qrious512`)
+    expect(body.imageUrl256).toContain(`${MOCK_DNA.hash}/qrious256`)
     expect(body.fieldNotes).toBe('A curious specimen was observed.')
     expect(body.isFirstDiscoverer).toBe(true)
     expect(body.discoveryCount).toBe(1)
@@ -287,6 +278,8 @@ describe('handleGenerateCreature', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }))
       // Gemini generate preferred model → success
       .mockResolvedValueOnce(new Response(JSON.stringify(geminiResponse), { status: 200 }))
+      // Cloudflare Images upload
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, result: { id: MOCK_DNA.hash, variants: [] }, errors: [] }), { status: 200 }))
       // Claude → failure (non-fatal)
       .mockResolvedValueOnce(new Response('Service unavailable', { status: 503 }))
       // species_images INSERT
@@ -299,8 +292,72 @@ describe('handleGenerateCreature', () => {
 
     expect(res.status).toBe(200)
     const body = await res.json() as Record<string, unknown>
-    expect(body.imageUrl).toContain('species/original/abc')
+    expect(body.imageUrl).toContain(`imagedelivery.net/cf-delivery-hash/${MOCK_DNA.hash}/qriousoriginal`)
     expect(body.fieldNotes).toBe('') // empty but not an error
+  })
+
+  it('treats CF Images duplicate-ID (HTTP 409 + error code 5409) as success and returns predictable URLs', async () => {
+    // Simulates concurrent scan of the same qr_hash: the losing race gets a
+    // duplicate-ID error from CF Images. Must fall through to success so the
+    // scanner still sees their specimen rather than a 500. Guards ADR 2026-04-20.
+    const fakeImageBase64 = btoa('fake image bytes')
+    const geminiResponse = {
+      candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: fakeImageBase64 } }] } }],
+    }
+    const duplicateResponse = {
+      success: false,
+      errors: [{ code: 5409, message: 'Resource already exists' }],
+      result: null,
+    }
+
+    mockFetch
+      // species_images GET → no cache
+      .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }))
+      // Gemini generate → success
+      .mockResolvedValueOnce(new Response(JSON.stringify(geminiResponse), { status: 200 }))
+      // CF Images upload → 409 duplicate (another worker already uploaded this qr_hash)
+      .mockResolvedValueOnce(new Response(JSON.stringify(duplicateResponse), { status: 409 }))
+      // Claude field notes
+      .mockResolvedValueOnce(new Response(JSON.stringify({ content: [{ type: 'text', text: 'Concurrent scan success.' }] }), { status: 200 }))
+      // species_images INSERT
+      .mockResolvedValueOnce(new Response('', { status: 201 }))
+      // register_discovery RPC
+      .mockResolvedValueOnce(new Response(JSON.stringify({ is_first_discoverer: false, discovery_count: 2 }), { status: 200 }))
+
+    const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
+    const res = await handleGenerateCreature(req, makeEnv())
+
+    expect(res.status).toBe(200)
+    const body = await res.json() as Record<string, unknown>
+    expect(body.imageUrl).toContain(`imagedelivery.net/cf-delivery-hash/${MOCK_DNA.hash}/qriousoriginal`)
+    expect(body.imageUrl512).toContain(`${MOCK_DNA.hash}/qrious512`)
+    expect(body.imageUrl256).toContain(`${MOCK_DNA.hash}/qrious256`)
+    expect(body.isFirstDiscoverer).toBe(false)
+  })
+
+  it('returns 500 when CF Images fails for a non-duplicate reason (e.g. invalid token)', async () => {
+    const fakeImageBase64 = btoa('fake image bytes')
+    const geminiResponse = {
+      candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: fakeImageBase64 } }] } }],
+    }
+    const authErrorResponse = {
+      success: false,
+      errors: [{ code: 10000, message: 'Authentication error' }],
+      result: null,
+    }
+
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(geminiResponse), { status: 200 }))
+      // CF Images → 401 (not a duplicate)
+      .mockResolvedValueOnce(new Response(JSON.stringify(authErrorResponse), { status: 401 }))
+
+    const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
+    const res = await handleGenerateCreature(req, makeEnv())
+
+    expect(res.status).toBe(500)
+    const body = await res.json() as Record<string, unknown>
+    expect(body.error).toContain('Image upload failed')
   })
 
   it('sets correct CORS headers for allowed origin', async () => {

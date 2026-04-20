@@ -31,7 +31,7 @@ When asked to remember anything, add project memory in this CLAUDE.md (project r
 - **Styling:** Tailwind CSS + shadcn/ui (Radix UI)
 - **Database:** Supabase (PostgreSQL + RLS + magic link auth)
 - **Hosting:** Cloudflare Workers (static SPA + API Worker routes)
-- **Image storage:** Cloudflare R2
+- **Image storage:** Cloudflare Images
 - **AI — illustrations:** Google Gemini API (via Cloudflare Worker)
 - **AI — field notes:** Anthropic Claude API (via Cloudflare Worker)
 - **Email:** Supabase Auth (magic link emails); Resend available via hultberg.org domain if needed
@@ -42,7 +42,7 @@ When asked to remember anything, add project memory in this CLAUDE.md (project r
 - Supabase PostgreSQL with Row Level Security
 - Google Gemini (Victorian naturalist creature illustrations)
 - Anthropic Claude Haiku (field notes generation)
-- Cloudflare R2 (creature image storage — original, 512px, 256px variants)
+- Cloudflare Images (creature illustrations — qriousoriginal, qrious512, qrious256 variants served from `imagedelivery.net`)
 
 **Current status:** Phases 1–7 complete and merged to main
 
@@ -143,6 +143,6 @@ bun run typecheck         # TypeScript check (no emit)
 
 **Admin account:** `magnus.hultberg@gmail.com` — `profiles.is_admin = true`
 
-**Supabase note:** Supabase is used for PostgreSQL + RLS + auth only. No Supabase Storage (images go to R2), no Supabase Edge Functions (AI calls go to Cloudflare Workers).
+**Supabase note:** Supabase is used for PostgreSQL + RLS + auth only. No Supabase Storage (images go to Cloudflare Images), no Supabase Edge Functions (AI calls go to Cloudflare Workers).
 
 **Mary Anning:** References to her should be subtle, earned, and consistent with the Victorian naturalist tone. The About page carries the main weight; elsewhere, light touches only. See Phase 9 spec for specific placement guidance.

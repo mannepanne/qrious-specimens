@@ -36,12 +36,9 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
-### TD-003: R2 image variants store original bytes (no actual pixel resize)
-- **Location:** `workers/generate-creature/r2.ts` — `uploadToR2()`
-- **Issue:** The 512px and 256px R2 variants store the original Gemini image bytes rather than pixel-resized copies. Display sizes are constrained by CSS in `SpecimenPage` and `SpecimenTeaser`, but users on slow connections download the full-resolution image even for thumbnails.
-- **Why accepted:** Cloudflare Workers runtime has no Canvas API or native image resize. Alternatives (WASM-based resize, CF Image Resizing service) require either a paid CF plan add-on or significant added complexity. For Phase 4 MVP this is acceptable — Gemini images are typically 1–2MB and the cabinet loads lazily.
-- **Risk:** Low — no data loss or functional breakage. Performance cost is bandwidth on the cabinet grid for users with many specimens.
-- **Future fix:** Enable Cloudflare Image Resizing on the account (Pro+ plan) and use `fetch(r2Url, { cf: { image: { width: 512 } } })` to resize before uploading the variant, OR use a WASM-based JPEG encoder in the Worker.
+### TD-003: R2 image variants store original bytes (no actual pixel resize) — RESOLVED 2026-04-20
+- **Status:** Resolved by migration to Cloudflare Images. See [ADR 2026-04-20](./decisions/2026-04-20-cloudflare-images-over-r2.md).
+- **Resolution:** CF Images serves properly resized `qrious512` and `qrious256` variants at the CDN edge from a single uploaded original; R2 variant logic removed.
 - **Phase introduced:** Phase 4
 
 ---
@@ -56,12 +53,9 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
-### TD-005: R2 orphan images from TOCTOU race
-- **Location:** `workers/generate-creature/index.ts` — `uploadToR2()` called before `insertSpeciesImage()`
-- **Issue:** When two concurrent requests scan the same QR code, both upload to R2 (step 5) before the upsert (step 7). The upsert uses `ON CONFLICT (qr_hash) DO NOTHING`, so the second request's R2 objects (three files) are uploaded but never referenced by any DB row. They become orphaned objects in the bucket.
-- **Why accepted:** The race window is narrow and the orphaned objects are small (1–2 MB total). Data integrity is preserved — the DB always has the first discoverer's data. The failure mode is minor storage waste.
-- **Risk:** Low — no data loss, no user-facing breakage. Cumulative storage cost is negligible at early scale.
-- **Future fix:** Periodic R2 cleanup job: list all keys in `species/`, cross-reference against `species_images.qr_hash`, delete unmatched keys older than 24 hours.
+### TD-005: R2 orphan images from TOCTOU race — RESOLVED 2026-04-20
+- **Status:** Resolved by migration to Cloudflare Images. See [ADR 2026-04-20](./decisions/2026-04-20-cloudflare-images-over-r2.md).
+- **Resolution:** CF Images uses `qr_hash` as the custom image ID, so concurrent uploads collapse on a single object (duplicate ID is treated as success). No orphans possible.
 - **Phase introduced:** Phase 4
 
 ---

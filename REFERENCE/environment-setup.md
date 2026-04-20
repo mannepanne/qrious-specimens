@@ -119,20 +119,20 @@ wrangler secret put ANTHROPIC_API_KEY
 
 ---
 
-### `PUBLIC_R2_URL`
-The public base URL for the R2 bucket — prepended to all creature image paths.
+### Cloudflare Images (`CF_ACCOUNT_ID`, `CF_IMAGES_TOKEN`, `CF_IMAGES_DELIVERY_HASH`)
+Specimen illustrations are stored in Cloudflare Images (see [ADR 2026-04-20](./decisions/2026-04-20-cloudflare-images-over-r2.md)).
 
-**How to obtain:** Cloudflare dashboard → R2 → `qrious-specimens-images` bucket → Settings → Public access → Custom domain or `r2.dev` subdomain.
+**`CF_ACCOUNT_ID`** (secret) — Cloudflare dashboard → right sidebar → Account ID.
+**`CF_IMAGES_TOKEN`** (secret) — My Profile → API Tokens → create with `Images:Edit` permission.
+**`CF_IMAGES_DELIVERY_HASH`** (not secret, in `wrangler.toml [vars]`) — Cloudflare dashboard → Images → Overview → "Your images are served from `https://imagedelivery.net/<HASH>/...`".
 
-**Format:** `https://pub-xxxxxxxx.r2.dev` (or a custom domain like `https://images.qrious.hultberg.org`)
-
-**Note:** This is a `[vars]` entry in `wrangler.toml`, not a secret — it is not sensitive. Update the placeholder value (`pub-PLACEHOLDER`) in `wrangler.toml` before deploying.
+**Named variants required in the CF Images dashboard:** `qriousoriginal`, `qrious512`, `qrious256`. Variant names must be alphanumeric (no dashes or underscores) because CF validates them against `/^[a-z0-9]+$/`.
 
 **Production setup:**
-```toml
-# wrangler.toml
-[vars]
-PUBLIC_R2_URL = "https://pub-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.r2.dev"
+```bash
+wrangler secret put CF_ACCOUNT_ID
+wrangler secret put CF_IMAGES_TOKEN
+# CF_IMAGES_DELIVERY_HASH is in wrangler.toml [vars]
 ```
 
 ---
@@ -161,8 +161,10 @@ SUPABASE_JWT_SECRET=your-jwt-secret-here
 GEMINI_API_KEY=AIza...
 ANTHROPIC_API_KEY=sk-ant-...
 
-# R2 public URL (not a secret — set in wrangler.toml [vars], not here)
-# PUBLIC_R2_URL=https://pub-xxxxxxxx.r2.dev
+# Cloudflare Images (secret — Workers only)
+CF_ACCOUNT_ID=your-cf-account-id
+CF_IMAGES_TOKEN=cf-images-edit-token
+# CF_IMAGES_DELIVERY_HASH is NOT a secret — set in wrangler.toml [vars]
 ```
 
 ---
@@ -191,13 +193,14 @@ qrious.hultberg.org  CNAME  [workers-subdomain].workers.dev
 ```
 Or via Workers Routes: assign `qrious.hultberg.org/*` to the `qrious-specimens` Worker.
 
-### R2 bucket
-- Bucket name: `qrious-specimens-images`
-- Public access: enabled (creature images are public)
-- Directory structure:
-  - `species/original/{hash}.png`
-  - `species/512/{hash}.jpg`
-  - `species/256/{hash}.jpg`
+### Cloudflare Images
+- Custom image IDs: each species uses its `qr_hash` as the image ID (idempotent uploads)
+- Named variants required (alphanumeric only — CF validates against `/^[a-z0-9]+$/`):
+  - `qriousoriginal` — no resize
+  - `qrious512` — width 512px
+  - `qrious256` — width 256px
+- Delivery URL shape: `https://imagedelivery.net/{CF_IMAGES_DELIVERY_HASH}/{qr_hash}/{variant}`
+- Historical: R2 bucket `qrious-specimens-images` stored images before 2026-04-20. Migrated to CF Images via `scripts/backfill-cf-images.ts`; bucket retired.
 
 ---
 
@@ -215,9 +218,12 @@ wrangler secret list
 # SUPABASE_JWT_SECRET
 # GEMINI_API_KEY
 # ANTHROPIC_API_KEY
+# CF_ACCOUNT_ID
+# CF_IMAGES_TOKEN
+# RESEND_API_KEY
 
 # Also verify wrangler.toml [vars]:
-# PUBLIC_R2_URL  — must be updated from placeholder before deploying
+# CF_IMAGES_DELIVERY_HASH  — not a secret, but required
 ```
 
 Full deployment:
