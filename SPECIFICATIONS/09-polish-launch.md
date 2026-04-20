@@ -7,7 +7,7 @@
 **Dependencies:** All previous phases complete
 
 **Brief description:**
-The finishing phase: Mary Anning references woven deliberately throughout the UI, the About/Privacy/Contact pages, the Victorian captcha on the contact form, page analytics tracking, comprehensive error handling, and the final production deployment to `qrious.hultberg.org`. This phase is about the difference between a working app and a *finished* one — attention to detail, graceful failure, and the thread of meaning that runs from Mary Anning's fossil beach to every QR code in the world.
+The finishing phase: Mary Anning references woven deliberately throughout the UI, the About/Privacy/Contact pages, the Victorian captcha on the contact form, page analytics tracking, and comprehensive error handling. The site is already live on `qrious.hultberg.org`; this phase closes with a post-merge smoke test rather than a first-time deployment. This phase is about the difference between a working app and a *finished* one — attention to detail, graceful failure, and the thread of meaning that runs from Mary Anning's fossil beach to every QR code in the world.
 
 ---
 
@@ -35,10 +35,10 @@ The finishing phase: Mary Anning references woven deliberately throughout the UI
 - [ ] Loading states: skeletons or spinners on all async content
 - [ ] Empty states: cabinet empty state (invite to scan first QR), catalogue empty state (no matching filters)
 - [ ] Image lazy loading in catalogue and cabinet grids
-- [ ] Production deployment checklist (Supabase config, Wrangler secrets, custom domain, DNS)
-- [ ] Custom domain DNS configured: `qrious.hultberg.org` → Cloudflare Workers
-- [ ] Supabase auth redirect URL confirmed for production domain
-- [ ] Final `wrangler deploy` and smoke test
+- [ ] Post-merge verification pass (site is already live — see below)
+  - [ ] Confirm Wrangler secrets audit (any new secrets introduced in Phase 9 set in production)
+  - [ ] Confirm Supabase auth redirect URL still valid for `qrious.hultberg.org`
+  - [ ] `wrangler deploy` after merge, then smoke test
 
 ### Out of scope
 - Native mobile app
@@ -57,7 +57,7 @@ The finishing phase: Mary Anning references woven deliberately throughout the UI
 - [ ] All error states display appropriate messages without crashing
 - [ ] Cabinet empty state appears for a new user with no specimens
 - [ ] Images in cabinet and catalogue lazy-load
-- [ ] `https://qrious.hultberg.org` is live, auth works, scanning works end-to-end
+- [ ] `https://qrious.hultberg.org` remains healthy after merge: auth works, scanning works end-to-end
 - [ ] Mary Anning references present in at least 4 distinct places across the app
 - [ ] `bun run test` passes; `bun run typecheck` passes
 
@@ -99,18 +99,19 @@ Purely client-side validation (simple enough that the value of blocking bots out
 
 Anonymous for unauthenticated users (no user_id). Session ID is a UUID stored in sessionStorage (clears on browser close).
 
-### Production deployment checklist
+### Post-merge verification checklist
+
+The site is already live at `https://qrious.hultberg.org` (DNS, Wrangler secrets, R2, Supabase auth URLs were all set during earlier phases). This checklist confirms nothing regressed when Phase 9 changes ship.
 
 **Supabase:**
-- [ ] Site URL set to `https://qrious.hultberg.org`
-- [ ] Redirect URL allowlist includes `https://qrious.hultberg.org/**`
+- [ ] Site URL still `https://qrious.hultberg.org`
+- [ ] Redirect URL allowlist still includes `https://qrious.hultberg.org/**`
 - [ ] Email templates customised (optional — Victorian style would be lovely)
 
 **Cloudflare:**
-- [ ] DNS: `qrious.hultberg.org` CNAME → Workers route
-- [ ] All Wrangler secrets set (GEMINI_API_KEY, ANTHROPIC_API_KEY, SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_JWT_SECRET)
-- [ ] `wrangler deploy` succeeds
-- [ ] R2 bucket public access confirmed
+- [ ] Any new Wrangler secrets introduced during Phase 9 are set in production
+- [ ] `wrangler deploy` succeeds after merge
+- [ ] R2 bucket (or Cloudflare Images, if the migration lands) still serving publicly
 
 > **⚠️ Discuss before Phase 9:** Two Cloudflare services worth evaluating before launch:
 >
@@ -151,7 +152,7 @@ Anonymous for unauthenticated users (no user_id). Session ID is a UUID stored in
 - [ ] No `console.log` or debug code in production build
 - [ ] All placeholder text replaced
 - [ ] Privacy policy reviewed and accurate
-- [ ] Production environment variables all set (not using dev keys)
+- [ ] Any new production environment variables introduced this phase are set (not dev keys)
 
 ---
 
