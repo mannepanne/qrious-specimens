@@ -101,7 +101,7 @@ Anonymous for unauthenticated users (no user_id). Session ID is a UUID stored in
 
 ### Post-merge verification checklist
 
-The site is already live at `https://qrious.hultberg.org` (DNS, Wrangler secrets, R2, Supabase auth URLs were all set during earlier phases). This checklist confirms nothing regressed when Phase 9 changes ship.
+The site is already live at `https://qrious.hultberg.org` (DNS, Wrangler secrets, Cloudflare Images, Supabase auth URLs were all set during earlier phases). This checklist confirms nothing regressed when Phase 9 changes ship.
 
 **Supabase:**
 - [ ] Site URL still `https://qrious.hultberg.org`
@@ -111,13 +111,13 @@ The site is already live at `https://qrious.hultberg.org` (DNS, Wrangler secrets
 **Cloudflare:**
 - [ ] Any new Wrangler secrets introduced during Phase 9 are set in production
 - [ ] `wrangler deploy` succeeds after merge
-- [ ] R2 bucket (or Cloudflare Images, if the migration lands) still serving publicly
+- [ ] Cloudflare Images variants (`qriousoriginal`, `qrious512`, `qrious256`) still serving from `imagedelivery.net`
 
-> **⚠️ Discuss before Phase 9:** Two Cloudflare services worth evaluating before launch:
+> **Cloudflare services evaluation:**
 >
-> **Cloudflare Images** — may replace our current R2 + manual 512px/256px variant approach. Offers on-the-fly resizing/transformations via URL parameters, a global CDN, and avoids the current race-condition around orphaned R2 objects (TD-003). Evaluate against current R2 approach for cost and simplicity.
+> **Cloudflare Images** — migrated from R2 on 2026-04-20. See [ADR](../REFERENCE/decisions/2026-04-20-cloudflare-images-over-r2.md) for the migration rationale. R2 bucket retired post-backfill.
 >
-> **Cloudflare Email** — new transactional email service (https://blog.cloudflare.com/email-service/). Could replace Resend for the contact form and any future notification emails. Evaluate against Resend (already available via hultberg.org domain) for feature parity and pricing.
+> **Cloudflare Email Sending** — new transactional email service (https://blog.cloudflare.com/email-service/). Could replace Resend for the contact form and any future notification emails. Evaluate against Resend (already available via hultberg.org domain) for feature parity and pricing. Pending.
 
 **Smoke test:**
 - [ ] Sign in via magic link

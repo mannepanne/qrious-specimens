@@ -77,6 +77,7 @@ async function makeJWT(sub: string, secret: string, expOffset = 3600): Promise<s
 
 function makeEnv(overrides: Partial<Env> = {}): Env {
   return {
+    ASSETS: {} as Fetcher,
     SUPABASE_URL: 'https://test.supabase.co',
     SUPABASE_SERVICE_ROLE_KEY: 'service-key',
     SUPABASE_JWT_SECRET: JWT_SECRET,
@@ -87,7 +88,7 @@ function makeEnv(overrides: Partial<Env> = {}): Env {
     CF_IMAGES_DELIVERY_HASH: 'cf-delivery-hash',
     RESEND_API_KEY: 'resend-key',
     ...overrides,
-  } as Env
+  }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -293,6 +294,70 @@ describe('handleGenerateCreature', () => {
     const body = await res.json() as Record<string, unknown>
     expect(body.imageUrl).toContain(`imagedelivery.net/cf-delivery-hash/${MOCK_DNA.hash}/qriousoriginal`)
     expect(body.fieldNotes).toBe('') // empty but not an error
+  })
+
+  it('treats CF Images duplicate-ID (HTTP 409 + error code 5409) as success and returns predictable URLs', async () => {
+    // Simulates concurrent scan of the same qr_hash: the losing race gets a
+    // duplicate-ID error from CF Images. Must fall through to success so the
+    // scanner still sees their specimen rather than a 500. Guards ADR 2026-04-20.
+    const fakeImageBase64 = btoa('fake image bytes')
+    const geminiResponse = {
+      candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: fakeImageBase64 } }] } }],
+    }
+    const duplicateResponse = {
+      success: false,
+      errors: [{ code: 5409, message: 'Resource already exists' }],
+      result: null,
+    }
+
+    mockFetch
+      // species_images GET → no cache
+      .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }))
+      // Gemini generate → success
+      .mockResolvedValueOnce(new Response(JSON.stringify(geminiResponse), { status: 200 }))
+      // CF Images upload → 409 duplicate (another worker already uploaded this qr_hash)
+      .mockResolvedValueOnce(new Response(JSON.stringify(duplicateResponse), { status: 409 }))
+      // Claude field notes
+      .mockResolvedValueOnce(new Response(JSON.stringify({ content: [{ type: 'text', text: 'Concurrent scan success.' }] }), { status: 200 }))
+      // species_images INSERT
+      .mockResolvedValueOnce(new Response('', { status: 201 }))
+      // register_discovery RPC
+      .mockResolvedValueOnce(new Response(JSON.stringify({ is_first_discoverer: false, discovery_count: 2 }), { status: 200 }))
+
+    const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
+    const res = await handleGenerateCreature(req, makeEnv())
+
+    expect(res.status).toBe(200)
+    const body = await res.json() as Record<string, unknown>
+    expect(body.imageUrl).toContain(`imagedelivery.net/cf-delivery-hash/${MOCK_DNA.hash}/qriousoriginal`)
+    expect(body.imageUrl512).toContain(`${MOCK_DNA.hash}/qrious512`)
+    expect(body.imageUrl256).toContain(`${MOCK_DNA.hash}/qrious256`)
+    expect(body.isFirstDiscoverer).toBe(false)
+  })
+
+  it('returns 500 when CF Images fails for a non-duplicate reason (e.g. invalid token)', async () => {
+    const fakeImageBase64 = btoa('fake image bytes')
+    const geminiResponse = {
+      candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: fakeImageBase64 } }] } }],
+    }
+    const authErrorResponse = {
+      success: false,
+      errors: [{ code: 10000, message: 'Authentication error' }],
+      result: null,
+    }
+
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(geminiResponse), { status: 200 }))
+      // CF Images → 401 (not a duplicate)
+      .mockResolvedValueOnce(new Response(JSON.stringify(authErrorResponse), { status: 401 }))
+
+    const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
+    const res = await handleGenerateCreature(req, makeEnv())
+
+    expect(res.status).toBe(500)
+    const body = await res.json() as Record<string, unknown>
+    expect(body.error).toContain('Image upload failed')
   })
 
   it('sets correct CORS headers for allowed origin', async () => {

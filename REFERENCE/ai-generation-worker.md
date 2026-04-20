@@ -16,7 +16,7 @@ When a user scans a QR code, two things happen in parallel:
 1. The creature row is inserted into `creatures` via `addCreature` mutation
 2. The `ExcavationAnimation` runs — at the COMMISSIONING ILLUSTRATION phase it calls `handleCommission`, which calls the Cloudflare Worker at `/api/generate-creature`
 
-The Worker generates a Victorian naturalist illustration via Gemini, writes field notes via Claude Haiku, uploads images to R2, writes to `species_images`, and calls the `register_discovery` RPC.
+The Worker generates a Victorian naturalist illustration via Gemini, writes field notes via Claude Haiku, uploads the image to Cloudflare Images, writes to `species_images`, and calls the `register_discovery` RPC.
 
 ---
 
@@ -61,7 +61,7 @@ Steps 6 and 7 are non-fatal — the Worker still returns a result if field notes
 
 - Tries `gemini-2.0-flash-preview-image-generation` directly (no model list call on the happy path)
 - If the preferred model fails, fetches the model list and tries image-specific models first, then flash models
-- Returns `{ imageBase64, mimeType }` — bytes passed to R2 upload and to Claude for multimodal field notes
+- Returns `{ imageBase64, mimeType }` — bytes passed to the Cloudflare Images upload and to Claude for multimodal field notes
 
 The prompt (`buildGeminiPrompt`) specifies: Victorian naturalist lithograph style, exact limb and eye counts, no text in the image, ink and watercolour washes.
 
@@ -177,7 +177,7 @@ User scans QR code
   → addCreature (parallel DB insert)
   → ExcavationAnimation starts (phases 0–3 fixed)
   → Phase 3: handleCommission fires
-      → Worker: JWT verify → cache check → Gemini → R2 → Claude → DB upsert → RPC
+      → Worker: JWT verify → cache check → Gemini → Cloudflare Images → Claude → DB upsert → RPC
       → setExcavationWorkerResult (unblocks phase 4)
   → Animation phases 5–6: reveal
   → onComplete fires → finishExcavation

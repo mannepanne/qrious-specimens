@@ -20,10 +20,10 @@ export interface Env {
   SUPABASE_JWT_SECRET: string
   GEMINI_API_KEY: string
   ANTHROPIC_API_KEY: string
-  RESEND_API_KEY: string
   CF_ACCOUNT_ID: string
   CF_IMAGES_TOKEN: string
   CF_IMAGES_DELIVERY_HASH: string
+  RESEND_API_KEY: string              // used by /api/contact handler
   CONTACT_RATE_LIMITER?: RateLimiter  // CF Rate Limiting binding — optional so local dev without it still works
 }
 
@@ -120,8 +120,9 @@ async function insertSpeciesImage(
   },
 ): Promise<void> {
   // Upsert with ignore-duplicates: if a concurrent request already inserted the row,
-  // this becomes a no-op (preserving the first discoverer's data). R2 objects uploaded
-  // by the losing race are orphaned — tracked as TD-003 for a future cleanup job.
+  // this becomes a no-op (preserving the first discoverer's data). Concurrent uploads
+  // to Cloudflare Images collapse on the shared `qr_hash` custom ID, so there are no
+  // orphan objects from the losing race (see ADR 2026-04-20).
   const res = await fetch(`${supabaseUrl}/rest/v1/species_images?on_conflict=qr_hash`, {
     method: 'POST',
     headers: { ...supabaseHeaders(serviceKey), Prefer: 'return=minimal,resolution=ignore-duplicates' },

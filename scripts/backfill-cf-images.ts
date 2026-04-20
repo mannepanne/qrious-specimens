@@ -1,6 +1,10 @@
 // ABOUT: One-off backfill — move species_images originals from R2 to Cloudflare Images
 // ABOUT: Idempotent (uses qr_hash as CF Images custom ID); safe to re-run
 
+// STATUS: Completed 2026-04-20 (18 rows migrated). Retained for audit/reference.
+// Do not re-run without reviewing the SELECT filter on line "selectR2Rows" — the
+// `image_url=not.like.*imagedelivery.net*` predicate is load-bearing for re-run safety.
+
 /**
  * Required environment variables:
  *   SUPABASE_URL                  e.g. https://tdegawvgtrpvtiqwaoxx.supabase.co
@@ -9,24 +13,20 @@
  *   CF_IMAGES_TOKEN               CF API token with Images:Edit permission
  *   CF_IMAGES_DELIVERY_HASH       Delivery hash for imagedelivery.net URLs
  *
- * Run:
- *   bun run scripts/backfill-cf-images.ts
+ * Run (avoids persistent shell export of SUPABASE_SERVICE_ROLE_KEY):
+ *   env $(cat .env.backfill) bun run scripts/backfill-cf-images.ts
  *
  * Dry run (inspect rows without writing):
  *   DRY_RUN=1 bun run scripts/backfill-cf-images.ts
  */
+
+import { uploadToCloudflareImages } from '../workers/cloudflare-images/index'
 
 type SpeciesImageRow = {
   qr_hash: string
   image_url: string | null
   image_url_512: string | null
   image_url_256: string | null
-}
-
-type CfUploadResponse = {
-  result: { id: string; variants: string[] }
-  success: boolean
-  errors: { message: string }[]
 }
 
 const env = {
@@ -49,7 +49,9 @@ function requireEnv(name: string): string {
 }
 
 async function selectR2Rows(): Promise<SpeciesImageRow[]> {
-  // Rows where image_url is NOT on imagedelivery.net (i.e. still on R2)
+  // Rows where image_url is NOT on imagedelivery.net (i.e. still on R2).
+  // This predicate is load-bearing for re-run safety — don't change it without
+  // thinking through idempotency.
   const url =
     `${env.SUPABASE_URL}/rest/v1/species_images` +
     `?select=qr_hash,image_url,image_url_512,image_url_256` +
@@ -70,42 +72,6 @@ async function fetchOriginal(url: string): Promise<{ bytes: Uint8Array; mimeType
   const mimeType = res.headers.get('content-type') ?? 'image/png'
   const buf = await res.arrayBuffer()
   return { bytes: new Uint8Array(buf), mimeType }
-}
-
-async function uploadToCfImages(
-  qrHash: string,
-  bytes: Uint8Array,
-  mimeType: string,
-): Promise<{ original: string; url512: string; url256: string }> {
-  const form = new FormData()
-  form.append('file', new Blob([bytes as BlobPart], { type: mimeType }), `${qrHash}.jpg`)
-  form.append('id', qrHash)
-
-  const res = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/images/v1`,
-    {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${env.CF_IMAGES_TOKEN}` },
-      body: form,
-    },
-  )
-  const body = (await res.json()) as CfUploadResponse
-  if (!res.ok || !body.success) {
-    // If the image already exists (custom ID collision), CF returns an error.
-    // We treat that as success and build URLs from qrHash — idempotent.
-    const msg = body.errors?.map((e) => e.message).join(', ') ?? `HTTP ${res.status}`
-    if (/already exists|duplicate|conflict/i.test(msg)) {
-      // fall through and build URLs from the known custom ID
-    } else {
-      throw new Error(`CF Images upload failed: ${msg}`)
-    }
-  }
-  const base = `https://imagedelivery.net/${env.CF_IMAGES_DELIVERY_HASH}/${qrHash}`
-  return {
-    original: `${base}/qriousoriginal`,
-    url512: `${base}/qrious512`,
-    url256: `${base}/qrious256`,
-  }
 }
 
 async function updateRow(
@@ -151,7 +117,14 @@ async function main() {
     try {
       process.stdout.write(`  [..] ${row.qr_hash} `)
       const { bytes, mimeType } = await fetchOriginal(row.image_url)
-      const urls = await uploadToCfImages(row.qr_hash, bytes, mimeType)
+      const urls = await uploadToCloudflareImages(
+        env.CF_ACCOUNT_ID,
+        env.CF_IMAGES_TOKEN,
+        env.CF_IMAGES_DELIVERY_HASH,
+        row.qr_hash,
+        bytes,
+        mimeType,
+      )
       await updateRow(row.qr_hash, urls)
       console.log(`-> ${urls.original}`)
       ok++

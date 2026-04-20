@@ -47,7 +47,7 @@ The same QR code always produces the same creature — anywhere in the world, an
 | Database | Supabase (PostgreSQL + RLS) |
 | Auth | Supabase magic link |
 | Hosting | Cloudflare Workers |
-| Images | Cloudflare R2 |
+| Images | Cloudflare Images |
 | Illustrations | Google Gemini API |
 | Field notes | Anthropic Claude API |
 

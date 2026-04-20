@@ -47,7 +47,7 @@ Data architecture (species_images + creatures.dna join), `get_catalogue` RPC par
 ### [ai-generation-worker.md](./ai-generation-worker.md)
 **When to read:** Working on illustration generation, the Cloudflare Worker, the excavation animation, or the discovery pipeline.
 
-Worker request flow (8 steps), Gemini + Claude Haiku integration, R2 image storage, `useSpeciesImage` hook, `ExcavationAnimation` state machine, and end-to-end discovery flow.
+Worker request flow (8 steps), Gemini + Claude Haiku integration, Cloudflare Images storage, `useSpeciesImage` hook, `ExcavationAnimation` state machine, and end-to-end discovery flow.
 
 ### [decisions/](./decisions/)
 **When to read:** Making architectural decisions, choosing between alternatives, or looking up why something was built the way it was.

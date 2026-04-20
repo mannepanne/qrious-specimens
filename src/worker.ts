@@ -1,5 +1,5 @@
 // ABOUT: Cloudflare Worker entrypoint — serves the SPA and handles API routes
-// ABOUT: POST /api/generate-creature → Gemini illustration + Claude field notes + R2 upload
+// ABOUT: POST /api/generate-creature → Gemini illustration + Claude field notes + Cloudflare Images upload
 // ABOUT: POST /api/contact → contact form submission + Resend admin notification
 
 import { handleGenerateCreature, type Env } from '../workers/generate-creature/index'

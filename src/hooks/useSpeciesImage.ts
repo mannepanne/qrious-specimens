@@ -23,11 +23,11 @@ interface SpeciesImageCacheRow {
 }
 
 export interface SpeciesImageResult {
-  /** Full-size R2 URL — use for SpecimenPage */
+  /** Full-size delivery URL (CF Images `qriousoriginal` variant) — use for SpecimenPage */
   imageUrl: string | null
-  /** 512px R2 URL — use for SpecimenPage display */
+  /** 512px delivery URL (CF Images `qrious512` variant) — use for SpecimenPage display */
   imageUrl512: string | null
-  /** 256px R2 URL — use for SpecimenTeaser thumbnail */
+  /** 256px delivery URL (CF Images `qrious256` variant) — use for SpecimenTeaser thumbnail */
   imageUrl256: string | null
   fieldNotes: string | null
   isFirstDiscoverer: boolean
