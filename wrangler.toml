@@ -14,15 +14,7 @@ not_found_handling = "single-page-application"
 [observability]
 enabled = true
 
-[[r2_buckets]]
-binding = "IMAGES"
-bucket_name = "qrious-specimens-images"
-
 [vars]
-# Legacy R2 URL — used only for images uploaded before CF Images migration
-# Find in: Cloudflare dashboard → R2 → qrious-specimens-images → Settings
-PUBLIC_R2_URL = "https://pub-PLACEHOLDER.r2.dev"
-
 # Cloudflare Images delivery hash — NOT a secret (appears in every image URL)
 # Find in: Cloudflare dashboard → Images → Overview → "Your images are served from"
 # e.g. https://imagedelivery.net/XXXXXX/<image_id>/<variant>  ← XXXXXX is the hash
