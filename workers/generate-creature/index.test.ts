@@ -2,7 +2,7 @@
 // ABOUT: Covers JWT verification, cache hits, generation flow, and error paths
 
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
-import { handleGenerateCreature, type Env } from './index'
+import { handleGenerateCreature, __resetJwksCache, type Env } from './index'
 import type { CreatureDNA } from '@/types/creature'
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
@@ -40,23 +40,25 @@ const MOCK_DNA: CreatureDNA = {
   estimatedSize: '5–10 cm',
 }
 
-// A valid-looking HS256 JWT for the sub "test-user-id"
-// (signature will not verify — we mock verifyJWT via mocking the module's imports)
-// Instead, we construct a real JWT manually using WebCrypto in the env
+// HS256 helper — used by legacy-token tests
 const JWT_SECRET = 'test-jwt-secret-long-enough-for-hmac-sha256-ok'
 
+function b64url(s: string): string {
+  return btoa(s).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_')
+}
+
+function b64urlBytes(bytes: ArrayBuffer | Uint8Array): string {
+  const arr = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)
+  let s = ''
+  for (const b of arr) s += String.fromCharCode(b)
+  return b64url(s)
+}
+
 async function makeJWT(sub: string, secret: string, expOffset = 3600): Promise<string> {
-  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
-    .replace(/=/g, '')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-  const payload = btoa(
+  const header = b64url(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+  const payload = b64url(
     JSON.stringify({ sub, exp: Math.floor(Date.now() / 1000) + expOffset, iat: Math.floor(Date.now() / 1000) }),
   )
-    .replace(/=/g, '')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-
   const key = await crypto.subtle.importKey(
     'raw',
     new TextEncoder().encode(secret),
@@ -65,12 +67,36 @@ async function makeJWT(sub: string, secret: string, expOffset = 3600): Promise<s
     ['sign'],
   )
   const sigBytes = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(`${header}.${payload}`))
-  const sig = btoa(String.fromCharCode(...new Uint8Array(sigBytes)))
-    .replace(/=/g, '')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
+  return `${header}.${payload}.${b64urlBytes(sigBytes)}`
+}
 
-  return `${header}.${payload}.${sig}`
+// ES256 helper — mirrors modern Supabase projects. Returns a signed JWT and
+// the public JWK (in the shape JWKS would return) so tests can mock the JWKS fetch.
+async function makeES256Setup(sub: string, kid = 'test-kid', expOffset = 3600): Promise<{
+  token: string
+  jwk: JsonWebKey & { kid: string }
+}> {
+  const { publicKey, privateKey } = await crypto.subtle.generateKey(
+    { name: 'ECDSA', namedCurve: 'P-256' },
+    true,
+    ['sign', 'verify'],
+  )
+
+  const header = b64url(JSON.stringify({ alg: 'ES256', typ: 'JWT', kid }))
+  const payload = b64url(
+    JSON.stringify({ sub, exp: Math.floor(Date.now() / 1000) + expOffset, iat: Math.floor(Date.now() / 1000) }),
+  )
+  const sigBytes = await crypto.subtle.sign(
+    { name: 'ECDSA', hash: 'SHA-256' },
+    privateKey,
+    new TextEncoder().encode(`${header}.${payload}`),
+  )
+
+  const jwk = (await crypto.subtle.exportKey('jwk', publicKey)) as JsonWebKey
+  return {
+    token: `${header}.${payload}.${b64urlBytes(sigBytes)}`,
+    jwk: { ...jwk, kid },
+  }
 }
 
 // ── Mock env ──────────────────────────────────────────────────────────────────
@@ -117,6 +143,7 @@ describe('handleGenerateCreature', () => {
   let validToken: string
 
   beforeEach(async () => {
+    __resetJwksCache()
     validToken = await makeJWT('test-user-id', JWT_SECRET)
     mockFetch = vi.fn()
     vi.stubGlobal('fetch', mockFetch)
@@ -358,6 +385,62 @@ describe('handleGenerateCreature', () => {
     expect(res.status).toBe(500)
     const body = await res.json() as Record<string, unknown>
     expect(body.error).toContain('Image upload failed')
+  })
+
+  it('verifies ES256 tokens against JWKS (modern Supabase projects)', async () => {
+    const { token, jwk } = await makeES256Setup('es256-user-id')
+
+    mockFetch
+      // JWKS fetch — served from {SUPABASE_URL}/auth/v1/.well-known/jwks.json
+      .mockResolvedValueOnce(new Response(JSON.stringify({ keys: [jwk] }), { status: 200 }))
+      // species_images cache hit so the rest of the flow short-circuits
+      .mockResolvedValueOnce(new Response(JSON.stringify([{
+        image_url: 'https://imagedelivery.net/test/abc/qriousoriginal',
+        image_url_512: null,
+        image_url_256: null,
+        field_notes: 'n',
+        discovery_count: 1,
+        first_discoverer_id: 'u',
+      }]), { status: 200 }))
+      // register_discovery RPC
+      .mockResolvedValueOnce(new Response(JSON.stringify({ is_first_discoverer: false, discovery_count: 2 }), { status: 200 }))
+
+    // Worker can run without SUPABASE_JWT_SECRET once projects are on asymmetric keys
+    const env = makeEnv({ SUPABASE_JWT_SECRET: undefined })
+    const req = makeRequest({ token, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
+    const res = await handleGenerateCreature(req, env)
+
+    expect(res.status).toBe(200)
+    const jwksFetched = mockFetch.mock.calls.some(
+      ([url]) => typeof url === 'string' && url.endsWith('/auth/v1/.well-known/jwks.json'),
+    )
+    expect(jwksFetched).toBe(true)
+  })
+
+  it('rejects ES256 tokens when no JWKS key matches the kid', async () => {
+    const { token } = await makeES256Setup('es256-user', 'signing-kid-A')
+    // JWKS returns a different kid than the token's header
+    const unrelatedKey = { kty: 'EC', crv: 'P-256', x: 'x', y: 'y', kid: 'signing-kid-B' }
+    mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ keys: [unrelatedKey] }), { status: 200 }))
+
+    const req = makeRequest({ token, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
+    const res = await handleGenerateCreature(req, makeEnv({ SUPABASE_JWT_SECRET: undefined }))
+    expect(res.status).toBe(401)
+    const body = await res.json() as Record<string, unknown>
+    expect(body.detail).toContain('No JWKS key')
+  })
+
+  it('rejects ES256 tokens with a tampered signature', async () => {
+    const { token, jwk } = await makeES256Setup('es256-user')
+    mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ keys: [jwk] }), { status: 200 }))
+
+    // Flip the last character of the signature segment — still valid base64url shape
+    const [h, p, sig] = token.split('.')
+    const tampered = `${h}.${p}.${sig.slice(0, -1)}${sig.endsWith('A') ? 'B' : 'A'}`
+
+    const req = makeRequest({ token: tampered, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
+    const res = await handleGenerateCreature(req, makeEnv({ SUPABASE_JWT_SECRET: undefined }))
+    expect(res.status).toBe(401)
   })
 
   it('sets correct CORS headers for allowed origin', async () => {

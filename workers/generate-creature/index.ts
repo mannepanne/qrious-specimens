@@ -17,7 +17,9 @@ export interface Env {
   ASSETS: Fetcher
   SUPABASE_URL: string
   SUPABASE_SERVICE_ROLE_KEY: string
-  SUPABASE_JWT_SECRET: string
+  // Optional — only required for legacy HS256-signed projects. Modern Supabase
+  // projects sign with asymmetric keys and are verified via the JWKS endpoint.
+  SUPABASE_JWT_SECRET?: string
   GEMINI_API_KEY: string
   ANTHROPIC_API_KEY: string
   CF_ACCOUNT_ID: string
@@ -42,45 +44,144 @@ interface RegisterDiscoveryResult {
 }
 
 // ── JWT verification ────────────────────────────────────────────────────────
+//
+// Supabase signs access tokens with one of two schemes:
+//   1. Asymmetric (ES256/RS256) — current default. Public keys served from the
+//      JWKS endpoint at {SUPABASE_URL}/auth/v1/.well-known/jwks.json.
+//   2. HS256 (legacy) — older projects. Verified against SUPABASE_JWT_SECRET.
+//
+// We support both. The token's `alg` header selects the path.
 
-/** Verify a Supabase HS256 JWT. Returns the payload or throws. */
-async function verifyJWT(token: string, secret: string): Promise<{ sub: string }> {
+interface JWKSKey {
+  kid: string
+  kty: string
+  alg?: string
+  crv?: string
+  x?: string
+  y?: string
+  n?: string
+  e?: string
+  use?: string
+}
+
+// Module-level JWKS cache (per isolate). Keyed by SUPABASE_URL so multiple
+// environments in the same deployment don't collide. 10-minute TTL balances
+// freshness against the cost of re-fetching on every cold request.
+const JWKS_TTL_MS = 10 * 60 * 1000
+const jwksCache = new Map<string, { keys: Map<string, CryptoKey>; expiresAt: number }>()
+
+// Exposed for tests — lets each test start with an empty cache.
+export function __resetJwksCache(): void {
+  jwksCache.clear()
+}
+
+function base64UrlDecode(s: string): Uint8Array<ArrayBuffer> {
+  const binary = atob(s.replace(/-/g, '+').replace(/_/g, '/'))
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+  return bytes
+}
+
+async function importJwk(k: JWKSKey): Promise<CryptoKey | null> {
+  if (k.kty === 'EC' && k.crv === 'P-256') {
+    return crypto.subtle.importKey(
+      'jwk',
+      k as JsonWebKey,
+      { name: 'ECDSA', namedCurve: 'P-256' },
+      false,
+      ['verify'],
+    )
+  }
+  if (k.kty === 'RSA') {
+    return crypto.subtle.importKey(
+      'jwk',
+      k as JsonWebKey,
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+      false,
+      ['verify'],
+    )
+  }
+  return null
+}
+
+async function fetchJwks(supabaseUrl: string): Promise<Map<string, CryptoKey>> {
+  const cached = jwksCache.get(supabaseUrl)
+  if (cached && cached.expiresAt > Date.now()) return cached.keys
+
+  const res = await fetch(`${supabaseUrl}/auth/v1/.well-known/jwks.json`)
+  if (!res.ok) throw new Error(`JWKS fetch failed: ${res.status}`)
+  const body = (await res.json()) as { keys?: JWKSKey[] }
+
+  const imported = new Map<string, CryptoKey>()
+  for (const k of body.keys ?? []) {
+    try {
+      const key = await importJwk(k)
+      if (key) imported.set(k.kid, key)
+    } catch {
+      // Skip unsupported key types; other kids may still be usable
+    }
+  }
+  jwksCache.set(supabaseUrl, { keys: imported, expiresAt: Date.now() + JWKS_TTL_MS })
+  return imported
+}
+
+interface VerifyEnv {
+  SUPABASE_URL: string
+  SUPABASE_JWT_SECRET?: string
+}
+
+/** Verify a Supabase JWT (HS256 legacy or ES256/RS256 via JWKS). Returns payload or throws. */
+async function verifyJWT(token: string, env: VerifyEnv): Promise<{ sub: string }> {
   const parts = token.split('.')
   if (parts.length !== 3) throw new Error('Malformed JWT')
-
   const [headerB64, payloadB64, sigB64] = parts
 
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['verify'],
-  )
-
-  // Decode base64url → Uint8Array
-  const sigBytes = Uint8Array.from(
-    atob(sigB64.replace(/-/g, '+').replace(/_/g, '/')),
-    (c) => c.charCodeAt(0),
-  )
-
-  const valid = await crypto.subtle.verify(
-    'HMAC',
-    key,
-    sigBytes,
-    new TextEncoder().encode(`${headerB64}.${payloadB64}`),
-  )
-
-  if (!valid) throw new Error('Invalid JWT signature')
-
-  const payload = JSON.parse(
-    atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')),
-  ) as { sub?: string; exp?: number }
+  const header = JSON.parse(new TextDecoder().decode(base64UrlDecode(headerB64))) as {
+    alg?: string
+    kid?: string
+  }
+  const payload = JSON.parse(new TextDecoder().decode(base64UrlDecode(payloadB64))) as {
+    sub?: string
+    exp?: number
+  }
 
   if (!payload.sub) throw new Error('JWT missing sub claim')
   if (payload.exp && payload.exp * 1000 < Date.now()) throw new Error('JWT expired')
 
-  return { sub: payload.sub }
+  const sigBytes = base64UrlDecode(sigB64)
+  const signingInput = new TextEncoder().encode(`${headerB64}.${payloadB64}`)
+
+  if (header.alg === 'HS256') {
+    if (!env.SUPABASE_JWT_SECRET) {
+      throw new Error('HS256 token received but SUPABASE_JWT_SECRET is not configured')
+    }
+    const key = await crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(env.SUPABASE_JWT_SECRET),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['verify'],
+    )
+    const valid = await crypto.subtle.verify('HMAC', key, sigBytes, signingInput)
+    if (!valid) throw new Error('Invalid HS256 signature')
+    return { sub: payload.sub }
+  }
+
+  if (header.alg === 'ES256' || header.alg === 'RS256') {
+    if (!header.kid) throw new Error(`${header.alg} JWT missing kid`)
+    const keys = await fetchJwks(env.SUPABASE_URL)
+    const pubKey = keys.get(header.kid)
+    if (!pubKey) throw new Error(`No JWKS key matching kid=${header.kid}`)
+    const algorithm: AlgorithmIdentifier | EcdsaParams =
+      header.alg === 'ES256'
+        ? { name: 'ECDSA', hash: 'SHA-256' }
+        : { name: 'RSASSA-PKCS1-v1_5' }
+    const valid = await crypto.subtle.verify(algorithm, pubKey, sigBytes, signingInput)
+    if (!valid) throw new Error(`Invalid ${header.alg} signature`)
+    return { sub: payload.sub }
+  }
+
+  throw new Error(`Unsupported JWT alg: ${header.alg ?? '(none)'}`)
 }
 
 // ── Supabase REST helpers ───────────────────────────────────────────────────
@@ -194,7 +295,7 @@ export async function handleGenerateCreature(request: Request, env: Env): Promis
 
   let userId: string
   try {
-    const payload = await verifyJWT(token, env.SUPABASE_JWT_SECRET)
+    const payload = await verifyJWT(token, env)
     userId = payload.sub
   } catch (err) {
     return json({ error: 'Invalid token', detail: (err as Error).message }, 401, origin)

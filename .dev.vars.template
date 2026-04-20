@@ -9,7 +9,10 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 # Supabase (secret — Cloudflare Workers only, never in frontend)
 SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_JWT_SECRET=your-jwt-secret-here
+# SUPABASE_JWT_SECRET — only required if your Supabase project still signs with
+# the legacy HS256 key. Modern projects (asymmetric EC/RSA signing) use JWKS
+# and don't need a secret. See REFERENCE/environment-setup.md for details.
+# SUPABASE_JWT_SECRET=your-legacy-jwt-secret-here
 
 # AI APIs (secret — Cloudflare Workers only)
 GEMINI_API_KEY=AIza...

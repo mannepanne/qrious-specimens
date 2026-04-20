@@ -25,7 +25,7 @@ CF_IMAGES_DELIVERY_HASH = "3c8s33-8vy1yKLZpGBolkQ"
 #   ANTHROPIC_API_KEY
 #   SUPABASE_URL
 #   SUPABASE_SERVICE_ROLE_KEY
-#   SUPABASE_JWT_SECRET
+#   SUPABASE_JWT_SECRET       (legacy HS256 projects only — modern JWKS-signed projects don't need this)
 #   RESEND_API_KEY            (contact form admin notification emails)
 #   CF_ACCOUNT_ID             (Cloudflare account ID — right sidebar on any CF dashboard page)
 #   CF_IMAGES_TOKEN           (CF API token with Images:Edit permission)

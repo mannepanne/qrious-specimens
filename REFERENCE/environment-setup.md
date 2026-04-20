@@ -79,15 +79,12 @@ wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 
 ---
 
-### `SUPABASE_JWT_SECRET`
-Used by Workers to verify Supabase JWTs (authenticate incoming requests).
+### `SUPABASE_JWT_SECRET` *(legacy-only, optional)*
+Worker JWT verification now auto-selects between asymmetric and legacy HS256 based on the token's `alg` header:
+- **Asymmetric (ES256 / RS256)** — default for modern Supabase projects. Public keys are fetched from `{SUPABASE_URL}/auth/v1/.well-known/jwks.json` and cached for 10 minutes per isolate. No secret to store.
+- **HS256 (legacy)** — only used when the Supabase project still signs with a symmetric secret. In that case, set `SUPABASE_JWT_SECRET` via `wrangler secret put SUPABASE_JWT_SECRET` using the value from Project Settings → JWT Keys → Legacy JWT secret.
 
-**How to obtain:** Supabase dashboard → Project Settings → API → JWT Settings → JWT Secret
-
-**Production setup:**
-```bash
-wrangler secret put SUPABASE_JWT_SECRET
-```
+Check which signing mode is active: Supabase dashboard → Project Settings → JWT Keys. If a "Current signing key" of type EC (P-256) or RSA is listed, you are on asymmetric and do not need this secret.
 
 ---
 
@@ -155,7 +152,7 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 # Supabase (secret — Workers only)
 SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_JWT_SECRET=your-jwt-secret-here
+# SUPABASE_JWT_SECRET — only needed for legacy HS256-signing projects; omit otherwise
 
 # AI APIs (secret — Workers only)
 GEMINI_API_KEY=AIza...
@@ -219,7 +216,7 @@ wrangler secret list
 # Expected Worker secrets:
 # SUPABASE_URL
 # SUPABASE_SERVICE_ROLE_KEY
-# SUPABASE_JWT_SECRET
+# SUPABASE_JWT_SECRET   (only required on legacy HS256 projects — see above)
 # GEMINI_API_KEY
 # ANTHROPIC_API_KEY
 # CF_ACCOUNT_ID
