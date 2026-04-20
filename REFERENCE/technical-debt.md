@@ -70,13 +70,8 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
-### TD-007: JWT `alg` header not validated
-- **Location:** `workers/generate-creature/index.ts` — `verifyJWT()`
-- **Issue:** The JWT header's `alg` field is parsed but not checked. Classic "algorithm confusion" attacks exploit implementations that branch on the header value (e.g. switching to `alg: none`). We don't branch on it — `crypto.subtle.verify('HMAC', ...)` is hardcoded to HMAC-SHA256 regardless of what the header says, so this attack doesn't apply in practice.
-- **Why accepted:** Not practically exploitable given the implementation. A 3-line defence-in-depth fix, but zero real-world risk without it.
-- **Risk:** Low — mitigated by implementation detail.
-- **Future fix:** Add `if (header.alg !== 'HS256') throw new Error('Unsupported JWT algorithm')` after parsing the header in `verifyJWT`.
-- **Phase introduced:** Phase 4
+### ~~TD-007~~: JWT `alg` header not validated
+- **Status:** Resolved 2026-04-20 in PR #47. `verifyJWT()` now dispatches on `alg` with a whitelist (HS256, ES256, RS256) and throws `Unsupported JWT alg` for anything else. Each branch pulls key material from a structurally distinct source (HS256 from `SUPABASE_JWT_SECRET`, ES256/RS256 from the JWKS endpoint), closing the algorithm-confusion attack vector. See [ADR 2026-04-20-jwks-jwt-verification](./decisions/2026-04-20-jwks-jwt-verification.md).
 
 ---
 

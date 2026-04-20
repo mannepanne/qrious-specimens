@@ -50,7 +50,8 @@ interface RegisterDiscoveryResult {
 //      JWKS endpoint at {SUPABASE_URL}/auth/v1/.well-known/jwks.json.
 //   2. HS256 (legacy) — older projects. Verified against SUPABASE_JWT_SECRET.
 //
-// We support both. The token's `alg` header selects the path.
+// The token's `alg` header selects the path. See
+// REFERENCE/decisions/2026-04-20-jwks-jwt-verification.md for rationale.
 
 interface JWKSKey {
   kid: string
@@ -64,10 +65,22 @@ interface JWKSKey {
   use?: string
 }
 
+/** Signals the JWKS endpoint or key-import pipeline failed — NOT an auth decision. Map to 503. */
+export class JwksUnavailableError extends Error {
+  constructor(message: string, public readonly cause?: unknown) {
+    super(message)
+    this.name = 'JwksUnavailableError'
+  }
+}
+
 // Module-level JWKS cache (per isolate). Keyed by SUPABASE_URL so multiple
-// environments in the same deployment don't collide. 10-minute TTL balances
-// freshness against the cost of re-fetching on every cold request.
+// environments in the same deployment don't collide. The 10-minute TTL balances
+// freshness against the cost of re-fetching on every cold request; an empty
+// imported map uses a shorter negative TTL so a transient upstream hiccup
+// doesn't silently fail every request for the full window.
 const JWKS_TTL_MS = 10 * 60 * 1000
+const JWKS_NEGATIVE_TTL_MS = 30 * 1000
+const JWKS_FETCH_TIMEOUT_MS = 5000
 const jwksCache = new Map<string, { keys: Map<string, CryptoKey>; expiresAt: number }>()
 
 // Exposed for tests — lets each test start with an empty cache.
@@ -104,24 +117,52 @@ async function importJwk(k: JWKSKey): Promise<CryptoKey | null> {
   return null
 }
 
-async function fetchJwks(supabaseUrl: string): Promise<Map<string, CryptoKey>> {
+/**
+ * Fetch the JWKS for a Supabase URL, with in-memory caching.
+ *
+ * Throws `JwksUnavailableError` when the endpoint is unreachable, times out,
+ * returns non-2xx, or yields unparseable JSON — these are upstream failures,
+ * not auth decisions. Successful empty/small responses are cached briefly
+ * (NEGATIVE_TTL) so the next request attempts a refresh rather than failing
+ * silently for the full TTL window.
+ */
+async function fetchJwks(supabaseUrl: string, force = false): Promise<Map<string, CryptoKey>> {
   const cached = jwksCache.get(supabaseUrl)
-  if (cached && cached.expiresAt > Date.now()) return cached.keys
+  if (!force && cached && cached.expiresAt > Date.now()) return cached.keys
 
-  const res = await fetch(`${supabaseUrl}/auth/v1/.well-known/jwks.json`)
-  if (!res.ok) throw new Error(`JWKS fetch failed: ${res.status}`)
-  const body = (await res.json()) as { keys?: JWKSKey[] }
+  let res: Response
+  try {
+    res = await fetch(`${supabaseUrl}/auth/v1/.well-known/jwks.json`, {
+      signal: AbortSignal.timeout(JWKS_FETCH_TIMEOUT_MS),
+    })
+  } catch (err) {
+    throw new JwksUnavailableError(`JWKS fetch failed: ${(err as Error).message}`, err)
+  }
+  if (!res.ok) {
+    throw new JwksUnavailableError(`JWKS fetch returned ${res.status}`)
+  }
+
+  let body: { keys?: JWKSKey[] }
+  try {
+    body = (await res.json()) as { keys?: JWKSKey[] }
+  } catch (err) {
+    throw new JwksUnavailableError(`JWKS body parse failed: ${(err as Error).message}`, err)
+  }
 
   const imported = new Map<string, CryptoKey>()
   for (const k of body.keys ?? []) {
     try {
       const key = await importJwk(k)
       if (key) imported.set(k.kid, key)
-    } catch {
-      // Skip unsupported key types; other kids may still be usable
+      else console.warn(`JWKS: skipping unsupported key type kty=${k.kty} crv=${k.crv ?? ''} kid=${k.kid}`)
+    } catch (err) {
+      console.warn(`JWKS: failed to import kid=${k.kid}: ${(err as Error).message}`)
     }
   }
-  jwksCache.set(supabaseUrl, { keys: imported, expiresAt: Date.now() + JWKS_TTL_MS })
+  // Negative TTL when the imported map is empty — avoids silently serving 401s
+  // for the full window if Supabase transiently ships an unimportable JWKS.
+  const ttl = imported.size === 0 ? JWKS_NEGATIVE_TTL_MS : JWKS_TTL_MS
+  jwksCache.set(supabaseUrl, { keys: imported, expiresAt: Date.now() + ttl })
   return imported
 }
 
@@ -130,7 +171,13 @@ interface VerifyEnv {
   SUPABASE_JWT_SECRET?: string
 }
 
-/** Verify a Supabase JWT (HS256 legacy or ES256/RS256 via JWKS). Returns payload or throws. */
+/**
+ * Verify a Supabase JWT (HS256 legacy or ES256/RS256 via JWKS).
+ *
+ * Returns payload on success. Throws on any verification failure — the outer
+ * handler classifies exceptions: `JwksUnavailableError` → 503, all other
+ * throws → 401.
+ */
 async function verifyJWT(token: string, env: VerifyEnv): Promise<{ sub: string }> {
   const parts = token.split('.')
   if (parts.length !== 3) throw new Error('Malformed JWT')
@@ -143,10 +190,20 @@ async function verifyJWT(token: string, env: VerifyEnv): Promise<{ sub: string }
   const payload = JSON.parse(new TextDecoder().decode(base64UrlDecode(payloadB64))) as {
     sub?: string
     exp?: number
+    iss?: string
   }
 
   if (!payload.sub) throw new Error('JWT missing sub claim')
-  if (payload.exp && payload.exp * 1000 < Date.now()) throw new Error('JWT expired')
+  if (typeof payload.exp !== 'number') throw new Error('JWT missing exp claim')
+  if (payload.exp * 1000 < Date.now()) throw new Error('JWT expired')
+
+  // Supabase Auth issues tokens with iss = {SUPABASE_URL}/auth/v1. Enforcing
+  // matches defence-in-depth best practice and rejects tokens accidentally
+  // issued by another project even if a kid collision occurred.
+  const expectedIss = `${env.SUPABASE_URL}/auth/v1`
+  if (payload.iss !== expectedIss) {
+    throw new Error(`JWT iss mismatch: expected ${expectedIss}, got ${payload.iss ?? '(none)'}`)
+  }
 
   const sigBytes = base64UrlDecode(sigB64)
   const signingInput = new TextEncoder().encode(`${headerB64}.${payloadB64}`)
@@ -169,13 +226,22 @@ async function verifyJWT(token: string, env: VerifyEnv): Promise<{ sub: string }
 
   if (header.alg === 'ES256' || header.alg === 'RS256') {
     if (!header.kid) throw new Error(`${header.alg} JWT missing kid`)
-    const keys = await fetchJwks(env.SUPABASE_URL)
-    const pubKey = keys.get(header.kid)
-    if (!pubKey) throw new Error(`No JWKS key matching kid=${header.kid}`)
     const algorithm: AlgorithmIdentifier | EcdsaParams =
       header.alg === 'ES256'
         ? { name: 'ECDSA', hash: 'SHA-256' }
         : { name: 'RSASSA-PKCS1-v1_5' }
+
+    // First attempt uses the cache. If the kid isn't known, refetch once
+    // (bypassing cache) — this covers Supabase signing-key rotation, where a
+    // fresh token references a kid newer than our cached JWKS.
+    let keys = await fetchJwks(env.SUPABASE_URL)
+    let pubKey = keys.get(header.kid)
+    if (!pubKey) {
+      keys = await fetchJwks(env.SUPABASE_URL, true)
+      pubKey = keys.get(header.kid)
+    }
+    if (!pubKey) throw new Error(`No JWKS key matching kid=${header.kid}`)
+
     const valid = await crypto.subtle.verify(algorithm, pubKey, sigBytes, signingInput)
     if (!valid) throw new Error(`Invalid ${header.alg} signature`)
     return { sub: payload.sub }
@@ -298,7 +364,16 @@ export async function handleGenerateCreature(request: Request, env: Env): Promis
     const payload = await verifyJWT(token, env)
     userId = payload.sub
   } catch (err) {
-    return json({ error: 'Invalid token', detail: (err as Error).message }, 401, origin)
+    // Correlation ID lets support trace a user-facing 401/503 back to the
+    // server-side log line without leaking internal verification detail to
+    // the client. Detail stays in Worker logs only.
+    const correlationId = crypto.randomUUID()
+    if (err instanceof JwksUnavailableError) {
+      console.error(`[${correlationId}] JWKS unavailable: ${err.message}`)
+      return json({ error: 'Auth provider unavailable', correlationId }, 503, origin)
+    }
+    console.error(`[${correlationId}] JWT verification failed: ${(err as Error).message}`)
+    return json({ error: 'Invalid token', correlationId }, 401, origin)
   }
 
   // Step 2: Parse body
