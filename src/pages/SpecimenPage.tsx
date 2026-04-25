@@ -34,9 +34,11 @@ export function SpecimenPage() {
   const cabinetCreatures = state.cabinetCreatures ?? []
   const cabinetIndex = state.cabinetIndex ?? -1
 
-  // Only fetch from DB when there's no creature in navigation state (direct URL access)
-  const { data: fetchedCreature, isLoading } = useCreatureById(stateCreature ? undefined : id)
-  const creature = stateCreature ?? fetchedCreature
+  // useCreatureById always runs so a refresh on this page picks up DB changes
+  // (e.g. a nickname saved earlier). The cabinet → specimen path passes
+  // state.creature as placeholderData so the page renders instantly while
+  // the background fetch confirms or refreshes.
+  const { data: creature, isLoading } = useCreatureById(id, stateCreature)
 
   const updateNickname = useUpdateNickname()
 
