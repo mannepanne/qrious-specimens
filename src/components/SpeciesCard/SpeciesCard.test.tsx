@@ -73,6 +73,13 @@ describe('SpeciesCard', () => {
     expect(screen.getByText('COMMON')).toBeInTheDocument()
   })
 
+  it('renders rarity as plain coloured text (matches cabinet card style)', () => {
+    render(<SpeciesCard entry={makeEntry({ discovery_count: 2 })} />)
+    const rarity = screen.getByText('RARE')
+    // No bordered pill — only the text colour is inline-styled
+    expect(rarity.style.border).toBe('')
+  })
+
   it('renders family name', () => {
     render(<SpeciesCard entry={makeEntry()} />)
     expect(screen.getByText('Mockaceae')).toBeInTheDocument()

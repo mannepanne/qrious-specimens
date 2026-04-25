@@ -45,17 +45,24 @@ export default function SpecimenTeaser({ creature, discoveryCount, onClick }: Pr
         )}
       </div>
 
-      {/* Name */}
-      <p className="font-serif text-xs font-medium italic truncate">
-        {nickname ?? dna.genus}
+      {/* Discoverer-given nickname (if any), then formal taxonomy. Matches the
+          catalogue card layout for the binomial + family lines so the cabinet
+          and catalogue read the same way. */}
+      {nickname && (
+        <p className="font-serif text-sm font-medium leading-tight truncate" title={nickname}>
+          {nickname}
+        </p>
+      )}
+      <p className="font-serif text-sm font-medium italic leading-tight text-center truncate">
+        {dna.genus} {dna.species}
       </p>
-      <p className="font-serif text-[10px] italic text-muted-foreground truncate">
-        {nickname ? `${dna.genus} ${dna.species}` : dna.species}
+      <p className="font-mono text-[10px] text-muted-foreground tracking-wider text-center mt-1 truncate">
+        {dna.family}
       </p>
 
       {/* Rarity + first-discoverer pineapple */}
       <div className="flex items-center justify-center gap-1 mt-1.5">
-        <span className="font-mono text-[8px] tracking-wider" style={{ color: rarityColor }}>
+        <span className="font-mono text-[9px] tracking-widest" style={{ color: rarityColor }}>
           {getRarityLabel(rarity)}
         </span>
         {creature.is_first_discoverer && (
