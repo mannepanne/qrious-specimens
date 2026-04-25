@@ -86,7 +86,17 @@ export function useUpdateNickname() {
       return { id, nickname, userId }
     },
     onSuccess: (data) => {
+      // Refresh the cabinet list so the new nickname appears in grid views.
       queryClient.invalidateQueries({ queryKey: ['creatures', data.userId] })
+      // Update the single-creature cache directly so SpecimenPage (when it
+      // reads via useCreatureById) reflects the saved value immediately
+      // without a network round-trip. The Cabinet → SpecimenPage path uses
+      // navigation state instead — handled by an optimistic display in
+      // SpecimenPage itself.
+      queryClient.setQueryData<CreatureRow | undefined>(
+        ['creature', data.id],
+        (prev) => (prev ? { ...prev, nickname: data.nickname || null } : prev),
+      )
     },
   })
 }

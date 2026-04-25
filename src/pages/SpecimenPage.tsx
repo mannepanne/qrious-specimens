@@ -43,6 +43,10 @@ export function SpecimenPage() {
   const [editing, setEditing] = useState(false)
   const [nickname, setNickname] = useState(creature?.nickname ?? '')
   const [fieldNotesAnimated, setFieldNotesAnimated] = useState(false)
+  // Optimistic display value after save. Wins over `creature.nickname` because
+  // `creature` may come from `state.creature` (Cabinet → SpecimenPage navigation)
+  // which the mutation can't refresh. Reset on creatureId change.
+  const [savedNickname, setSavedNickname] = useState<string | null>(null)
   const flipDirRef = useRef(1)
 
   // Sync nickname when navigating to a different creature (prev/next or direct
@@ -50,6 +54,7 @@ export function SpecimenPage() {
   const creatureId = creature?.id
   useEffect(() => {
     setNickname(creature?.nickname ?? '')
+    setSavedNickname(null)
     // creatureId is the only meaningful change — nickname syncs when we load a different creature
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [creatureId])
@@ -127,6 +132,10 @@ export function SpecimenPage() {
     if (!creature) return
     const trimmed = nickname.trim().slice(0, 64)
     updateNickname.mutate({ id: creature.id, nickname: trimmed, userId })
+    // Optimistic — show the new value immediately. The mutation invalidates the
+    // cabinet list and updates the single-creature cache, but the
+    // `state.creature` path can only be patched in this local state.
+    setSavedNickname(trimmed)
     setEditing(false)
   }
 
@@ -155,6 +164,9 @@ export function SpecimenPage() {
   }
 
   const { dna } = creature
+  // Empty-string saves clear the nickname back to null; treat both as no-name.
+  const displayedNickname = savedNickname ?? creature.nickname
+  const hasNickname = !!displayedNickname && displayedNickname.length > 0
   const date = new Date(creature.discovered_at)
   const dateStr = date.toLocaleDateString('en-GB', {
     day: 'numeric',
@@ -175,7 +187,7 @@ export function SpecimenPage() {
         </Button>
         <div className="flex-1 min-w-0">
           <h1 className="font-serif text-lg font-medium truncate">
-            {creature.nickname ?? `${dna.genus} ${dna.species}`}
+            {hasNickname ? displayedNickname : `${dna.genus} ${dna.species}`}
           </h1>
         </div>
         <span className="font-mono text-[9px] tracking-[2px] text-muted-foreground flex items-center gap-1.5">
@@ -276,7 +288,7 @@ export function SpecimenPage() {
                     className="flex items-center gap-1.5 text-sm font-serif italic text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <Pencil className="h-3 w-3" />
-                    {creature.nickname ?? 'Name this specimen...'}
+                    {hasNickname ? displayedNickname : 'Name this specimen...'}
                   </button>
                 )}
               </div>
