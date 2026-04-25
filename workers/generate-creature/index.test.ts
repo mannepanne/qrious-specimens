@@ -231,7 +231,7 @@ describe('handleGenerateCreature', () => {
       // Supabase species_images GET → returns cached row
       .mockResolvedValueOnce(new Response(JSON.stringify([cachedRow]), { status: 200 }))
       // register_discovery RPC
-      .mockResolvedValueOnce(new Response(JSON.stringify({ is_first_discoverer: false, discovery_count: 6 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first: false, total_count: 6, scan_count: 6 }]), { status: 200 }))
 
     const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
     const res = await handleGenerateCreature(req, makeEnv())
@@ -277,7 +277,7 @@ describe('handleGenerateCreature', () => {
       // species_images INSERT
       .mockResolvedValueOnce(new Response('', { status: 201 }))
       // register_discovery RPC
-      .mockResolvedValueOnce(new Response(JSON.stringify({ is_first_discoverer: true, discovery_count: 1 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first: true, total_count: 1, scan_count: 1 }]), { status: 200 }))
 
     const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
     const res = await handleGenerateCreature(req, makeEnv())
@@ -331,7 +331,7 @@ describe('handleGenerateCreature', () => {
       // species_images INSERT
       .mockResolvedValueOnce(new Response('', { status: 201 }))
       // register_discovery RPC
-      .mockResolvedValueOnce(new Response(JSON.stringify({ is_first_discoverer: true, discovery_count: 1 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first: true, total_count: 1, scan_count: 1 }]), { status: 200 }))
 
     const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
     const res = await handleGenerateCreature(req, makeEnv())
@@ -368,7 +368,7 @@ describe('handleGenerateCreature', () => {
       // species_images INSERT
       .mockResolvedValueOnce(new Response('', { status: 201 }))
       // register_discovery RPC
-      .mockResolvedValueOnce(new Response(JSON.stringify({ is_first_discoverer: false, discovery_count: 2 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first: false, total_count: 2, scan_count: 2 }]), { status: 200 }))
 
     const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
     const res = await handleGenerateCreature(req, makeEnv())
@@ -422,7 +422,7 @@ describe('handleGenerateCreature', () => {
         first_discoverer_id: 'u',
       }]), { status: 200 }))
       // register_discovery RPC
-      .mockResolvedValueOnce(new Response(JSON.stringify({ is_first_discoverer: false, discovery_count: 2 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first: false, total_count: 2, scan_count: 2 }]), { status: 200 }))
 
     // Worker can run without SUPABASE_JWT_SECRET once projects are on asymmetric keys
     const env = makeEnv({ SUPABASE_JWT_SECRET: undefined })
@@ -480,7 +480,7 @@ describe('handleGenerateCreature', () => {
         image_url_512: null, image_url_256: null, field_notes: 'n',
         discovery_count: 1, first_discoverer_id: 'u',
       }]), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ is_first_discoverer: false, discovery_count: 2 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first: false, total_count: 2, scan_count: 2 }]), { status: 200 }))
 
     const req = makeRequest({ token, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
     const res = await handleGenerateCreature(req, makeEnv({ SUPABASE_JWT_SECRET: undefined }))
@@ -519,7 +519,7 @@ describe('handleGenerateCreature', () => {
         image_url_512: null, image_url_256: null, field_notes: 'n',
         discovery_count: 1, first_discoverer_id: 'u',
       }]), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ is_first_discoverer: false, discovery_count: 2 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first: false, total_count: 2, scan_count: 2 }]), { status: 200 }))
 
     // With a 30s negative TTL (vs 10min primary), we can't literally wait here.
     // The contract under test is: the cache entry is sized so a near-term
@@ -616,7 +616,7 @@ describe('handleGenerateCreature', () => {
     // Mock cache hit to short-circuit
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify([{ image_url: 'https://example.com/img.png', image_url_512: null, image_url_256: null, field_notes: 'notes', discovery_count: 1, first_discoverer_id: 'u1' }]), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ is_first_discoverer: false, discovery_count: 1 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first: false, total_count: 1, scan_count: 1 }]), { status: 200 }))
 
     const res = await handleGenerateCreature(req, makeEnv())
     expect(res.headers.get('Access-Control-Allow-Origin')).toBe('https://qrious.hultberg.org')
