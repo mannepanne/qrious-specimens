@@ -175,6 +175,10 @@ Items here are accepted risks or pragmatic choices made during development, not 
 - **Resolved in:** Phase 7 (same branch)
 - **Resolution:** Extracted all badge/rank side-effect logic from `finishExcavation` into `src/hooks/usePostExcavationEffects.ts`. The hook is tested by `usePostExcavationEffects.test.ts` (14 tests) using mocked inner hooks — covers discovery activity posting, badge toasts with tier labels, badge activity, rank invalidation, and the rank-up detection effect. `App.tsx` is now a thin caller.
 
+### ~~TD-017~~: `calculate_explorer_rank` referenced a column that no longer exists on `page_events`
+- **Resolved in:** PR #61 (2026-04-25)
+- **Resolution:** The RPC was deployed straight to Supabase from the original implementation and referenced `page_events.page`. When `page_events` was recreated in `20260419000005_fix_page_events_schema.sql` with column `page_name`, the RPC silently started failing with `column "page" does not exist` on every authenticated call (visible as a 400 in the browser console). Migration `20260425000004_fix_calculate_explorer_rank_page_events_column.sql` brings the function into version control, switches the column reference to `page_name`, adds `SET search_path = public`, and broadens the curiosity-bonus filter to match pathname-based values (`/specimen%`, `/catalogue%`, `/species%`).
+
 ---
 
 ## Notes

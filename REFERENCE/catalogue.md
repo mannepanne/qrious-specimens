@@ -111,7 +111,7 @@ Prev/next navigation between species uses `PageFlip` for the page-turn animation
 - **Authenticated users:** Full field notes text shown
 - **Unauthenticated visitors:** First 120 characters (nearest word boundary) shown, followed by a "Sign in to read the complete field notes" prompt
 
-First discoverer credit is not shown in Phase 5. It is deferred to Phase 6 when Gazette profiles exist (see `SPECIFICATIONS/06-gazette.md`).
+First discoverer credit is shown in `SpeciesDetail` when the discoverer has a public Gazette profile and the viewer is authenticated. Lookup runs via `useFirstDiscoverer(entry.first_discoverer_id, isAuthenticated && !!selectedEntry)` in `CataloguePage`; private profiles return no row, so their credit is suppressed at the DB layer. See `gazette.md` for full details.
 
 ### Sketch fallback
 

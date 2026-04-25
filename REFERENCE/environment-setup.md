@@ -249,7 +249,7 @@ Use only as a fallback. Normal flow is always push to main.
 |---|---|---|
 | Supabase | PostgreSQL + RLS + magic link auth | supabase.com |
 | Cloudflare Workers | SPA hosting + AI Worker API routes | dash.cloudflare.com |
-| Cloudflare R2 | Creature image storage | dash.cloudflare.com → R2 |
+| Cloudflare Images | Creature image storage (qriousoriginal, qrious512, qrious256 variants) | dash.cloudflare.com → Images |
 | Google Gemini | Victorian naturalist illustration generation | aistudio.google.com |
 | Anthropic | Field notes (Claude Haiku) | console.anthropic.com |
 | Resend (optional) | Custom email domain if needed | resend.com (hultberg.org configured) |
