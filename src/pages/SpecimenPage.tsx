@@ -63,11 +63,21 @@ export function SpecimenPage() {
     creature?.dna ?? null,
   )
 
-  const wasLoadingOnMountRef = useRef(imageLoading)
-  const animateFieldNotesRef = useRef(false)
-  if (fieldNotes && !animateFieldNotesRef.current && wasLoadingOnMountRef.current) {
-    animateFieldNotesRef.current = true
-    setFieldNotesAnimated(true)
+  // Animate field notes the first time this specimen's notes are revealed on
+  // this device. After that, subsequent visits show them as a static block —
+  // the typewriter is part of the discovery moment, not an ambient effect.
+  const animateDecidedRef = useRef(false)
+  if (fieldNotes && !animateDecidedRef.current && creature?.id) {
+    animateDecidedRef.current = true
+    const storageKey = `qrious:fieldnotes-seen:${creature.id}`
+    try {
+      if (!localStorage.getItem(storageKey)) {
+        setFieldNotesAnimated(true)
+        localStorage.setItem(storageKey, '1')
+      }
+    } catch {
+      // localStorage unavailable (private mode, quota) — fall back to no animation
+    }
   }
 
   const hasPrev = cabinetIndex > 0
