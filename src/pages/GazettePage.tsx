@@ -11,6 +11,7 @@ import ActivityTimeline from '@/components/ActivityTimeline/ActivityTimeline'
 import ExplorerShowcase from '@/components/ExplorerShowcase/ExplorerShowcase'
 import CommunityStats from '@/components/CommunityStats/CommunityStats'
 import GazetteJoinPrompt from '@/components/GazetteJoinPrompt/GazetteJoinPrompt'
+import QueryErrorBanner from '@/components/QueryErrorBanner/QueryErrorBanner'
 
 export function GazettePage() {
   const navigate = useNavigate()
@@ -40,12 +41,28 @@ export function GazettePage() {
 
   const profile = explorerProfile.data as ExplorerProfile | null | undefined
 
+  // Single umbrella banner: any of the three Gazette panels failing covers the same retry path
+  const hasFetchError = feed.isError || showcase.isError || stats.isError
+  function retryAll() {
+    if (feed.isError) feed.refetch()
+    if (showcase.isError) showcase.refetch()
+    if (stats.isError) stats.refetch()
+  }
+
   return (
     <main className="flex flex-col h-full">
       <AppHeader eyebrow="Field Dispatches" title="The Explorer's Gazette" />
 
       <div className="flex-1 overflow-y-auto">
         <div className="px-4 pt-4 pb-6 space-y-6 max-w-2xl mx-auto">
+        {hasFetchError && (
+          <QueryErrorBanner
+            headline="The Gazette could not be retrieved in full."
+            body="Some dispatches did not arrive. Try again in a moment."
+            onRetry={retryAll}
+          />
+        )}
+
         {/* Community stats */}
         <CommunityStats stats={stats.data} isLoading={stats.isLoading} />
 

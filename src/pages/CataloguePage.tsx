@@ -10,6 +10,7 @@ import type { CatalogueFilters, CatalogueEntry } from '@/hooks/useCatalogue'
 import { useAuth } from '@/hooks/useAuth'
 import SpeciesCard from '@/components/SpeciesCard/SpeciesCard'
 import TaxonomicSidebar from '@/components/TaxonomicSidebar/TaxonomicSidebar'
+import QueryErrorBanner from '@/components/QueryErrorBanner/QueryErrorBanner'
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver'
 import type { Rarity } from '@/lib/rarity'
 
@@ -352,7 +353,16 @@ export function CataloguePage() {
           {/* Species grid — centred, fixed card widths, max 4 columns */}
           <div className="flex-1 overflow-y-auto px-4 pb-4">
           <div className="max-w-2xl mx-auto">
-            {catalogue.isLoading ? (
+            {/* `useInfiniteQuery.isError` only fires on the initial fetch; later
+                page-fetch failures land in `isFetchNextPageError` and leave existing
+                results visible, so this banner doesn't appear mid-scroll. */}
+            {catalogue.isError ? (
+              <QueryErrorBanner
+                headline="The species index could not be retrieved."
+                body="The catalogue is momentarily out of reach."
+                onRetry={catalogue.refetch}
+              />
+            ) : catalogue.isLoading ? (
               <div className="grid grid-cols-[repeat(2,160px)] sm:grid-cols-[repeat(3,160px)] lg:grid-cols-[repeat(4,160px)] gap-4 justify-center pt-2">
                 {Array.from({ length: 12 }).map((_, i) => (
                   <div key={i} className="w-[160px] h-52 rounded-lg border border-border animate-pulse bg-accent/20" />
