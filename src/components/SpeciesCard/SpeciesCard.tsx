@@ -51,11 +51,11 @@ export default function SpeciesCard({ entry, onClick }: Props) {
         {entry.family}
       </p>
 
-      {/* Rarity badge */}
+      {/* Rarity — plain coloured text to match the cabinet card style */}
       <div className="flex justify-center mt-1.5">
         <span
-          className="font-mono text-[9px] tracking-widest px-1.5 py-0.5 rounded-sm"
-          style={{ color: rarityColor, borderColor: rarityColor, border: '1px solid' }}
+          className="font-mono text-[9px] tracking-widest"
+          style={{ color: rarityColor }}
         >
           {getRarityLabel(rarity)}
         </span>
