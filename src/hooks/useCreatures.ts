@@ -5,15 +5,6 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { supabase } from '@/lib/supabase'
 import type { CreatureDNA, CreatureRow } from '@/types/creature'
 
-// Simple FNV-1a hash for QR content → 8 hex char dedup key
-function hashQr(content: string): string {
-  let h = 0x811c9dc5
-  for (let i = 0; i < content.length; i++) {
-    h = Math.imul(h ^ content.charCodeAt(i), 0x01000193) >>> 0
-  }
-  return h.toString(16).padStart(8, '0')
-}
-
 const PAGE_SIZE = 30
 
 export function useCreatures(userId: string | undefined) {
@@ -53,15 +44,16 @@ export function useAddCreature() {
       qrContent: string
       dna: CreatureDNA
     }) => {
-      const qrHash = hashQr(qrContent)
-
-      // Phase 3: insert directly without register_discovery RPC (wired in Phase 4)
+      // Use the deterministic 16-char DNA hash so creatures.qr_hash matches the
+      // species_images.qr_hash, species_discoveries.qr_hash, and activity_feed.qr_hash
+      // values (all of which are written from `dna.hash`). Earlier versions used a
+      // separate 8-char FNV that produced mismatched joins — see ADR / issue #48.
       const { data, error } = await supabase
         .from('creatures')
         .insert({
           user_id: userId,
           qr_content: qrContent,
-          qr_hash: qrHash,
+          qr_hash: dna.hash,
           dna: dna as unknown as Record<string, unknown>,
         })
         .select()

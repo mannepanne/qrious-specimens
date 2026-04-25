@@ -44,7 +44,7 @@ const TEST_DNA = {
 const MOCK_CREATURE_ROW = {
   id: 'creature-1',
   qr_content: 'https://example.com',
-  qr_hash: 'abcd1234',
+  qr_hash: TEST_DNA.hash, // 16-char DNA hash — matches species_images.qr_hash
   dna: TEST_DNA,
   nickname: null,
   discovered_at: '2026-04-09T00:00:00Z',
@@ -127,6 +127,38 @@ describe('useAddCreature', () => {
     })
 
     expect(creature).toEqual(MOCK_CREATURE_ROW)
+  })
+
+  it('writes the 16-char DNA hash as qr_hash so joins to species_images work', async () => {
+    // Guards #48: previously a custom 8-char FNV was used here, breaking joins
+    // with species_images / species_discoveries / activity_feed which key on the
+    // 16-char DNA hash.
+    const { supabase } = await import('@/lib/supabase')
+    const mockInsert = vi.fn().mockReturnThis()
+    const mockSelect = vi.fn().mockReturnThis()
+    const mockSingle = vi.fn().mockResolvedValue({ data: MOCK_CREATURE_ROW, error: null })
+
+    ;(supabase.from as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      insert: mockInsert,
+      select: mockSelect,
+      single: mockSingle,
+    })
+    mockInsert.mockReturnValue({ select: mockSelect })
+    mockSelect.mockReturnValue({ single: mockSingle })
+
+    const { result } = renderHook(() => useAddCreature(), { wrapper: makeWrapper() })
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        userId: 'user-123',
+        qrContent: 'https://example.com',
+        dna: TEST_DNA,
+      })
+    })
+
+    expect(mockInsert).toHaveBeenCalledWith(expect.objectContaining({
+      qr_hash: TEST_DNA.hash,
+    }))
   })
 
   it('throws DUPLICATE error on unique constraint violation', async () => {
