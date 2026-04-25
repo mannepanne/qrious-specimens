@@ -38,6 +38,13 @@ interface SpeciesImageRow {
   first_discoverer_id: string | null
 }
 
+/** Shape of one row returned by the `register_discovery` Postgres function. */
+interface RegisterDiscoveryRow {
+  is_first: boolean
+  total_count: number
+  scan_count: number
+}
+
 interface RegisterDiscoveryResult {
   is_first_discoverer: boolean
   discovery_count: number
@@ -316,8 +323,15 @@ async function callRegisterDiscovery(
     // RPC failure is non-fatal — discovery data is best-effort
     return { is_first_discoverer: false, discovery_count: 1 }
   }
-  const result = (await res.json()) as RegisterDiscoveryResult | null
-  return result ?? { is_first_discoverer: false, discovery_count: 1 }
+  // PostgREST returns RETURNS TABLE results as an array of rows. Earlier code
+  // treated this as a single object with `is_first_discoverer`/`discovery_count`
+  // keys — those keys never existed, so every caller silently received the
+  // fallback `{ is_first_discoverer: false }`. Correct shape: array of rows
+  // with `is_first` / `total_count` / `scan_count` columns.
+  const rows = (await res.json()) as RegisterDiscoveryRow[] | null
+  const row = rows?.[0]
+  if (!row) return { is_first_discoverer: false, discovery_count: 1 }
+  return { is_first_discoverer: row.is_first, discovery_count: row.total_count }
 }
 
 // ── CORS helpers ────────────────────────────────────────────────────────────
