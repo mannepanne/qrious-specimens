@@ -137,6 +137,7 @@ temp/
 .env.*
 !.env.example
 !.env.template
+!.env.backfill.template
 .dev.vars
 !.dev.vars.template
 *.pem
