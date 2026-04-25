@@ -223,6 +223,23 @@ describe('useAuth', () => {
     expect(response.error).toMatch(/too many dispatches/i)
   })
 
+  it('sendMagicLink falls through to the raw provider message for unmapped errors', async () => {
+    setupNoSession()
+    mockAuth.signInWithOtp.mockResolvedValue({
+      error: { message: 'Email signup is disabled' },
+    })
+
+    const { result } = renderHook(() => useAuth())
+    await waitFor(() => expect(result.current.authState.status).not.toBe('loading'))
+
+    let response!: { error: string | null }
+    await act(async () => {
+      response = await result.current.sendMagicLink('naturalist@example.com')
+    })
+
+    expect(response.error).toBe('Email signup is disabled')
+  })
+
   it('sendMagicLink catches synchronous network failures', async () => {
     setupNoSession()
     mockAuth.signInWithOtp.mockRejectedValue(new Error('Failed to fetch'))

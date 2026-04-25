@@ -208,10 +208,10 @@ export function usePostActivity() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['community-feed'] })
     },
-    // Fires after a successful excavation. The discovery itself is already saved;
-    // only the Gazette post failed. Single-id toast so multiple events collapse.
+    // Fires after a successful excavation, for both discovery and badge_earned
+    // events. Single-id toast so multiple events collapse into one banner.
     onError: () => {
-      toast.error('Your discovery did not reach the Gazette.', { id: 'gazette-post-error' })
+      toast.error('Your activity could not be posted to the Gazette.', { id: 'gazette-post-error' })
     },
   })
 }

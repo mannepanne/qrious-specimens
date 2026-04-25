@@ -130,7 +130,7 @@ export function CabinetPage() {
             <QueryErrorBanner
               headline="The cabinet could not be reached."
               body="Your specimens are safely stored — only the connection lapsed."
-              onRetry={() => refetch()}
+              onRetry={refetch}
             />
           )}
 

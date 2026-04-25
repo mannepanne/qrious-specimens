@@ -13,7 +13,7 @@ interface Props {
 }
 
 const DEFAULT_HEADLINE = 'The dispatch could not be retrieved.'
-const DEFAULT_BODY = 'The data is momentarily out of reach. Try again in a moment.'
+const DEFAULT_BODY = 'The dispatch is momentarily out of reach. Try again in a moment.'
 
 export default function QueryErrorBanner({
   headline = DEFAULT_HEADLINE,
