@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createElement } from 'react'
-import { useCreatures, useAddCreature } from './useCreatures'
+import { useCreatures, useAddCreature, useUpdateNickname } from './useCreatures'
 import type { CreatureRow } from '@/types/creature'
 
 // Minimal DNA for testing
@@ -189,5 +189,41 @@ describe('useAddCreature', () => {
         })
       ).rejects.toThrow('DUPLICATE')
     })
+  })
+})
+
+describe('useUpdateNickname', () => {
+  beforeEach(() => { vi.clearAllMocks() })
+
+  it('updates the single-creature query cache on success so SpecimenPage refreshes', async () => {
+    const { supabase } = await import('@/lib/supabase')
+    const mockUpdate = vi.fn().mockReturnThis()
+    const mockEq = vi.fn().mockResolvedValue({ data: null, error: null })
+    ;(supabase.from as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      update: mockUpdate,
+      eq: mockEq,
+    })
+    mockUpdate.mockReturnValue({ eq: mockEq })
+
+    // Custom wrapper that exposes the QueryClient so we can inspect cache writes.
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    })
+    queryClient.setQueryData<CreatureRow>(['creature', 'creature-1'], MOCK_CREATURE_ROW)
+    const wrapper = ({ children }: { children: React.ReactNode }) =>
+      createElement(QueryClientProvider, { client: queryClient }, children)
+
+    const { result } = renderHook(() => useUpdateNickname(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        id: 'creature-1',
+        nickname: 'Sir Wiggles',
+        userId: 'user-123',
+      })
+    })
+
+    const cached = queryClient.getQueryData<CreatureRow>(['creature', 'creature-1'])
+    expect(cached?.nickname).toBe('Sir Wiggles')
   })
 })

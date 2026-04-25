@@ -383,6 +383,38 @@ describe('SpecimenPage', () => {
     })
   })
 
+  it('shows the saved nickname optimistically without waiting for the cache to refresh', async () => {
+    // Guards #issue (nickname-display-stale-after-save). The mutation cannot
+    // refresh `state.creature` (it's plain navigation state), so SpecimenPage
+    // must show the new value via a local optimistic state.
+    const mutateMock = vi.fn()
+    mockUseUpdateNickname.mockReturnValue({
+      mutate: mutateMock,
+      isPending: false,
+    } as unknown as ReturnType<typeof useUpdateNickname>)
+    mockUseCreatureById.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+    } as ReturnType<typeof useCreatureById>)
+
+    // creature.nickname starts null
+    renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
+
+    fireEvent.click(screen.getByText(/name this specimen/i))
+    fireEvent.change(screen.getByPlaceholderText(/give it a name/i), {
+      target: { value: 'Sir Wiggles' },
+    })
+    fireEvent.click(screen.getAllByRole('button')[1])
+
+    // The header h1 and the nickname button should both reflect the new
+    // nickname even though creature.nickname (the navigation state) is null.
+    await waitFor(() => {
+      expect(screen.getAllByText('Sir Wiggles').length).toBeGreaterThan(0)
+    })
+    // The placeholder is gone — the button no longer reads "Name this specimen…"
+    expect(screen.queryByText(/name this specimen/i)).not.toBeInTheDocument()
+  })
+
   it('shows prev/next navigation when cabinetCreatures is provided', () => {
     const second = { ...fakeCreature, id: 'creature-uuid-2', dna: { ...fakeDna, genus: 'Secondus', species: 'alter' } }
     mockUseCreatureById.mockReturnValue({
