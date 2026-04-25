@@ -17,6 +17,7 @@ CREATE OR REPLACE FUNCTION public.calculate_explorer_rank(p_user_id uuid)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
   v_bronze_badges int := 0;
@@ -79,12 +80,16 @@ BEGIN
   v_activity_points := floor(ln(greatest(v_days_active, 1) + 1) * 1.5);
 
   -- === CURIOSITY SCORING ===
-  -- page_name stores full pathnames (e.g. /specimen/abc, /catalogue),
-  -- so match by prefix rather than exact equality.
+  -- page_name stores full pathnames (e.g. /specimen/abc, /catalogue,
+  -- /species/abc), so match by prefix rather than exact equality.
   SELECT count(*) INTO v_specimen_views
   FROM page_events
   WHERE user_id = p_user_id
-    AND (page_name LIKE '/specimen%' OR page_name LIKE '/catalogue%');
+    AND (
+      page_name LIKE '/specimen%'
+      OR page_name LIKE '/catalogue%'
+      OR page_name LIKE '/species%'
+    );
 
   v_curiosity_bonus := floor(ln(greatest(v_specimen_views, 1) + 1) * 0.8);
 
