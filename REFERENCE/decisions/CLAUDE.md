@@ -131,6 +131,7 @@ grep -r "authentication" REFERENCE/decisions/
 
 **Format:** Listed chronologically (newest first)
 
+- [2026-04-20 — JWKS JWT verification (with HS256 fallback)](./2026-04-20-jwks-jwt-verification.md) — Worker verifies Supabase ES256/RS256 tokens via JWKS with per-isolate cache and kid-miss refetch; HS256 retained for legacy projects; resolves TD-007
 - [2026-04-20 — Cloudflare Images over R2](./2026-04-20-cloudflare-images-over-r2.md) — Specimen illustrations stored in CF Images; R2 bucket retired; supersedes earlier "stick with R2" decision
 - [2026-04-19 — Retain contact messages on GDPR delete](./2026-04-19-retain-contact-messages-on-gdpr-delete.md) — Contact messages kept after erasure requests; GDPR Art. 17(3) legal basis, provability of acting on user requests
 - [2026-04-09 — Layered navigation model](./2026-04-09-layered-navigation-model.md) — Tab/overlay/subpage state, why no URL router, auth gate per destination
