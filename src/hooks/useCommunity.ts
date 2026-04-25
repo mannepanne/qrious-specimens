@@ -2,6 +2,7 @@
 // ABOUT: Covers explorer profiles, activity feed, showcase, community stats, badge checking, and activity posting
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 
 // ============================================================
@@ -207,6 +208,11 @@ export function usePostActivity() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['community-feed'] })
     },
+    // Fires after a successful excavation. The discovery itself is already saved;
+    // only the Gazette post failed. Single-id toast so multiple events collapse.
+    onError: () => {
+      toast.error('Your discovery did not reach the Gazette.', { id: 'gazette-post-error' })
+    },
   })
 }
 
@@ -227,6 +233,9 @@ export function useCheckBadges() {
       queryClient.invalidateQueries({ queryKey: ['community-showcase'] })
       // Invalidate the per-user badge cache so BadgeCollection reflects new awards immediately
       queryClient.invalidateQueries({ queryKey: ['explorer-badges', userId] })
+    },
+    onError: () => {
+      toast.error('New badges could not be checked.', { id: 'badge-check-error' })
     },
   })
 }
@@ -268,6 +277,9 @@ export function useToggleBadgeVisibility() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['my-badges', data.userId] })
       queryClient.invalidateQueries({ queryKey: ['community-showcase'] })
+    },
+    onError: () => {
+      toast.error('Could not update badge visibility.')
     },
   })
 }

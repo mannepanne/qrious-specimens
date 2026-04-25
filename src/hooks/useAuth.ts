@@ -53,15 +53,38 @@ export function useAuth(): UseAuthReturn {
   }, [])
 
   async function sendMagicLink(email: string): Promise<{ error: string | null }> {
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        // Redirect back to the app root after clicking the magic link
-        emailRedirectTo: window.location.origin,
-      },
-    })
-    if (error) return { error: error.message }
-    return { error: null }
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          // Redirect back to the app root after clicking the magic link
+          emailRedirectTo: window.location.origin,
+        },
+      })
+      if (error) return { error: friendlyAuthMessage(error.message) }
+      return { error: null }
+    } catch (err) {
+      // Synchronous throw — typically a complete network failure before the
+      // request reaches Supabase. signInWithOtp normally folds errors into
+      // the returned object, so this branch is rare.
+      const message = err instanceof Error ? err.message : ''
+      return { error: friendlyAuthMessage(message) }
+    }
+  }
+
+  /** Maps raw auth-provider errors to user-friendly copy. Falls back to the original message. */
+  function friendlyAuthMessage(raw: string): string {
+    const lower = raw.toLowerCase()
+    if (lower.includes('rate limit')) {
+      return 'Too many dispatches in a short time. Please wait a minute before trying again.'
+    }
+    if (lower.includes('invalid') && lower.includes('email')) {
+      return 'That correspondence address does not appear valid.'
+    }
+    if (lower.includes('failed to fetch') || lower.includes('network')) {
+      return 'The post could not be sent. Check your connection and try again.'
+    }
+    return raw || 'The dispatch could not be sent. Please try again.'
   }
 
   async function signOut(): Promise<void> {

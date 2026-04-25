@@ -10,6 +10,7 @@ import { useScanOverlay } from '@/App'
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver'
 import { useExplorerRank, RANK_DISPLAY } from '@/hooks/useBadges'
 import SpecimenTeaser from '@/components/SpecimenTeaser/SpecimenTeaser'
+import QueryErrorBanner from '@/components/QueryErrorBanner/QueryErrorBanner'
 import type { CreatureRow } from '@/types/creature'
 import { getRarityFromCount } from '@/lib/rarity'
 
@@ -22,7 +23,7 @@ export function CabinetPage() {
   const userId = authState.status === 'authenticated' ? authState.session.user.id : ''
   const { data: explorerRank } = useExplorerRank(userId || null)
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status } = useCreatures(userId)
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, status, refetch } = useCreatures(userId)
   const sentinelRef = useIntersectionObserver(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage()
   })
@@ -126,11 +127,11 @@ export function CabinetPage() {
 
           {/* Error state */}
           {status === 'error' && (
-            <div className="py-12 text-center">
-              <p className="font-serif text-muted-foreground italic">
-                The cabinet could not be reached. Please try again.
-              </p>
-            </div>
+            <QueryErrorBanner
+              headline="The cabinet could not be reached."
+              body="Your specimens are safely stored — only the connection lapsed."
+              onRetry={() => refetch()}
+            />
           )}
 
           {/* Empty state */}

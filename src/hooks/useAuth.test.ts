@@ -189,7 +189,7 @@ describe('useAuth', () => {
     })
   })
 
-  it('sendMagicLink returns error message on failure', async () => {
+  it('sendMagicLink maps invalid-email errors to a friendly message', async () => {
     setupNoSession()
     mockAuth.signInWithOtp.mockResolvedValue({
       error: { message: 'Invalid email' },
@@ -203,7 +203,39 @@ describe('useAuth', () => {
       response = await result.current.sendMagicLink('bad')
     })
 
-    expect(response.error).toBe('Invalid email')
+    expect(response.error).toMatch(/correspondence address/i)
+  })
+
+  it('sendMagicLink maps rate-limit errors to a friendly message', async () => {
+    setupNoSession()
+    mockAuth.signInWithOtp.mockResolvedValue({
+      error: { message: 'Email rate limit exceeded' },
+    })
+
+    const { result } = renderHook(() => useAuth())
+    await waitFor(() => expect(result.current.authState.status).not.toBe('loading'))
+
+    let response!: { error: string | null }
+    await act(async () => {
+      response = await result.current.sendMagicLink('naturalist@example.com')
+    })
+
+    expect(response.error).toMatch(/too many dispatches/i)
+  })
+
+  it('sendMagicLink catches synchronous network failures', async () => {
+    setupNoSession()
+    mockAuth.signInWithOtp.mockRejectedValue(new Error('Failed to fetch'))
+
+    const { result } = renderHook(() => useAuth())
+    await waitFor(() => expect(result.current.authState.status).not.toBe('loading'))
+
+    let response!: { error: string | null }
+    await act(async () => {
+      response = await result.current.sendMagicLink('naturalist@example.com')
+    })
+
+    expect(response.error).toMatch(/check your connection/i)
   })
 
   it('signOut calls supabase.auth.signOut', async () => {

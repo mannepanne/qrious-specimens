@@ -15,6 +15,7 @@ import {
   usePostActivity,
   useCheckBadges,
   useFirstDiscoverer,
+  useToggleBadgeVisibility,
 } from './useCommunity'
 
 // Mock Supabase
@@ -24,6 +25,14 @@ vi.mock('@/lib/supabase', () => ({
     from: vi.fn(),
   },
 }))
+
+// Mock sonner so we can assert on the new onError toast calls
+vi.mock('sonner', () => ({
+  toast: { error: vi.fn(), success: vi.fn() },
+}))
+
+import { toast } from 'sonner'
+const mockToastError = toast.error as ReturnType<typeof vi.fn>
 
 import { supabase } from '@/lib/supabase'
 
@@ -219,6 +228,21 @@ describe('usePostActivity', () => {
       await expect(result.current.mutateAsync({ event_type: 'discovery' })).rejects.toThrow('DB fail')
     })
   })
+
+  it('surfaces a single-id toast on failure so multiple calls collapse', async () => {
+    const chain = { insert: vi.fn().mockResolvedValue({ error: new Error('boom') }) }
+    mockFrom.mockReturnValueOnce(chain as never)
+    const { result } = renderHook(() => usePostActivity(), { wrapper: createWrapper() })
+    await act(async () => {
+      await result.current.mutateAsync({ event_type: 'discovery' }).catch(() => {})
+    })
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith(
+        expect.stringMatching(/gazette/i),
+        expect.objectContaining({ id: 'gazette-post-error' }),
+      )
+    })
+  })
 })
 
 // ============================================================
@@ -255,6 +279,54 @@ describe('useCheckBadges', () => {
     await act(async () => { await result.current.mutateAsync('u1') })
 
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['explorer-badges', 'u1'] })
+  })
+
+  it('surfaces a single-id toast when the badge RPC fails', async () => {
+    mockRpc.mockResolvedValueOnce({ data: null, error: new Error('RPC fail') })
+    const { result } = renderHook(() => useCheckBadges(), { wrapper: createWrapper() })
+    await act(async () => {
+      await result.current.mutateAsync('u1').catch(() => {})
+    })
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith(
+        expect.stringMatching(/badges/i),
+        expect.objectContaining({ id: 'badge-check-error' }),
+      )
+    })
+  })
+})
+
+// ============================================================
+// Badge visibility toggle
+// ============================================================
+
+describe('useToggleBadgeVisibility', () => {
+  it('updates explorer_badges and invalidates caches on success', async () => {
+    const chain = {
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    }
+    mockFrom.mockReturnValueOnce(chain as never)
+    const { result } = renderHook(() => useToggleBadgeVisibility(), { wrapper: createWrapper() })
+    await act(async () => {
+      await result.current.mutateAsync({ badgeId: 'b1', isPublic: true, userId: 'u1' })
+    })
+    expect(chain.update).toHaveBeenCalledWith({ is_public: true })
+  })
+
+  it('surfaces a toast when the update fails', async () => {
+    const chain = {
+      update: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockResolvedValue({ error: new Error('denied') }),
+    }
+    mockFrom.mockReturnValueOnce(chain as never)
+    const { result } = renderHook(() => useToggleBadgeVisibility(), { wrapper: createWrapper() })
+    await act(async () => {
+      await result.current.mutateAsync({ badgeId: 'b1', isPublic: true, userId: 'u1' }).catch(() => {})
+    })
+    await waitFor(() => {
+      expect(mockToastError).toHaveBeenCalledWith(expect.stringMatching(/badge visibility/i))
+    })
   })
 })
 
