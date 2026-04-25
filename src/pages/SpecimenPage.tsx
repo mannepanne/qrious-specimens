@@ -9,6 +9,7 @@ import type { CreatureRow } from '@/types/creature'
 import CreatureRenderer from '@/components/CreatureRenderer/CreatureRenderer'
 import PageFlip from '@/components/PageFlip/PageFlip'
 import TypewriterText from '@/components/TypewriterText/TypewriterText'
+import SpecimenImageError from '@/components/SpecimenImageError/SpecimenImageError'
 import { useSpeciesImage } from '@/hooks/useSpeciesImage'
 import { getRarityFromCount, getRarityLabel, getRarityColor } from '@/lib/rarity'
 import { Button } from '@/components/ui/button'
@@ -64,7 +65,7 @@ export function SpecimenPage() {
   const rarity = getRarityFromCount(discoveryCount)
   const rarityColor = getRarityColor(rarity)
 
-  const { imageUrl512, fieldNotes, isLoading: imageLoading } = useSpeciesImage(
+  const { imageUrl512, fieldNotes, isLoading: imageLoading, error: imageError, retry: retryImage } = useSpeciesImage(
     creature?.dna.hash ?? '',
     creature?.dna ?? null,
   )
@@ -219,6 +220,13 @@ export function SpecimenPage() {
                 </div>
               )}
             </div>
+
+            {/* Inline error banner — surfaces silent generation failures
+                that would otherwise leave the user staring at the sketch
+                with no explanation. */}
+            {!imageUrl512 && !imageLoading && imageError && (
+              <SpecimenImageError error={imageError} onRetry={retryImage} />
+            )}
 
             {/* Inline navigation */}
             {cabinetCreatures.length > 1 && (
