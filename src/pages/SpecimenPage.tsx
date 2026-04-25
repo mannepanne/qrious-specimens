@@ -1,5 +1,5 @@
 // ABOUT: Full-detail specimen view — AI illustration, taxonomy, observations, discovery record
-// ABOUT: Reads creature from navigation state (fast path) or fetches by ID for direct URL access
+// ABOUT: Always fetches creature by ID; uses navigation state as placeholder for instant render
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
