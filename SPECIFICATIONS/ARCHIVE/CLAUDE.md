@@ -13,6 +13,24 @@ Magic link auth, Victorian design system (typography, colour tokens, shadcn/ui),
 ### [03-creature-engine-cabinet.md](./03-creature-engine-cabinet.md)
 DNA engine (djb2 + FNV-1a + mulberry32), QR scanner, Victorian ink renderer (CreatureRendererSketch), hatching animation, cabinet grid with infinite scroll, SpecimenPage, rarity system.
 
+### [04-ai-generation-workers.md](./04-ai-generation-workers.md)
+Cloudflare Workers for Gemini illustrations and Claude Haiku field notes, image storage, full discovery pipeline.
+
+### [05-catalogue.md](./05-catalogue.md)
+Public species catalogue, taxonomic index, search and filters, sketch fallback, field-notes auth-gating.
+
+### [06-gazette.md](./06-gazette.md)
+Community activity feed, explorer showcase, Gazette profiles, badge awarding, cross-tab navigation.
+
+### [07-gamification.md](./07-gamification.md)
+Badges, explorer rank tiers, achievement notifications, rank-up toasts.
+
+### [08-settings-admin.md](./08-settings-admin.md)
+Account settings, admin dashboard, GDPR data-export and account-deletion tools.
+
+### [design-polish/00-design-polish.md](./design-polish/00-design-polish.md)
+Pre-phase polish pass aligning the implementation with the original design (completed before phases 7–9).
+
 ---
 
 **Note:** Archived specs are historical record. For current implementation details, see `REFERENCE/` documentation.

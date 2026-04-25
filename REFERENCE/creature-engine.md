@@ -111,7 +111,7 @@ const sentinelRef = useIntersectionObserver(() => {
 
 Rarity is intentionally "discovered" — a new user's entire cabinet shows RARE because they are the first (or among the first) to find each specimen. The label becomes meaningful as the community grows.
 
-The first discoverer of a species is flagged via `is_first_discoverer` on the `creatures` row. This is set server-side by the `register_discovery` RPC in Phase 4. In Phase 3 it is always `false`; the nickname editing UI is present but gated by Phase 4 activation.
+The first discoverer of a species is flagged via `is_first_discoverer` on the `creatures` row. This is set server-side by the `register_discovery` RPC and persisted (migration `20260425000002_register_discovery_persists_first_discoverer.sql`), so the badge survives reload. The flag is set when the caller is the first user to scan that `qr_hash`; subsequent scanners are stored with `false`.
 
 ---
 

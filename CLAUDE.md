@@ -44,7 +44,7 @@ When asked to remember anything, add project memory in this CLAUDE.md (project r
 - Anthropic Claude Haiku (field notes generation)
 - Cloudflare Images (creature illustrations — qriousoriginal, qrious512, qrious256 variants served from `imagedelivery.net`)
 
-**Current status:** Phases 1–7 complete and merged to main
+**Current status:** Phases 1–8 complete and merged to main; Phase 9 in progress
 
 ## Implementation phases
 

@@ -1,10 +1,9 @@
 # Design polish
 
-Pre-phase polish pass to align the current implementation more closely with the original design.
-Implemented before continuing with phases 7–9.
+Pre-phase polish pass to align the current implementation more closely with the original design. Completed before continuing with phases 7–9.
 
-**Screenshots:** Place side-by-side comparison images in `SPECIFICATIONS/design-polish/screenshots/`.
-Name them clearly, e.g. `cabinet-original.png` / `cabinet-current.png`.
+**Screenshots:** Side-by-side comparison images in `SPECIFICATIONS/ARCHIVE/design-polish/screenshots/`.
+Named clearly, e.g. `cabinet-original.png` / `cabinet-current.png`.
 
 ---
 
