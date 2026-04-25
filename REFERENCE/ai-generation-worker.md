@@ -47,7 +47,9 @@ Client → Worker (POST /api/generate-creature)
   Step 5: Upload to Cloudflare Images (single POST; CDN serves qriousoriginal/qrious512/qrious256 variants)
   Step 6: Generate field notes via Claude Haiku (multimodal with the image)
   Step 7: Upsert into species_images (ON CONFLICT qr_hash DO NOTHING)
-  Step 8: Call register_discovery RPC → returns is_first_discoverer + discovery_count
+  Step 8: Call register_discovery RPC → returns is_first + total_count;
+          also persists is_first_discoverer = true onto the caller's creatures
+          row when applicable (server-authoritative — no client write needed)
   → Response: { imageUrl, imageUrl512, imageUrl256, fieldNotes, isFirstDiscoverer, discoveryCount, cached }
 ```
 
@@ -120,7 +122,13 @@ The insert uses `ON CONFLICT (qr_hash) DO NOTHING` — if a concurrent request a
 
 ### `register_discovery` RPC
 
-Called after the `species_images` write (or cache hit). Atomically increments `discovery_count` and determines `is_first_discoverer`. Uses `ON CONFLICT` internally so it is race-safe.
+Called after the `species_images` write (or cache hit). In a single transaction it:
+
+1. Upserts into `species_discoveries`, atomically incrementing `discovery_count` (per-user) and `total_scans` (per-call). Uses `ON CONFLICT` so it is race-safe.
+2. If the caller is the first discoverer for that species, sets `creatures.is_first_discoverer = true` on the caller's row matching `dna->>'hash' = p_qr_hash`. Idempotent (`IS DISTINCT FROM true` guard). Without this server-side write, the badge would only ever appear via the client-side post-scan navigate state and would disappear on refresh.
+3. Returns `(is_first, total_count, scan_count)` as a single-row table.
+
+**Access control:** EXECUTE is restricted to the `service_role` only (the Worker's caller). Authenticated and anon users cannot call this RPC directly via PostgREST — they would otherwise be able to spoof `p_user_id` and force-set the badge on another user's creature. See migration `20260425000003`.
 
 ---
 
