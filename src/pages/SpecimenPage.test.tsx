@@ -354,9 +354,10 @@ describe('SpecimenPage', () => {
       error: new WorkerError(503, 'Auth provider unavailable', 'corr-abc12345', 'Worker error 503'),
       retry: vi.fn(),
     })
-    mockUseCreatureById.mockReturnValue({
-      data: undefined, isLoading: false,
-    } as ReturnType<typeof useCreatureById>)
+    // Default useCreatureById mock returns the placeholder (state.creature)
+    // — no explicit override needed. An override to `data: undefined` would
+    // make the page render the "Specimen not found" branch instead of the
+    // banner under test.
 
     renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
 
