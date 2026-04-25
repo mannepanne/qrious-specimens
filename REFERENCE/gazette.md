@@ -63,9 +63,9 @@ Uses `FOREACH` loop with `r_`-prefixed return columns to avoid column-name ambig
 
 Called silently after each excavation. Badge toast notifications (with tier label) fire in Phase 7. On success, invalidates both `['community-showcase']` and `['explorer-badges', userId]` query keys.
 
-### `calculate_explorer_rank(p_user_id uuid)` *(deployed, no migration file)*
+### `calculate_explorer_rank(p_user_id uuid)`
 
-Computes a cumulative score for the user and maps it to a rank tier. Deployed directly to Supabase; not in the migrations directory.
+Computes a cumulative score for the user and maps it to a rank tier. Migration: `20260425000004_fix_calculate_explorer_rank_page_events_column.sql`.
 
 Returns a single JSON object: `{ rank, rank_icon, score, next_rank, next_threshold, progress, breakdown }`.
 
