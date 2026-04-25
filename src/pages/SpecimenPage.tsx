@@ -1,5 +1,5 @@
 // ABOUT: Full-detail specimen view — AI illustration, taxonomy, observations, discovery record
-// ABOUT: Reads creature from navigation state (fast path) or fetches by ID for direct URL access
+// ABOUT: Always fetches creature by ID; uses navigation state as placeholder for instant render
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
@@ -34,9 +34,11 @@ export function SpecimenPage() {
   const cabinetCreatures = state.cabinetCreatures ?? []
   const cabinetIndex = state.cabinetIndex ?? -1
 
-  // Only fetch from DB when there's no creature in navigation state (direct URL access)
-  const { data: fetchedCreature, isLoading } = useCreatureById(stateCreature ? undefined : id)
-  const creature = stateCreature ?? fetchedCreature
+  // useCreatureById always runs so a refresh on this page picks up DB changes
+  // (e.g. a nickname saved earlier). The cabinet → specimen path passes
+  // state.creature as placeholderData so the page renders instantly while
+  // the background fetch confirms or refreshes.
+  const { data: creature, isLoading } = useCreatureById(id, stateCreature)
 
   const updateNickname = useUpdateNickname()
 

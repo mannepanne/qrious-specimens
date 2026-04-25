@@ -104,6 +104,14 @@ function setupDefaultMocks() {
     mutate: vi.fn(),
     isPending: false,
   } as unknown as ReturnType<typeof useUpdateNickname>)
+  // Default: useCreatureById returns whatever the caller passed as
+  // placeholderData (i.e. state.creature). Mirrors React Query's behaviour
+  // where the initial render uses placeholder while the fetch resolves.
+  // Tests that need to assert on a separate fetched-data path can override.
+  mockUseCreatureById.mockImplementation((_id, placeholder) => ({
+    data: placeholder,
+    isLoading: false,
+  } as unknown as ReturnType<typeof useCreatureById>))
   mockUseSpeciesImage.mockReturnValue({
     imageUrl: null,
     imageUrl512: null,
@@ -154,20 +162,12 @@ describe('SpecimenPage', () => {
   })
 
   it('shows specimen not found when DB returns nothing', () => {
-    mockUseCreatureById.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-    } as ReturnType<typeof useCreatureById>)
 
     renderSpecimenPage()
     expect(screen.getByText(/specimen not found/i)).toBeInTheDocument()
   })
 
   it('renders specimen taxonomy from navigation state (fast path)', () => {
-    mockUseCreatureById.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-    } as ReturnType<typeof useCreatureById>)
 
     renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
     // Genus + species appear in the taxonomy h2 (header h1 also shows it — both are fine)
@@ -184,32 +184,21 @@ describe('SpecimenPage', () => {
     expect(screen.getAllByText(/Testus exemplar/).length).toBeGreaterThan(0)
   })
 
-  it('does not fetch from DB when creature is in navigation state', () => {
-    mockUseCreatureById.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-    } as ReturnType<typeof useCreatureById>)
-
+  it('passes state.creature as placeholderData so the page renders instantly while the fetch confirms freshness', () => {
     renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
-    // When state carries the creature, hook is called with undefined (disabled)
-    expect(mockUseCreatureById).toHaveBeenCalledWith(undefined)
+    // Hook is always called with the id; state.creature is passed as the
+    // second arg (placeholderData) so the cabinet → specimen path renders
+    // without a network round-trip while still consulting the DB in the
+    // background. This is the fix for stale-nickname-after-reload.
+    expect(mockUseCreatureById).toHaveBeenCalledWith('creature-uuid-1', fakeCreature)
   })
 
   it('fetches from DB when there is no navigation state', () => {
-    mockUseCreatureById.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-    } as ReturnType<typeof useCreatureById>)
-
     renderSpecimenPage('creature-uuid-1')
-    expect(mockUseCreatureById).toHaveBeenCalledWith('creature-uuid-1')
+    expect(mockUseCreatureById).toHaveBeenCalledWith('creature-uuid-1', undefined)
   })
 
   it('shows order and family in taxonomy line', () => {
-    mockUseCreatureById.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-    } as ReturnType<typeof useCreatureById>)
 
     renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
     expect(screen.getByText(/Order Ordinis/)).toBeInTheDocument()
@@ -217,10 +206,6 @@ describe('SpecimenPage', () => {
   })
 
   it('shows observation table with creature attributes', () => {
-    mockUseCreatureById.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-    } as ReturnType<typeof useCreatureById>)
 
     renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
     expect(screen.getByText('HABITAT')).toBeInTheDocument()
@@ -239,10 +224,6 @@ describe('SpecimenPage', () => {
       isLoading: false,
       error: null,
     })
-    mockUseCreatureById.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-    } as ReturnType<typeof useCreatureById>)
 
     renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
     expect(screen.getByText('A most curious specimen found in tidal pools.')).toBeInTheDocument()
@@ -254,9 +235,6 @@ describe('SpecimenPage', () => {
       fieldNotes: 'A most curious specimen found in tidal pools.',
       isFirstDiscoverer: false, isLoading: false, error: null,
     })
-    mockUseCreatureById.mockReturnValue({
-      data: undefined, isLoading: false,
-    } as ReturnType<typeof useCreatureById>)
 
     renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
 
@@ -273,9 +251,6 @@ describe('SpecimenPage', () => {
       fieldNotes: 'A most curious specimen found in tidal pools.',
       isFirstDiscoverer: false, isLoading: false, error: null,
     })
-    mockUseCreatureById.mockReturnValue({
-      data: undefined, isLoading: false,
-    } as ReturnType<typeof useCreatureById>)
 
     renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
 
@@ -298,9 +273,6 @@ describe('SpecimenPage', () => {
       fieldNotes: 'A most curious specimen found in tidal pools.',
       isFirstDiscoverer: false, isLoading: false, error: null,
     })
-    mockUseCreatureById.mockReturnValue({
-      data: undefined, isLoading: false,
-    } as ReturnType<typeof useCreatureById>)
 
     // Visit A — flag written
     const a = renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
@@ -327,30 +299,18 @@ describe('SpecimenPage', () => {
       isLoading: false,
       error: null,
     })
-    mockUseCreatureById.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-    } as ReturnType<typeof useCreatureById>)
 
     renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
     expect(screen.getByText(/observations pending/i)).toBeInTheDocument()
   })
 
   it('shows nickname edit button', () => {
-    mockUseCreatureById.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-    } as ReturnType<typeof useCreatureById>)
 
     renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
     expect(screen.getByText(/name this specimen/i)).toBeInTheDocument()
   })
 
   it('shows nickname input when edit is clicked', () => {
-    mockUseCreatureById.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-    } as ReturnType<typeof useCreatureById>)
 
     renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
     fireEvent.click(screen.getByText(/name this specimen/i))
@@ -363,10 +323,6 @@ describe('SpecimenPage', () => {
       mutate: mutateMock,
       isPending: false,
     } as unknown as ReturnType<typeof useUpdateNickname>)
-    mockUseCreatureById.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-    } as ReturnType<typeof useCreatureById>)
 
     renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
     fireEvent.click(screen.getByText(/name this specimen/i))
@@ -392,10 +348,6 @@ describe('SpecimenPage', () => {
       mutate: mutateMock,
       isPending: false,
     } as unknown as ReturnType<typeof useUpdateNickname>)
-    mockUseCreatureById.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-    } as ReturnType<typeof useCreatureById>)
 
     // creature.nickname starts null
     renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
@@ -417,10 +369,6 @@ describe('SpecimenPage', () => {
 
   it('shows prev/next navigation when cabinetCreatures is provided', () => {
     const second = { ...fakeCreature, id: 'creature-uuid-2', dna: { ...fakeDna, genus: 'Secondus', species: 'alter' } }
-    mockUseCreatureById.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-    } as ReturnType<typeof useCreatureById>)
 
     renderSpecimenPage('creature-uuid-1', {
       creature: fakeCreature,
@@ -433,10 +381,6 @@ describe('SpecimenPage', () => {
 
   it('hides prev navigation on first specimen in cabinet', () => {
     const second = { ...fakeCreature, id: 'creature-uuid-2' }
-    mockUseCreatureById.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-    } as ReturnType<typeof useCreatureById>)
 
     renderSpecimenPage('creature-uuid-1', {
       creature: fakeCreature,
@@ -450,12 +394,27 @@ describe('SpecimenPage', () => {
 
   it('shows first discoverer badge when is_first_discoverer is true', () => {
     const firstDiscovererCreature = { ...fakeCreature, is_first_discoverer: true }
-    mockUseCreatureById.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-    } as ReturnType<typeof useCreatureById>)
 
     renderSpecimenPage('creature-uuid-1', { creature: firstDiscovererCreature })
     expect(screen.getByText(/FIRST DISCOVERER/)).toBeInTheDocument()
+  })
+
+  it('shows the fetched nickname even when navigation state still has the pre-edit value', () => {
+    // Reproduces the post-save reload bug: history.state can carry the
+    // pre-edit creature object across browser refresh. The DB has the new
+    // nickname; useCreatureById returns it. The page must prefer the
+    // fetched data over the stale placeholder so the user sees what was saved.
+    const stalePlaceholder = { ...fakeCreature, nickname: null }
+    const freshFromDb = { ...fakeCreature, nickname: 'Sir Wiggles' }
+
+    mockUseCreatureById.mockReturnValue({
+      data: freshFromDb,
+      isLoading: false,
+    } as ReturnType<typeof useCreatureById>)
+
+    renderSpecimenPage('creature-uuid-1', { creature: stalePlaceholder })
+    // The header h1 reflects the DB value, not the placeholder
+    expect(screen.getAllByText('Sir Wiggles').length).toBeGreaterThan(0)
+    expect(screen.queryByText(/name this specimen/i)).not.toBeInTheDocument()
   })
 })

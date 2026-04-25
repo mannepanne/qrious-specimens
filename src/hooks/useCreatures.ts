@@ -101,8 +101,15 @@ export function useUpdateNickname() {
   })
 }
 
-/** Fetch a single creature by its UUID — used by the /specimen/:id route for direct URL access. */
-export function useCreatureById(id: string | undefined) {
+/**
+ * Fetch a single creature by its UUID — used by the /specimen/:id route.
+ *
+ * Accepts an optional `placeholderData` so the page can render instantly from
+ * navigation state while a background fetch confirms freshness. Without this,
+ * a stale `state.creature` (e.g. preserved through browser refresh after a
+ * nickname save) would mask the latest DB row.
+ */
+export function useCreatureById(id: string | undefined, placeholderData?: CreatureRow) {
   return useQuery({
     queryKey: ['creature', id],
     queryFn: async () => {
@@ -116,6 +123,7 @@ export function useCreatureById(id: string | undefined) {
     },
     enabled: !!id,
     staleTime: 2 * 60 * 1000,
+    placeholderData,
   })
 }
 
