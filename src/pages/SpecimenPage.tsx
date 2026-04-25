@@ -45,7 +45,8 @@ export function SpecimenPage() {
   const [fieldNotesAnimated, setFieldNotesAnimated] = useState(false)
   const flipDirRef = useRef(1)
 
-  // Sync nickname when navigating to a different creature (prev/next or direct URL access)
+  // Sync nickname when navigating to a different creature (prev/next or direct
+  // URL access reuses the same SpecimenPage instance — no unmount).
   const creatureId = creature?.id
   useEffect(() => {
     setNickname(creature?.nickname ?? '')
@@ -63,11 +64,26 @@ export function SpecimenPage() {
     creature?.dna ?? null,
   )
 
-  const wasLoadingOnMountRef = useRef(imageLoading)
-  const animateFieldNotesRef = useRef(false)
-  if (fieldNotes && !animateFieldNotesRef.current && wasLoadingOnMountRef.current) {
-    animateFieldNotesRef.current = true
-    setFieldNotesAnimated(true)
+  // Animate field notes the first time this specimen's notes are revealed on
+  // this device, and only the first time. Subsequent visits — including
+  // prev/next navigation that re-uses this component — render the notes as a
+  // static block. The decision is gated by a ref tracking the last id we
+  // made a decision for, so a fresh creatureId triggers a fresh evaluation.
+  const lastDecidedIdRef = useRef<string | null>(null)
+  if (fieldNotes && creature?.id && lastDecidedIdRef.current !== creature.id) {
+    lastDecidedIdRef.current = creature.id
+    const storageKey = `qrious:fieldnotes-seen:${creature.id}`
+    try {
+      if (localStorage.getItem(storageKey)) {
+        setFieldNotesAnimated(false)
+      } else {
+        setFieldNotesAnimated(true)
+        localStorage.setItem(storageKey, '1')
+      }
+    } catch {
+      // localStorage unavailable (private mode, quota) — fall back to static
+      setFieldNotesAnimated(false)
+    }
   }
 
   const hasPrev = cabinetIndex > 0

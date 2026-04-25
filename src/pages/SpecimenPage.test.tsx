@@ -25,8 +25,14 @@ vi.mock('@/components/CreatureRenderer/CreatureRenderer', () => ({
   default: () => <svg data-testid="creature-renderer" />,
 }))
 
+// The mock exposes the `animate` prop in a data attribute so tests can assert
+// when the typewriter is engaged vs when notes render statically.
 vi.mock('@/components/TypewriterText/TypewriterText', () => ({
-  default: ({ text }: { text: string }) => <span>{text}</span>,
+  default: ({ text, animate }: { text: string; animate?: boolean }) => (
+    <span data-testid="typewriter" data-animate={animate ? 'true' : 'false'}>
+      {text}
+    </span>
+  ),
 }))
 
 vi.mock('@/components/PageFlip/PageFlip', () => ({
@@ -130,6 +136,9 @@ function renderSpecimenPage(
 
 beforeEach(() => {
   vi.clearAllMocks()
+  // Field-notes animation persists a per-specimen seen-flag in localStorage —
+  // clear so each test starts from a clean slate, regardless of execution order.
+  localStorage.clear()
   setupDefaultMocks()
 })
 
@@ -237,6 +246,75 @@ describe('SpecimenPage', () => {
 
     renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
     expect(screen.getByText('A most curious specimen found in tidal pools.')).toBeInTheDocument()
+  })
+
+  it('animates field notes on first reveal and persists a per-specimen seen flag', () => {
+    mockUseSpeciesImage.mockReturnValue({
+      imageUrl: null, imageUrl512: null, imageUrl256: null,
+      fieldNotes: 'A most curious specimen found in tidal pools.',
+      isFirstDiscoverer: false, isLoading: false, error: null,
+    })
+    mockUseCreatureById.mockReturnValue({
+      data: undefined, isLoading: false,
+    } as ReturnType<typeof useCreatureById>)
+
+    renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
+
+    expect(screen.getByTestId('typewriter').dataset.animate).toBe('true')
+    expect(localStorage.getItem('qrious:fieldnotes-seen:creature-uuid-1')).toBe('1')
+  })
+
+  it('renders field notes statically on subsequent visits to the same specimen', () => {
+    // Seed the seen-flag — simulates a returning visitor
+    localStorage.setItem('qrious:fieldnotes-seen:creature-uuid-1', '1')
+
+    mockUseSpeciesImage.mockReturnValue({
+      imageUrl: null, imageUrl512: null, imageUrl256: null,
+      fieldNotes: 'A most curious specimen found in tidal pools.',
+      isFirstDiscoverer: false, isLoading: false, error: null,
+    })
+    mockUseCreatureById.mockReturnValue({
+      data: undefined, isLoading: false,
+    } as ReturnType<typeof useCreatureById>)
+
+    renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
+
+    expect(screen.getByTestId('typewriter').dataset.animate).toBe('false')
+  })
+
+  it('flags each specimen independently across separate visits', () => {
+    // Guards the per-specimen reset: an earlier broken implementation gated
+    // the decision on a one-shot boolean, so the second specimen's flag
+    // would never be written and refreshing on it would re-animate forever.
+    const fakeCreatureB: CreatureRow = {
+      ...fakeCreature,
+      id: 'creature-uuid-2',
+      qr_hash: 'beefcafe',
+      dna: { ...fakeDna, hash: 'beefcafe' },
+    }
+
+    mockUseSpeciesImage.mockReturnValue({
+      imageUrl: null, imageUrl512: null, imageUrl256: null,
+      fieldNotes: 'A most curious specimen found in tidal pools.',
+      isFirstDiscoverer: false, isLoading: false, error: null,
+    })
+    mockUseCreatureById.mockReturnValue({
+      data: undefined, isLoading: false,
+    } as ReturnType<typeof useCreatureById>)
+
+    // Visit A — flag written
+    const a = renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
+    expect(localStorage.getItem('qrious:fieldnotes-seen:creature-uuid-1')).toBe('1')
+    a.unmount()
+
+    // Visit B — independent flag written
+    const b = renderSpecimenPage('creature-uuid-2', { creature: fakeCreatureB })
+    expect(localStorage.getItem('qrious:fieldnotes-seen:creature-uuid-2')).toBe('1')
+    b.unmount()
+
+    // Re-visit A — flag is already set, so the typewriter renders statically
+    const aAgain = renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
+    expect(aAgain.getByTestId('typewriter').dataset.animate).toBe('false')
   })
 
   it('shows pending message when field notes are not yet loaded', () => {
