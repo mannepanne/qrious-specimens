@@ -120,6 +120,7 @@ function setupDefaultMocks() {
     isFirstDiscoverer: false,
     isLoading: false,
     error: null,
+      retry: vi.fn(),
   })
 }
 
@@ -223,6 +224,7 @@ describe('SpecimenPage', () => {
       isFirstDiscoverer: false,
       isLoading: false,
       error: null,
+      retry: vi.fn(),
     })
 
     renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
@@ -234,6 +236,7 @@ describe('SpecimenPage', () => {
       imageUrl: null, imageUrl512: null, imageUrl256: null,
       fieldNotes: 'A most curious specimen found in tidal pools.',
       isFirstDiscoverer: false, isLoading: false, error: null,
+      retry: vi.fn(),
     })
 
     renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
@@ -250,6 +253,7 @@ describe('SpecimenPage', () => {
       imageUrl: null, imageUrl512: null, imageUrl256: null,
       fieldNotes: 'A most curious specimen found in tidal pools.',
       isFirstDiscoverer: false, isLoading: false, error: null,
+      retry: vi.fn(),
     })
 
     renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
@@ -272,6 +276,7 @@ describe('SpecimenPage', () => {
       imageUrl: null, imageUrl512: null, imageUrl256: null,
       fieldNotes: 'A most curious specimen found in tidal pools.',
       isFirstDiscoverer: false, isLoading: false, error: null,
+      retry: vi.fn(),
     })
 
     // Visit A — flag written
@@ -298,6 +303,7 @@ describe('SpecimenPage', () => {
       isFirstDiscoverer: false,
       isLoading: false,
       error: null,
+      retry: vi.fn(),
     })
 
     renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
@@ -337,6 +343,25 @@ describe('SpecimenPage', () => {
         expect.objectContaining({ id: 'creature-uuid-1', nickname: 'Sir Wiggles' })
       )
     })
+  })
+
+  it('shows an inline error banner when AI generation fails', async () => {
+    const { WorkerError } = await import('@/types/worker')
+    mockUseSpeciesImage.mockReturnValue({
+      imageUrl: null, imageUrl512: null, imageUrl256: null,
+      fieldNotes: null,
+      isFirstDiscoverer: false, isLoading: false,
+      error: new WorkerError(503, 'Auth provider unavailable', 'corr-abc12345', 'Worker error 503'),
+      retry: vi.fn(),
+    })
+    mockUseCreatureById.mockReturnValue({
+      data: undefined, isLoading: false,
+    } as ReturnType<typeof useCreatureById>)
+
+    renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
+
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    expect(screen.getByText(/atelier is temporarily closed/i)).toBeInTheDocument()
   })
 
   it('shows the saved nickname optimistically without waiting for the cache to refresh', async () => {

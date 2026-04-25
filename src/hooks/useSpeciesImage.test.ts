@@ -6,6 +6,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createElement } from 'react'
 import { useSpeciesImage } from './useSpeciesImage'
+import { WorkerError } from '@/types/worker'
 import type { CreatureDNA } from '@/types/creature'
 
 // Mock Supabase
@@ -147,7 +148,7 @@ describe('useSpeciesImage', () => {
     }))
   })
 
-  it('returns null values and error on Worker failure', async () => {
+  it('returns a WorkerError carrying the worker status + correlationId on failure', async () => {
     // Cache miss
     const maybeSingleMock = vi.fn().mockResolvedValue({ data: null, error: null })
     const selectMock = { eq: vi.fn().mockReturnThis(), maybeSingle: maybeSingleMock }
@@ -159,7 +160,12 @@ describe('useSpeciesImage', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any)
 
-    vi.mocked(fetch).mockResolvedValue(new Response('Internal server error', { status: 500 }))
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({ error: 'Auth provider unavailable', correlationId: 'corr-12345678' }),
+        { status: 503 },
+      ),
+    )
 
     const { result } = renderHook(() => useSpeciesImage('hash123', MOCK_DNA), {
       wrapper: makeWrapper(),
@@ -169,7 +175,11 @@ describe('useSpeciesImage', () => {
 
     expect(result.current.imageUrl).toBeNull()
     expect(result.current.fieldNotes).toBeNull()
-    expect(result.current.error).toBeInstanceOf(Error)
+    const err = result.current.error
+    expect(err).toBeInstanceOf(WorkerError)
+    expect((err as WorkerError).status).toBe(503)
+    expect((err as WorkerError).errorCode).toBe('Auth provider unavailable')
+    expect((err as WorkerError).correlationId).toBe('corr-12345678')
   })
 
   it('does not trigger when qrHash is null', () => {

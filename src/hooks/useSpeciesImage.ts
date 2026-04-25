@@ -13,7 +13,7 @@ import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import type { CreatureDNA } from '@/types/creature'
-import type { WorkerResponse } from '@/types/worker'
+import { parseWorkerError, type WorkerResponse } from '@/types/worker'
 
 interface SpeciesImageCacheRow {
   image_url: string
@@ -32,7 +32,10 @@ export interface SpeciesImageResult {
   fieldNotes: string | null
   isFirstDiscoverer: boolean
   isLoading: boolean
+  /** Worker error from the most recent generation attempt — null if cache hit or not yet attempted. */
   error: Error | null
+  /** Re-trigger the worker mutation manually. Useful for retry UX after a failure. */
+  retry: () => void
 }
 
 export function useSpeciesImage(
@@ -73,8 +76,7 @@ export function useSpeciesImage(
       })
 
       if (!res.ok) {
-        const body = await res.text()
-        throw new Error(`Worker error ${res.status}: ${body.slice(0, 200)}`)
+        throw await parseWorkerError(res)
       }
 
       return res.json() as Promise<WorkerResponse>
@@ -84,6 +86,13 @@ export function useSpeciesImage(
       queryClient.invalidateQueries({ queryKey: ['species-image', qrHash] })
     },
   })
+
+  // Manual retry — useful for the SpecimenPage error banner.
+  function retry() {
+    if (!qrHash || !dna) return
+    mutation.reset()
+    mutation.mutate()
+  }
 
   // Auto-trigger the mutation when cache miss is confirmed
   useEffect(() => {
@@ -103,5 +112,6 @@ export function useSpeciesImage(
     isFirstDiscoverer: workerData?.isFirstDiscoverer ?? false,
     isLoading: cacheLoading || mutation.isPending,
     error: mutation.error,
+    retry,
   }
 }

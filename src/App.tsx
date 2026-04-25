@@ -25,7 +25,7 @@ import { useAddCreature } from '@/hooks/useCreatures'
 import { useExplorerProfile } from '@/hooks/useCommunity'
 import { usePostExcavationEffects } from '@/hooks/usePostExcavationEffects'
 import type { CreatureRow } from '@/types/creature'
-import type { WorkerResponse } from '@/types/worker'
+import { parseWorkerError, WorkerError, type WorkerResponse } from '@/types/worker'
 import { generateCreatureDNA } from '@/lib/creatureEngine'
 import { AuthPage } from '@/pages/AuthPage'
 import { CataloguePage } from '@/pages/CataloguePage'
@@ -104,6 +104,7 @@ function AppShell() {
   const animationDoneRef = useRef(false)
   const workerCalledRef = useRef(false)
   const workerFailedRef = useRef(false)
+  const workerErrorRef = useRef<WorkerError | null>(null)
 
   const finishExcavation = useCallback(() => {
     animationDoneRef.current = false
@@ -122,9 +123,21 @@ function AppShell() {
       }
 
       if (workerFailedRef.current) {
-        toast('The specimen eluded our naturalist.', {
-          description: 'The illustration could not be captured — try viewing the specimen again.',
-        })
+        const err = workerErrorRef.current
+        const correlationSuffix = err?.correlationId ? ` (ref: ${err.correlationId.slice(0, 8)})` : ''
+        if (err?.status === 401) {
+          toast('Your credentials have lapsed.', {
+            description: `Please sign in again to commission this illustration.${correlationSuffix}`,
+          })
+        } else if (err && err.status >= 500) {
+          toast("The illustrator's atelier is temporarily closed.", {
+            description: `Try viewing the specimen again in a moment.${correlationSuffix}`,
+          })
+        } else {
+          toast('The specimen eluded our naturalist.', {
+            description: `The illustration could not be captured — try viewing the specimen again.${correlationSuffix}`,
+          })
+        }
       }
 
       fireEffects(creature, isFirstDiscoverer)
@@ -198,6 +211,7 @@ function AppShell() {
     animationDoneRef.current = false
     workerCalledRef.current = false
     workerFailedRef.current = false
+    workerErrorRef.current = null
 
     setExcavatingDna(dna)
     setExcavationWorkerResult(null)
@@ -228,15 +242,26 @@ function AppShell() {
         },
         body: JSON.stringify({ qrHash: excavatingDna.hash, dna: excavatingDna }),
       })
-      const data = res.ok ? (await res.json()) as WorkerResponse : null
-      if (!data) workerFailedRef.current = true
+      if (!res.ok) {
+        const workerErr = await parseWorkerError(res)
+        workerFailedRef.current = true
+        workerErrorRef.current = workerErr
+        console.error(`[scan] worker failed:`, workerErr)
+        setExcavationWorkerResult({ imageUrl512: null, isFirstDiscoverer: false })
+        return
+      }
+      const data = (await res.json()) as WorkerResponse
       excavationWorkerResponseRef.current = data
       setExcavationWorkerResult({
-        imageUrl512: data?.imageUrl512 ?? null,
-        isFirstDiscoverer: data?.isFirstDiscoverer ?? false,
+        imageUrl512: data.imageUrl512 ?? null,
+        isFirstDiscoverer: data.isFirstDiscoverer ?? false,
       })
-    } catch {
+    } catch (err) {
       workerFailedRef.current = true
+      // Network errors get a synthetic WorkerError with status=0 so the toast
+      // selector below still picks the generic message.
+      workerErrorRef.current = new WorkerError(0, 'NetworkError', null, (err as Error).message)
+      console.error(`[scan] worker call threw:`, err)
       setExcavationWorkerResult({ imageUrl512: null, isFirstDiscoverer: false })
     }
   }
