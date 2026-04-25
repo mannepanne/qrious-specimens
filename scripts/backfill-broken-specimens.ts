@@ -17,10 +17,12 @@
  *   CF_IMAGES_DELIVERY_HASH       Delivery hash for imagedelivery.net URLs
  *
  * Run:
- *   env $(cat .env.backfill) bun run scripts/backfill-broken-specimens.ts
+ *   set -a && source .env.backfill && set +a && bun run scripts/backfill-broken-specimens.ts
  *
  * Dry run (lists rows without generating):
- *   DRY_RUN=1 env $(cat .env.backfill) bun run scripts/backfill-broken-specimens.ts
+ *   set -a && source .env.backfill && set +a && DRY_RUN=1 bun run scripts/backfill-broken-specimens.ts
+ *
+ * (`env $(cat …)` looks tempting but breaks on the comment lines in the file.)
  */
 
 import type { CreatureDNA } from '@/types/creature'
