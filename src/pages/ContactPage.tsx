@@ -91,7 +91,7 @@ export function ContactPage() {
           <input
             id="contact-website"
             name="website"
-            type="text"
+            type="url"
             value={honeypot}
             onChange={(e) => setHoneypot(e.target.value)}
             tabIndex={-1}

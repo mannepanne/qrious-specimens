@@ -152,7 +152,9 @@ describe('ContactPage — honeypot', () => {
 
     const honeypot = container.querySelector<HTMLInputElement>('#contact-website')
     expect(honeypot).not.toBeNull()
-    fireEvent.change(honeypot!, { target: { value: 'i-am-a-bot' } })
+    // Field is type="url"; use a value that passes browser URL validation so the
+    // form actually submits in jsdom. The worker only checks truthiness.
+    fireEvent.change(honeypot!, { target: { value: 'http://bot.example' } })
 
     fillForm({ email: 'spam@example.com', message: 'spam payload' })
     fireEvent.click(screen.getByTestId('mock-captcha-verify'))
@@ -160,7 +162,7 @@ describe('ContactPage — honeypot', () => {
 
     await waitFor(() => {
       expect(mutation.mutateAsync).toHaveBeenCalledWith(
-        expect.objectContaining({ honeypot: 'i-am-a-bot' }),
+        expect.objectContaining({ honeypot: 'http://bot.example' }),
       )
     })
   })
