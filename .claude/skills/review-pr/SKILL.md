@@ -37,7 +37,7 @@ Run the gate defined in [`.claude/skills/review-gate.md`](../review-gate.md) →
 
 > `/review-pr expects a single positive integer (PR number). Got: "<value>". Aborting.`
 
-**Applies to every subsequent step**: `gh pr view/diff/comment $ARGUMENTS` shell commands AND any `/tmp/review-pr-$ARGUMENTS-*.md` Write-tool path. Do not proceed past this step if validation fails. This validation is load-bearing — do not remove or relax it without reading the ADR at `REFERENCE/decisions/2026-04-22-tiered-pr-review-dispatcher.md`.
+**Applies to every subsequent step**: `gh pr view/diff/comment $ARGUMENTS` shell commands AND any `SCRATCH/review-pr-$ARGUMENTS-*.md` Write-tool path. Do not proceed past this step if validation fails. This validation is load-bearing — do not remove or relax it without reading the ADR at `REFERENCE/decisions/2026-04-22-tiered-pr-review-dispatcher.md`.
 
 ### Step 1: Triage
 
@@ -102,10 +102,10 @@ When the signal is valid:
 2. Tell the user: *"Light reviewer flagged this PR as potentially misclassified (see line above). Recommend re-running as `/review-pr-team <N>` for deeper analysis. I have not posted a PR comment."*
 3. Stop. Do not auto-escalate — the user decides.
 
-**Posting the comment.** Build the body as a string, write it to a temp file via the Write tool (path `/tmp/review-pr-<N>-light.md`), then post with `--body-file`:
+**Posting the comment.** Build the body as a string, write it to a temp file via the Write tool (path `SCRATCH/review-pr-<N>-light.md`), then post with `--body-file`:
 
 ```bash
-gh pr comment $ARGUMENTS --body-file /tmp/review-pr-$ARGUMENTS-light.md
+gh pr comment $ARGUMENTS --body-file SCRATCH/review-pr-$ARGUMENTS-light.md
 ```
 
 The body must contain:
@@ -118,7 +118,7 @@ The body must contain:
 
 Using `--body-file` avoids the brittle heredoc-quoting pattern (where a substituted rationale containing the literal token `EOF` on its own line would terminate the heredoc early and either mangle the comment or run unintended shell). Write-then-post also makes the substitution step explicit.
 
-**Read-then-Write fallback (avoid `rm -f`).** If the Write tool errors with *"File has not been read yet"* (because a stale temp file exists at the same path from a prior abandoned run), call **Read on the path first** to satisfy the Write prerequisite, then re-issue the Write. Do **not** use `Bash(rm -f /tmp/…)` to clear stale files — `rm -f` is not allowlisted (and shouldn't be broadly allowlisted) so it triggers a manual approval prompt; Read-then-Write stays silent. Don't bother cleaning up the temp file after posting either: the next run handles staleness via the same fallback, and `/tmp/` is short-lived on most host OSes. This same fallback applies to all subsequent Write call sites in this skill (standard tier, team-triage marker).
+**Read-then-Write fallback (avoid `rm -f`).** If the Write tool errors with *"File has not been read yet"* (because a stale temp file exists at the same path from a prior abandoned run), call **Read on the path first** to satisfy the Write prerequisite, then re-issue the Write. Do **not** use `Bash(rm -f SCRATCH/…)` to clear stale files — `rm -f` is not allowlisted (and shouldn't be broadly allowlisted) so it triggers a manual approval prompt; Read-then-Write stays silent. Don't bother cleaning up the temp file after posting either: the next run handles staleness via the same fallback, and contents of `SCRATCH/` are gitignored so artefacts don't leak. This same fallback applies to all subsequent Write call sites in this skill (standard tier, team-triage marker).
 
 Why two agents in light tier: the triage routes docs-only PRs to `light`, and docs PRs are exactly the case where temporal-language and REFERENCE/ currency checks matter most. Keeping `technical-writer` in this tier closes that gap without bloating the light-reviewer prompt with doc-specific rules.
 
@@ -129,10 +129,10 @@ Follow the two-reviewer flow:
 1. Spawn **`code-reviewer`** with its default task: `Conduct a comprehensive code review of PR #$ARGUMENTS. Follow your review checklist and output format. Post nothing — return your findings.`
 2. Spawn **`technical-writer`** with: `Conduct a documentation review of PR #$ARGUMENTS. Follow your review checklist and output format. Post nothing — return your findings.`
 3. Combine findings (code review first, documentation second). If the doc reviewer found nothing, `✅ Documentation: No issues found` is sufficient.
-4. Build the body as a string, write to `/tmp/review-pr-$ARGUMENTS-standard.md` via the Write tool, then post:
+4. Build the body as a string, write to `SCRATCH/review-pr-$ARGUMENTS-standard.md` via the Write tool, then post:
 
    ```bash
-   gh pr comment $ARGUMENTS --body-file /tmp/review-pr-$ARGUMENTS-standard.md
+   gh pr comment $ARGUMENTS --body-file SCRATCH/review-pr-$ARGUMENTS-standard.md
    ```
 
    The body must start with:
@@ -155,10 +155,10 @@ Follow the two-reviewer flow:
    to finish (it posts to the PR regardless).
    ```
 
-2. Post a **separate triage marker comment** to the PR *before* invoking the team skill (the team skill can't receive extra arguments, so the header is posted directly). Build the body as a string, write to `/tmp/review-pr-$ARGUMENTS-triage.md` via the Write tool, then post:
+2. Post a **separate triage marker comment** to the PR *before* invoking the team skill (the team skill can't receive extra arguments, so the header is posted directly). Build the body as a string, write to `SCRATCH/review-pr-$ARGUMENTS-triage.md` via the Write tool, then post:
 
    ```bash
-   gh pr comment $ARGUMENTS --body-file /tmp/review-pr-$ARGUMENTS-triage.md
+   gh pr comment $ARGUMENTS --body-file SCRATCH/review-pr-$ARGUMENTS-triage.md
    ```
 
    The body must contain:

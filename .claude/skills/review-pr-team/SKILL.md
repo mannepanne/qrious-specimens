@@ -245,15 +245,15 @@ After all teammates complete the discussion phase:
 *This review was conducted by an agent team using collaborative discussion. Reviewers independently analyzed the PR, then shared findings, challenged each other's conclusions, and reached consensus through structured debate.*
 ```
 
-3. **Post the synthesized review** as a comment on the PR. Build the body as a string, write it to a temp file via the Write tool (path `/tmp/review-pr-$ARGUMENTS-team.md`), then post with `--body-file`:
+3. **Post the synthesized review** as a comment on the PR. Build the body as a string, write it to a temp file via the Write tool (path `SCRATCH/review-pr-$ARGUMENTS-team.md`), then post with `--body-file`:
 
 ```bash
-gh pr comment $ARGUMENTS --body-file /tmp/review-pr-$ARGUMENTS-team.md
+gh pr comment $ARGUMENTS --body-file SCRATCH/review-pr-$ARGUMENTS-team.md
 ```
 
    Using `--body-file` avoids the brittle heredoc-quoting pattern (where the synthesised review containing the literal token `EOF` on its own line would terminate the heredoc early and either mangle the comment or run unintended shell).
 
-   **Read-then-Write fallback (avoid `rm -f`).** If the Write tool errors with *"File has not been read yet"* (because a stale temp file exists at the same path from a prior abandoned run), call **Read on the path first** to satisfy the Write prerequisite, then re-issue the Write. Do **not** use `Bash(rm -f /tmp/…)` to clear stale files — `rm -f` is not allowlisted (and shouldn't be broadly allowlisted) so it triggers a manual approval prompt; Read-then-Write stays silent. Don't bother cleaning up the temp file after posting either: the next run handles staleness via the same fallback.
+   **Read-then-Write fallback (avoid `rm -f`).** If the Write tool errors with *"File has not been read yet"* (because a stale temp file exists at the same path from a prior abandoned run), call **Read on the path first** to satisfy the Write prerequisite, then re-issue the Write. Do **not** use `Bash(rm -f SCRATCH/…)` to clear stale files — `rm -f` is not allowlisted (and shouldn't be broadly allowlisted) so it triggers a manual approval prompt; Read-then-Write stays silent. Don't bother cleaning up the temp file after posting either: the next run handles staleness via the same fallback.
 
 4. **Provide user summary:**
    - Total critical issues found

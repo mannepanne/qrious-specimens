@@ -17,7 +17,7 @@ This is the rule for deciding the granularity of every new allow-list entry. The
 
 ## Context
 
-Allow-list entries are accumulating: review tooling (PR #19, #21), test/typecheck/lint commands (PR #29), JSON validation tooling (PR #30). Each addition raises the same question — should the rule pin to the specific shape Claude reaches for, or allow the binary broadly so flag variants and pipe-shapes also silence?
+Allow-list entries are accumulating across categories: review tooling, test/typecheck/lint commands, JSON validation tooling. Each addition raises the same question — should the rule pin to the specific shape Claude reaches for, or allow the binary broadly so flag variants and pipe-shapes also silence?
 
 The right answer differs per binary, and the reasoning should be stable across additions. Without an explicit principle, every new tool becomes a fresh debate ("is `Bash(jq:*)` safe?", "what about `Bash(node:*)`?"), and without a documented rule a future maintainer might broaden a rule that *looks* safe but admits arbitrary code execution. The risk isn't theoretical — `Bash(python3:*)` looks fine until you remember `python3 -c "import os; os.system(...)"`.
 
@@ -46,7 +46,8 @@ The right answer differs per binary, and the reasoning should be stable across a
 | `git` | Mixed — most subcommands safe, some have hooks/aliases that can run code | Subcommand-pinned in practice | Already what the file does (`git fetch *`, `git -C * log *`, etc) |
 | `gh` | No (the binary itself is an API client) | Subcommand-pinned for UX clarity, but binary-level would be safe-ish | Pinned in current file — fine to leave |
 | `curl` / `wget` | No code-eval, but **network egress + arbitrary file writes** | Narrow URL/destination patterns only | Different risk axis — not RCE but exfiltration / write-where-you-shouldn't |
-| `cat`, `head`, `tail`, `grep`, `sort`, `wc`, `uniq` | No | Binary level safe; in practice already covered by Claude Code defaults | — |
+| `grep` | No — pure pattern matcher, no `-e`-as-eval, no shell-out | Binary level (`grep:*`) plus `Bash(grep * ; echo *)` sibling for the exit-code workaround | Common enough to need an explicit rule; semicolon-echo sibling silences the `grep ... ; echo "exit=$?"` disambiguation pattern |
+| `cat`, `head`, `tail`, `sort`, `wc`, `uniq` | No | Binary level safe; in practice already covered by Claude Code defaults | — |
 
 **The pipe siblings are orthogonal to this principle.** Pipe-aware rules (`Bash(jq * | tail *)`, `Bash(node_modules/.bin/vitest * | tail *)`) exist because the matcher evaluates the full compound command — they're a *matcher* concern, not a *security* concern. Adding pipe siblings to a binary-level-allowed safe binary is fine; adding them to a subcommand-pinned binary requires extending the pin (`Bash(python3 -m json.tool * | tail *)`, not `Bash(python3 * | tail *)`).
 
