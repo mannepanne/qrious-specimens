@@ -156,6 +156,12 @@ service-account*.json
 .claude/session-state/current.md
 .claude/session-state/pr-*.md
 
+# Per-clone override for the review-mode flag. The committed
+# .claude/project-config.json governs what cloners inherit; this local file
+# lets a maintainer run a different prReviewMode locally (e.g. "enabled" for
+# dogfooding on the template repo) without flipping the committed default.
+.claude/project-config.local.json
+
 # Project-specific
 # Downloaded reference material from original app builder — imported to Supabase/R2 in Phase 1
 downloads-claude-ship/
