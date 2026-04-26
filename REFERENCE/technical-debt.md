@@ -96,12 +96,12 @@ Items here are accepted risks or pragmatic choices made during development, not 
 ---
 
 ### TD-010: `http://localhost:5173` in production CORS allowlist
-- **Location:** `workers/generate-creature/index.ts` — `corsHeaders()`
-- **Issue:** The CORS allowlist includes `http://localhost:5173` in production. This allows a local dev server to make cross-origin requests to the production Worker. Still requires a valid Supabase JWT, so there is no bypass of authentication.
-- **Why accepted:** Convenient for development against the production Worker when local Cloudflare dev isn't practical. The JWT requirement prevents any real exploitation.
-- **Risk:** Informational — no practical security impact given auth requirements.
-- **Future fix:** Move the allowlist to a `ALLOWED_ORIGINS` environment variable so localhost is excluded from the production Wrangler deployment automatically.
-- **Phase introduced:** Phase 4
+- **Location:** `workers/generate-creature/index.ts` — `corsHeaders()`; `workers/contact/index.ts` — inline `allowed` list
+- **Issue:** The CORS allowlist includes `http://localhost:5173` in production on both Workers. This allows a local dev server to make cross-origin requests to the production Workers. The generate-creature Worker still requires a valid Supabase JWT (no auth bypass); the contact Worker is a public form protected by per-IP rate limiting and a server-side honeypot, so CORS hygiene is the only concern there.
+- **Why accepted:** Convenient for development against the production Workers when local Cloudflare dev isn't practical. CORS protects browsers, not direct HTTP clients (curl, scripts), so the localhost entry adds no real attack surface.
+- **Risk:** Informational — no practical security impact.
+- **Future fix:** Move the allowlist to an `ALLOWED_ORIGINS` environment variable so localhost is excluded from the production Wrangler deployment automatically. Apply to both Workers when fixed.
+- **Phase introduced:** Phase 4 (generate-creature); Phase 9 (contact)
 
 ---
 
