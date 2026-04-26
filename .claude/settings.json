@@ -59,8 +59,10 @@
       "Bash(jq * | tail *)",
       "Bash(jq * | head *)",
       "Bash(jq * | grep *)",
-      "Write(/tmp/review-pr-*)",
-      "Write(/tmp/spec-review-*)"
+      "Bash(grep:*)",
+      "Bash(grep * ; echo *)",
+      "Write(/SCRATCH/*)",
+      "Read(/SCRATCH/*)"
     ],
     "deny": []
   },
