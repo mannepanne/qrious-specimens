@@ -3,7 +3,6 @@
 
 - This file provides collaboration principles and ways of working guidance to Claude Code (claude.ai/code) when working with in this repository.
 - The purpose is to help the Claude to better collaborate on this project.
-- Last updated: 21st February 2026
 
 **Credits and inspiration:**
 - https://github.com/obra
