@@ -25,9 +25,14 @@ Environment variables, API key configuration, third-party service setup (Supabas
 Common issues and solutions for local development, deployment, and API integrations.
 
 ### [pr-review-workflow.md](./pr-review-workflow.md)
-**When to read:** Creating PRs or running code reviews.
+**When to read:** Starting a new feature, creating PRs, or running any kind of review.
 
-How to use `/review-pr` and `/review-pr-team` skills for automated code review.
+How to use `/review-spec` (pre-implementation), `/review-pr`, and `/review-pr-team` skills.
+
+### [safety-harness.md](./safety-harness.md)
+**When to read:** A safety-harness block or ask dialog fired and you want to understand what's going on, you want to add a pattern, or you want to bypass the hook for a legitimate use.
+
+What's caught at block / ask tier, what's deliberately not caught, how the inline `SAFETY_HARNESS_OFF=1` bypass works (and its limits), how the hook composes with the allowlist, how to extend patterns + tests.
 
 ### [creature-engine.md](./creature-engine.md)
 **When to read:** Working on the scan flow, DNA generation, rendering, cabinet, or rarity system.
@@ -53,3 +58,8 @@ Worker request flow (8 steps), Gemini + Claude Haiku integration, Cloudflare Ima
 **When to read:** Making architectural decisions, choosing between alternatives, or looking up why something was built the way it was.
 
 Architecture Decision Records (ADRs) — permanent log of significant technical choices, alternatives considered, and trade-offs accepted.
+
+### [TEMPLATE-UPDATES/](./TEMPLATE-UPDATES/)
+**When to read:** Rolling out a template improvement to a derivative project, or formalising a new improvement so future derivative projects can adopt it.
+
+Migration packets that describe template changes in conceptual terms plus a file manifest, so a Claude in another project can compare against local files and apply the improvement without clobbering customisations.
