@@ -81,7 +81,8 @@ export function ContactPage() {
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Honeypot — hidden from real users, filled by bots */}
+        {/* Honeypot — hidden from real users; bots that fill all visible inputs trip it.
+            Value is forwarded to /api/contact, which silently 200s without inserting. */}
         <div aria-hidden="true" className="hidden">
           <label htmlFor="contact-name-verify">Name verification</label>
           <input

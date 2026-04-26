@@ -79,7 +79,10 @@ export async function handleContact(request: Request, env: Env): Promise<Respons
     })
   }
 
-  // Per-IP rate limit: 5 submissions per minute — skipped in local dev (binding not configured)
+  // Per-IP rate limit: 5 submissions per minute — skipped in local dev (binding not configured).
+  // Order matters: rate limit runs BEFORE the honeypot check so bots that trip the trap still
+  // burn their per-IP quota. Reversing it would give attackers an unlimited probing oracle to
+  // map changes to the validation pipeline.
   if (env.CONTACT_RATE_LIMITER) {
     const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown'
     const { success } = await env.CONTACT_RATE_LIMITER.limit({ key: ip })
