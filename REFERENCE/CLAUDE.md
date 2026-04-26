@@ -34,6 +34,11 @@ How to use `/review-spec` (pre-implementation), `/review-pr`, and `/review-pr-te
 
 What's caught at block / ask tier, what's deliberately not caught, how the inline `SAFETY_HARNESS_OFF=1` bypass works (and its limits), how the hook composes with the allowlist, how to extend patterns + tests.
 
+### [scratch-write-hook.md](./scratch-write-hook.md)
+**When to read:** Reviewing or extending the `Write` auto-approval for `<project>/SCRATCH/`, debugging a SCRATCH/ Write prompt that fired unexpectedly, or removing the hook if upstream Claude Code fixes the underlying matcher.
+
+What the hook approves and why, where it sits in the call path alongside `safety-harness.sh`, what's deliberately out of scope (symlinks, exotic filenames), how to extend, and the rollback path if the upstream defect is fixed. Decision rationale at [`decisions/2026-04-26-scratch-write-pretooluse-hook.md`](./decisions/2026-04-26-scratch-write-pretooluse-hook.md).
+
 ### [creature-engine.md](./creature-engine.md)
 **When to read:** Working on the scan flow, DNA generation, rendering, cabinet, or rarity system.
 

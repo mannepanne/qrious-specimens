@@ -103,6 +103,17 @@ Order of evaluation: allowlist → PreToolUse hook → command executes. Allowli
 
 This means: don't add `Bash(rm -rf:*)` to the allowlist as a "convenience" — the allowlist would silence the prompt, but the harness would still block. Keep dangerous-command patterns un-allowlisted so both layers fire when needed.
 
+### Two PreToolUse hooks coexist
+
+The project registers two `PreToolUse` hooks in `.claude/settings.json`. They are scoped to different tools and never both fire on the same call:
+
+| Hook | Matcher | Purpose |
+|---|---|---|
+| `safety-harness.sh` | `Bash` (with an `if`-filter alternation) | Block / ask on destructive Bash commands |
+| `approve-scratch-write.sh` | `Write` | Auto-approve `Write` into `<project>/SCRATCH/` (works around an upstream allow-list matcher quirk) |
+
+Keeping the matchers tool-disjoint is the discipline that makes the composition safe — neither hook needs to know the other exists. If a future hook covers a third tool (`Edit`, `MultiEdit`), follow the same pattern: one hook per tool, sharing the parse helper at `.claude/hooks/lib/parse-tool-input.sh`. See [`REFERENCE/scratch-write-hook.md`](./scratch-write-hook.md) for the SCRATCH/ Write hook's contract.
+
 ---
 
 ## How to extend
