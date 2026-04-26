@@ -168,4 +168,11 @@ The hook depends on `python3` for JSON parsing. If `python3` is missing from `PA
 
 ## Inheriting this fix in a derivative project
 
-The hook + registration + tests + reference doc + ADR all need to land together. The TEMPLATE-UPDATES migration packet at [`REFERENCE/TEMPLATE-UPDATES/2026-04-threat-model-and-safety-harness/`](./TEMPLATE-UPDATES/2026-04-threat-model-and-safety-harness/) carries the safety-harness shape; the SCRATCH-write hook is a separate follow-up packet. Until that packet lands, derivative projects that copy `.claude/settings.json` alone will see the SCRATCH/ Write prompt return — copy the hook script, the registration, and the parse helper at `.claude/hooks/lib/parse-tool-input.sh` together with the settings, or follow the migration packet end-to-end.
+The hook + registration + tests + reference doc + ADR all need to land together. Copying `.claude/settings.json` alone will see the SCRATCH/ Write prompt return — instead, copy the full manifest:
+
+- `.claude/hooks/approve-scratch-write.sh` (the hook script)
+- `.claude/hooks/lib/parse-tool-input.sh` (the shared parse helper)
+- `.claude/hooks/tests/approve-scratch-write/` (the fixture-based test suite)
+- The `PreToolUse` `Write` matcher block in `.claude/settings.json`
+- The `_comment_scratch_writes` field in `.claude/settings.json` (so the asymmetry with the `Read(/SCRATCH/*)` allow-list entry is self-documenting)
+- This reference doc and the ADR at [`decisions/2026-04-26-scratch-write-pretooluse-hook.md`](./decisions/2026-04-26-scratch-write-pretooluse-hook.md)

@@ -54,7 +54,7 @@ The review-skill workflow writes intermediate comment-body files into a top-leve
 
 **Hook compensates for an unfixed upstream defect.** The root cause in Claude Code's `Write` allow-list matcher is unresolved. This ADR explicitly documents that we are working around the symptom rather than fixing the cause. The investigation document at [`SPECIFICATIONS/ARCHIVE/INVESTIGATION-claude-code-write-path-normalisation.md`](../../SPECIFICATIONS/ARCHIVE/INVESTIGATION-claude-code-write-path-normalisation.md) preserves the diagnosis log so a future upstream-fix verification can replay the test cases.
 
-**Derivative projects need to apply the hook to inherit the fix.** A derivative project that copies only `.claude/settings.json` (without the hook script and its registration) gets dead allow-list entries — actually, gets *no* allow-list entries for `Write(/SCRATCH/...)` after this ADR's cleanup, since they were removed — and the prompt fires. The TEMPLATE-UPDATES migration packet system carries the hook + registration + reference doc as a coherent unit; ad-hoc copying does not. Documented at the top of [`REFERENCE/scratch-write-hook.md`](../scratch-write-hook.md).
+**Derivative projects need to apply the hook to inherit the fix.** A derivative project that copies only `.claude/settings.json` (without the hook script and its registration) gets dead allow-list entries — actually, gets *no* allow-list entries for `Write(/SCRATCH/...)` after this ADR's cleanup, since they were removed — and the prompt fires. Projects cloning from this template need to copy the hook + registration + reference doc as a coherent unit. Ad-hoc copying of `.claude/settings.json` alone leaves the prompt firing. Documented at the top of [`REFERENCE/scratch-write-hook.md`](../scratch-write-hook.md).
 
 **Tests are fixture-based, not session-based.** The 7-test suite at `.claude/hooks/tests/approve-scratch-write/` validates the hook's JSON output for synthetic inputs. It does not — and cannot — validate "the hook is registered correctly in `.claude/settings.json` and Claude Code actually fires it before the matcher gates `Write`." That end-to-end behaviour is verified by a fresh-session smoke test (described in the reference doc) and re-verified whenever the hook or its registration changes.
 
@@ -67,7 +67,7 @@ The review-skill workflow writes intermediate comment-body files into a top-leve
 
 **Prevents/complicates:**
 - Hook-shaped logic must be maintained inside `.claude/hooks/`, with an associated test suite and reference doc. The maintenance burden is real but small (one script, ~90 lines).
-- Derivative projects that don't apply the hook see the prompt return. The TEMPLATE-UPDATES packet must carry the hook script, the test suite, the registration, and the cross-reference docs as one unit. The current packet for the threat-model rollup (`REFERENCE/TEMPLATE-UPDATES/2026-04-threat-model-and-safety-harness/`) describes the previous (broken) shape; a follow-up packet — or an update to that packet — must propagate the hook-based shape.
+- Derivative projects that don't apply the hook see the prompt return. The full manifest — hook script, parse helper, test suite, settings registration, and cross-reference docs — needs to land as one unit. Copying `.claude/settings.json` alone regresses to the prompt.
 - Concurrent extension to `Edit`/`MultiEdit` would require either expanding the hook's matcher or registering a sibling hook; not a problem today, but documented so a future change knows to look here.
 
 ---
