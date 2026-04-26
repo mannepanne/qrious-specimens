@@ -31,6 +31,10 @@ Account settings, admin dashboard, GDPR data-export and account-deletion tools.
 ### [design-polish/00-design-polish.md](./design-polish/00-design-polish.md)
 Pre-phase polish pass aligning the implementation with the original design (completed before phases 7–9).
 
+## Link convention for archived specs
+
+Archived specs sit one directory deeper than their original `SPECIFICATIONS/` location. Outbound relative links must use `../../` (not `../`) to reach project-root-relative paths like `REFERENCE/`, `CLAUDE.md`, etc. When moving a spec into this directory, walk every `](../...)` link and add one extra `../` segment. A markdown link checker can catch missed updates.
+
 ---
 
 **Note:** Archived specs are historical record. For current implementation details, see `REFERENCE/` documentation.
