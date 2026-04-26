@@ -1,5 +1,5 @@
 // ABOUT: Contact form Worker handler — inserts contact_messages and sends Resend notification
-// ABOUT: No auth required (public form); honeypot and VictorianCaptcha validation is client-side
+// ABOUT: No auth required; per-IP rate limit + server-side honeypot drop; VictorianCaptcha is client-side
 
 import type { Env } from '../generate-creature/index'
 
@@ -7,6 +7,9 @@ interface ContactBody {
   sender_email?: string
   sender_name?: string
   message?: string
+  // Honeypot field — real users leave it empty; bots fill all visible inputs.
+  // A non-empty value is treated as spam and rejected silently with 200.
+  honeypot?: string
 }
 
 /** Send an admin notification email via Resend. Non-fatal on failure. */
@@ -88,7 +91,16 @@ export async function handleContact(request: Request, env: Env): Promise<Respons
     }
   }
 
-  const { sender_email, sender_name, message } = body
+  const { sender_email, sender_name, message, honeypot } = body
+
+  // Silent honeypot rejection: return 200 so the bot thinks it succeeded and doesn't retry,
+  // but skip the DB insert and email notification.
+  if (honeypot) {
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
+  }
 
   if (!sender_email || !message) {
     return new Response(JSON.stringify({ error: 'sender_email and message are required' }), {

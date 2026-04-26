@@ -292,6 +292,7 @@ export interface ContactMessageParams {
   sender_email: string
   sender_name?: string
   message: string
+  honeypot?: string
 }
 
 /** Submit a contact message via the Worker API, which handles DB insert and Resend notification. */
