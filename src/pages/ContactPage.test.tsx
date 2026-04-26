@@ -150,7 +150,7 @@ describe('ContactPage — honeypot', () => {
     const mutation = setupMutation()
     const { container } = render(<ContactPage />)
 
-    const honeypot = container.querySelector<HTMLInputElement>('#contact-name-verify')
+    const honeypot = container.querySelector<HTMLInputElement>('#contact-website')
     expect(honeypot).not.toBeNull()
     fireEvent.change(honeypot!, { target: { value: 'i-am-a-bot' } })
 

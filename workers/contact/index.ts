@@ -51,6 +51,10 @@ async function sendResendNotification(
 
 export async function handleContact(request: Request, env: Env): Promise<Response> {
   const origin = request.headers.get('Origin')
+  // Localhost is intentionally allowed in production: CORS protects browsers, not
+  // direct HTTP clients (curl, scripts), so it adds no real attack surface — and
+  // keeping it here lets `wrangler dev` against the deployed worker work without
+  // an environment-specific build flag.
   const allowed = ['https://qrious.hultberg.org', 'http://localhost:5173']
   const allowedOrigin = origin && allowed.includes(origin) ? origin : allowed[0]
   const cors = {

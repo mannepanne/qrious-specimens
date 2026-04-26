@@ -84,9 +84,13 @@ export function ContactPage() {
         {/* Honeypot — hidden from real users; bots that fill all visible inputs trip it.
             Value is forwarded to /api/contact, which silently 200s without inserting. */}
         <div aria-hidden="true" className="hidden">
-          <label htmlFor="contact-name-verify">Name verification</label>
+          {/* Field name "website" is deliberate: password managers and browser autofill
+              ignore it (no autofill heuristic targets a website field on a contact form),
+              while naive bots that fill every input still trip it. */}
+          <label htmlFor="contact-website">Website</label>
           <input
-            id="contact-name-verify"
+            id="contact-website"
+            name="website"
             type="text"
             value={honeypot}
             onChange={(e) => setHoneypot(e.target.value)}
