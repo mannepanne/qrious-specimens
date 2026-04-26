@@ -14,26 +14,12 @@
 
 set -u
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+. "$SCRIPT_DIR/lib/parse-tool-input.sh"
+
 INPUT=$(cat)
-
-# Parse tool_name and command in a single python invocation (cuts cold-start cost).
-read -r TOOL_NAME COMMAND <<< "$(printf '%s' "$INPUT" | python3 -c "
-import sys, json
-try:
-    data = json.loads(sys.stdin.read())
-    name = data.get('tool_name', '')
-    cmd = data.get('tool_input', {}).get('command', '')
-    # Encode command as base64 to avoid newline/whitespace splitting issues.
-    import base64
-    cmd_b64 = base64.b64encode(cmd.encode('utf-8')).decode('ascii')
-    print(name, cmd_b64)
-except Exception:
-    print('', '')
-" 2>/dev/null)"
-
-if [ -n "${COMMAND:-}" ]; then
-    COMMAND=$(printf '%s' "$COMMAND" | base64 --decode 2>/dev/null)
-fi
+parse_tool_input "$INPUT" "command"
+COMMAND="$TOOL_INPUT_VALUE"
 
 # Defensive: only operate on Bash. Hook is registered with matcher "Bash" but if
 # the matcher behaviour ever changes, fail safe by allowing other tools through.
