@@ -24,19 +24,19 @@ export function ContactPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Honeypot: bots fill hidden fields; real users leave them empty
-    if (honeypot) return
-
     if (!verified) {
       toast.error('Please complete the naturalist verification before submitting.')
       return
     }
 
     try {
+      // The honeypot value is forwarded to the worker, which silently drops the
+      // message if non-empty. Bots that fill every input get a fake 200 and move on.
       await submitContact.mutateAsync({
         sender_email: email.trim(),
         sender_name: name.trim() || undefined,
         message: message.trim(),
+        honeypot: honeypot || undefined,
       })
       setSubmitted(true)
     } catch {
@@ -81,7 +81,8 @@ export function ContactPage() {
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Honeypot — hidden from real users, filled by bots */}
+        {/* Honeypot — hidden from real users; bots that fill all visible inputs trip it.
+            Value is forwarded to /api/contact, which silently 200s without inserting. */}
         <div aria-hidden="true" className="hidden">
           <label htmlFor="contact-name-verify">Name verification</label>
           <input
