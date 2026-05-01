@@ -63,8 +63,3 @@ Worker request flow (8 steps), Gemini + Claude Haiku integration, Cloudflare Ima
 **When to read:** Making architectural decisions, choosing between alternatives, or looking up why something was built the way it was.
 
 Architecture Decision Records (ADRs) — permanent log of significant technical choices, alternatives considered, and trade-offs accepted.
-
-### [TEMPLATE-UPDATES/](./TEMPLATE-UPDATES/)
-**When to read:** Rolling out a template improvement to a derivative project, or formalising a new improvement so future derivative projects can adopt it.
-
-Migration packets that describe template changes in conceptual terms plus a file manifest, so a Claude in another project can compare against local files and apply the improvement without clobbering customisations.
