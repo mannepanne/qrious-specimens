@@ -4,6 +4,11 @@ Auto-loaded when working with files in this directory. Navigation index for coll
 
 ## Files in this directory
 
+### [debugging-mindset.md](./debugging-mindset.md)
+**When to read:** Debugging a problem, investigating a failure, or deciding how to approach a tricky fix.
+
+Scientific debugging approach: read errors first, root causes over symptoms, one change at a time.
+
 ### [documentation-standards.md](./documentation-standards.md)
 **When to read:** Creating or updating project documentation, README files, or reference guides.
 
