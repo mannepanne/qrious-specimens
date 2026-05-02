@@ -76,6 +76,17 @@ Ask: What does the user actually need? What problem are they experiencing? Could
 - [ ] Does this introduce new user expectations that are expensive to meet?
 - [ ] Will this age well, or will we regret it in 6 months?
 
+### QRious-Specific Challenges
+
+QRious Specimens is a Victorian cabinet of curiosities — a small, single-developer project with a distinctive tone and a deliberately narrow product shape. Probe specs against that identity:
+
+- [ ] **Tone integrity** — does this preserve the Victorian naturalist voice and vocabulary (cabinet, gazette, specimen, correspondence address), or does it sneak in modern-SaaS UX patterns (notifications, social hooks, gamification language)?
+- [ ] **Mary Anning earning its place** — if the spec invokes Mary Anning, the Victorian framing, or naturalist language, is it earned and consistent? Or is it scope creep dressed in costume?
+- [ ] **Single-Worker concentration** — does this push more responsibility into the single AI Worker (Gemini + Claude orchestration)? That's already the project's biggest blast-radius surface; adding more makes outages worse.
+- [ ] **Free-tier cliff** — does this require jumping to a paid plan (Supabase Pro, Cloudflare Workers Paid, larger Anthropic / Gemini quotas) where free-tier headroom would do? If it does, is the cost step explicitly acknowledged and accepted?
+- [ ] **Product shape drift** — does this fit the cabinet-of-curiosities discovery loop (scan → hatch → catalogue), or does it pull the product toward something else (social network, marketplace, multi-player game, productivity tool)? Drift is fine if intentional, dangerous if accidental.
+- [ ] **DNA / determinism contract** — does this preserve the rule that the same QR always produces the same creature? Any spec that breaks this changes what the product *is*.
+
 ### Known Alternatives
 
 For each core design decision in the spec:

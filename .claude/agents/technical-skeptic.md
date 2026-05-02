@@ -70,12 +70,35 @@ For any existing code areas this spec touches, read the relevant source files. D
 
 ### Integration and Dependency Risks
 
-- [ ] Does this depend on any third-party API features? Are those features reliable, available, and within plan limits?
-- [ ] Does this depend on hosting platform capabilities (CPU limits, memory, env vars, queue workers)?
-- [ ] Does this depend on database features that require a paid plan or have usage limits?
-- [ ] Does this depend on any external services whose contracts aren't fully defined?
+QRious Specimens runs on Supabase (Postgres + RLS + magic-link auth), Cloudflare Workers + Cloudflare Images, and the Gemini and Anthropic Claude APIs. Probe each that the spec touches:
 
-*Note: Replace these with your project's specific integrations (e.g. Supabase, Cloudflare Workers, Resend, specific APIs) when using this template.*
+**Supabase**
+- [ ] Does this add or change tables? Is an RLS policy specified for every new table / column? (RLS is the only access control — missing policies = data leak)
+- [ ] Does this join `auth.users` or rely on `profiles.is_admin`? Is the admin gate explicit?
+- [ ] Are free-tier limits in play (500 MB DB, 5 GB egress, 50k MAU)? Will this change push us over?
+- [ ] Does this preserve magic-link-only auth — no password fields, no OAuth, no email/password sign-up?
+
+**Cloudflare Workers (the AI Worker at `worker/`)**
+- [ ] Will this push CPU time over the free-tier 50ms wall (or 30s on paid)? AI calls are I/O so usually fine, but local processing isn't.
+- [ ] New env vars or secrets? Specified how they're set (`wrangler secret put`) and documented in `REFERENCE/environment-setup.md`?
+- [ ] Bundle-size implications (new heavy dependency)?
+- [ ] Does this add new Worker routes that need rate-limiting or auth?
+
+**Cloudflare Images**
+- [ ] New image variants needed beyond `qriousoriginal` / `qrious512` / `qrious256`? Adding a variant retroactively requires re-processing every existing image.
+- [ ] Per-image quota / cost implications (currently 100k images, 1M deliveries / month free)?
+
+**Gemini API (illustrations)**
+- [ ] New prompt patterns? Does this risk content-policy refusals (Victorian engravings of fantastical creatures usually pass; humanoid / anatomical edge cases sometimes don't)?
+- [ ] Image-generation latency is 5–15s — does the UI surface this honestly (loading state, fallback)?
+- [ ] Rate-limit / quota headroom?
+
+**Anthropic Claude API (field notes)**
+- [ ] Model + RPM limits respected? Currently Claude Haiku for cost reasons — does this spec assume a stronger model?
+- [ ] Does the field-notes prompt still produce Victorian-naturalist voice for whatever new content this introduces?
+
+**The DNA invariant**
+- [ ] Does this touch the QR → djb2 → FNV-1a → mulberry32 → CreatureDNA pipeline in any way? Changing it invalidates every existing specimen's deterministic regeneration. If the spec needs to change it, the migration story for existing creatures must be explicit.
 
 ### Security Surface Area
 
