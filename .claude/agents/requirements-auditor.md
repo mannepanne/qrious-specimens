@@ -82,6 +82,22 @@ Read the spec file provided. Understand:
 - [ ] Are there loading/processing states the UI needs to show?
 - [ ] Are there notifications or feedback mechanisms defined?
 
+### QRious-Specific Completeness
+
+QRious Specimens has a few recurring failure modes that specs routinely under-specify. Probe each that the feature touches:
+
+- [ ] **AI-generation states** — if this triggers Gemini or Claude calls, are these states all defined?
+  - Loading (5–15s for illustrations, 1–3s for field notes)
+  - Partial success (illustration succeeded, field notes failed; or vice versa) — what does the user see and can they retry?
+  - Content-policy refusal from Gemini — fallback behaviour?
+  - Timeout / Worker error — fallback behaviour?
+- [ ] **Re-scan / regeneration behaviour** — if the user encounters the same QR (or species) again, is the expected behaviour specified? Same creature record? Re-fetch from cache? New record? What if the prior generation was incomplete?
+- [ ] **RLS-visible vs cabinet-only fields** — if this adds or surfaces creature/specimen/profile data, is it explicit which fields are visible in the public Gazette vs. the owner's private cabinet? (Easy to forget that "show in cabinet" defaults won't carry over to gazette queries.)
+- [ ] **Magic-link-only auth constraint** — does the spec respect that there are no passwords, no OAuth, no traditional sign-up? If a flow needs "the user has an account but isn't signed in", is the magic-link re-auth path described?
+- [ ] **GDPR data path** — if this stores new user data, are the export and delete stories covered? (Account deletion is an admin-facing tool — does it need to know about the new data?)
+- [ ] **Admin gating** — if the feature has any admin-only surface, is the `profiles.is_admin` check specified at every layer (UI, RPC, RLS)?
+- [ ] **First-discoverer credit** — if this touches species discovery, is it specified what happens to the original discoverer's credit when subsequent users encounter the same species?
+
 ### Assumptions
 
 - [ ] What assumptions does the spec make that aren't stated explicitly?
