@@ -35,9 +35,9 @@ The finishing phase: Mary Anning references woven deliberately throughout the UI
 - [x] Loading states: skeletons or spinners on all async content
 - [x] Empty states: cabinet empty state (invite to scan first QR), catalogue empty state (no matching filters)
 - [x] Image lazy loading in catalogue and cabinet grids
-- [ ] Post-merge verification pass (site is already live — see below)
-  - [ ] Confirm Wrangler secrets audit (any new secrets introduced in Phase 9 set in production)
-  - [ ] Confirm Supabase auth redirect URL still valid for `qrious.hultberg.org`
+- [x] Post-merge verification pass (site is already live — see below)
+  - [x] Confirm Wrangler secrets audit (any new secrets introduced in Phase 9 set in production)
+  - [x] Confirm Supabase auth redirect URL still valid for `qrious.hultberg.org`
   - [x] Confirm GitHub Actions deploy run succeeds after merge, then smoke test
 
 ### Out of scope
@@ -57,7 +57,7 @@ The finishing phase: Mary Anning references woven deliberately throughout the UI
 - [x] All error states display appropriate messages without crashing
 - [x] Cabinet empty state appears for a new user with no specimens
 - [x] Images in cabinet and catalogue lazy-load
-- [ ] `https://qrious.hultberg.org` remains healthy after merge: auth works, scanning works end-to-end
+- [x] `https://qrious.hultberg.org` remains healthy after merge: auth works, scanning works end-to-end
 - [x] Mary Anning references present in at least 4 distinct places across the app
 - [x] `bun run test` passes; `bun run typecheck` passes
 
