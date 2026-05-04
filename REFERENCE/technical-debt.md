@@ -148,13 +148,9 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
-### TD-018: Account deletion does not anonymise `species_discoveries.first_discoverer_id`
-
-- **Location:** `supabase/migrations/20260419000000_phase8_settings_admin.sql` — `admin_delete_user_data()`; `species_discoveries.first_discoverer_id`
-- **Issue:** When a user deletes their account, `admin_delete_user_data` removes their `creatures`, `explorer_badges`, `activity_feed`, `explorer_profiles`, and `profiles` rows, but does not touch `species_discoveries`. The `first_discoverer_id` column on any species they first discovered continues to point at a now-deleted user — a dangling reference. The privacy policy promises that "where you were the first discoverer of a species, your name is removed from the public record" — the policy and the code are currently out of sync.
-- **Why accepted:** The Privacy page (PR #77) sets the intended behaviour correctly. The schema/RPC change is a follow-up that needs its own migration, RPC update, and test pass. Shared species data (taxonomy, illustrations, field notes) is correctly retained — only the `first_discoverer_id` link needs to be cleared.
-- **Risk:** Medium — gap between stated policy and actual behaviour. Practically there is no public surface that resolves a dangling `first_discoverer_id` to a profile (the profile row is gone, so any join returns null and the UI falls back gracefully), so the privacy harm is limited. But it must be fixed before launch to honour the policy.
-- **Future fix:** Update `admin_delete_user_data()` to also run `UPDATE species_discoveries SET first_discoverer_id = NULL WHERE first_discoverer_id = p_user_id`. Verify any catalogue / Gazette UI that reads `first_discoverer_id` handles `NULL` cleanly (display "an explorer who is no longer with us" or similar). Add an integration test covering the anonymisation.
+### TD-018: Account deletion does not anonymise `species_discoveries.first_discoverer_id` — RESOLVED 2026-05-04
+- **Status:** Resolved by `supabase/migrations/20260504000000_admin_delete_anonymises_first_discoverer.sql`.
+- **Resolution:** `admin_delete_user_data()` now nulls `first_discoverer_id` on both `species_discoveries` and `species_images` for the deleted user before removing the profile row. UI null-handling was already correct (`useFirstDiscoverer` returns null via `maybeSingle()`; `SpeciesDetail` guards on `firstDiscovererName` before rendering the "FIRST BY" credit), so no UI change was needed.
 - **Phase introduced:** Phase 9 (identified during Privacy page review)
 
 ---
