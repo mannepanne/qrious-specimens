@@ -117,7 +117,7 @@ The site is already live at `https://qrious.hultberg.org` (DNS, Wrangler secrets
 >
 > **Cloudflare Images** — migrated from R2 on 2026-04-20. See [ADR](../REFERENCE/decisions/2026-04-20-cloudflare-images-over-r2.md) for the migration rationale. R2 bucket retired post-backfill.
 >
-> **Cloudflare Email Sending** — new transactional email service (https://blog.cloudflare.com/email-service/). Could replace Resend for the contact form and any future notification emails. Evaluate against Resend (already available via hultberg.org domain) for feature parity and pricing. Pending.
+> **Cloudflare Email Sending** — evaluated and declined. Resend is already wired up via the `hultberg.org` domain and working in production for the contact form, so a migration adds work without adding value. Cloudflare Email Sending stays on the radar if Resend pricing changes or volume outgrows the free tier.
 
 **Smoke test:**
 - [ ] Sign in via magic link
