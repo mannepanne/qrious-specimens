@@ -62,6 +62,19 @@ export function useScanOverlay(): ScanOverlayContextValue {
 // Protected routes: unauthenticated access is redirected to /enter by AppShell
 const PROTECTED_PREFIXES = ['/cabinet', '/specimen/', '/settings', '/admin']
 
+// ── Scroll restoration ─────────────────────────────────────────────────────
+// React Router preserves window scrollY across route changes by default, which
+// makes a long page (e.g. About) open the next route mid-scroll. Reset on every
+// pathname change. Trade-off: back-navigation does not restore prior position.
+
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+  return null
+}
+
 // ── Route definitions ──────────────────────────────────────────────────────
 // Exported so tests can create a MemoryRouter with the same routes.
 
@@ -349,6 +362,7 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <ScrollToTop />
         <AppRoutes />
       </BrowserRouter>
       <Toaster />
