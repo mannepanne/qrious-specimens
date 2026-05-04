@@ -65,6 +65,7 @@ export function usePostExcavationEffects(
         const speciesName = `${creature.dna.genus} ${creature.dna.species}`.trim()
         const eventType = isFirstDiscoverer ? 'first_discovery' : 'discovery'
         postActivityRef.current.mutate({
+          user_id: userId,
           event_type: eventType,
           species_name: speciesName,
           qr_hash: creature.qr_hash,
@@ -85,6 +86,7 @@ export function usePostExcavationEffects(
             // Write badge activity to the Gazette feed for public profiles
             if (explorerProfileRef.current?.is_public) {
               postActivityRef.current.mutate({
+                user_id: userId,
                 event_type: 'badge_earned',
                 badge_slug: badge.r_badge_slug,
               })
