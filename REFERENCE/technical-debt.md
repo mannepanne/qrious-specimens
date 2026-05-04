@@ -249,6 +249,17 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
+### TD-029: Cloudflare Wrangler GitHub Action pinned to Node 20 runtime
+
+- **Location:** `.github/workflows/deploy.yml` — `cloudflare/wrangler-action@v3.14.1`
+- **Issue:** GitHub Actions surfaces a deprecation warning on each deploy: the `cloudflare/wrangler-action@v3.14.1` action runs on Node.js 20. GitHub will force Node 24 by default from 2 June 2026, and Node 20 is removed from the runner on 16 September 2026. After that date, the action will either fail to start or be silently upgraded.
+- **Why accepted:** No deploy impact today; Cloudflare publishes new wrangler-action releases regularly, so a Node-24-compatible version is likely to appear before the deadline. Bumping speculatively risks introducing an unrelated breakage.
+- **Risk:** Low until ~August 2026, then High — the deploy workflow is the only path to production.
+- **Future fix:** Watch [`cloudflare/wrangler-action` releases](https://github.com/cloudflare/wrangler-action/releases) for a Node-24 compatible version; bump `@v3.14.1` to whatever ships with Node 24 support and verify a clean deploy. As a stop-gap, `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` in the workflow env opts in to Node 24 immediately if needed.
+- **Phase introduced:** Phase 9 (warning surfaced post-merge of PR #85)
+
+---
+
 ### TD-016: Contact form captcha is client-side only
 
 - **Location:** `src/components/VictorianCaptcha/VictorianCaptcha.tsx`
