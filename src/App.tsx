@@ -62,6 +62,19 @@ export function useScanOverlay(): ScanOverlayContextValue {
 // Protected routes: unauthenticated access is redirected to /enter by AppShell
 const PROTECTED_PREFIXES = ['/cabinet', '/specimen/', '/settings', '/admin']
 
+// ── Scroll restoration ─────────────────────────────────────────────────────
+// React Router preserves window scrollY across route changes by default, which
+// makes a long page (e.g. About) open the next route mid-scroll. Reset on every
+// pathname change. Trade-off: back-navigation does not restore prior position.
+
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+  return null
+}
+
 // ── Route definitions ──────────────────────────────────────────────────────
 // Exported so tests can create a MemoryRouter with the same routes.
 
@@ -321,25 +334,28 @@ function AppShell() {
 
 export function AppRoutes() {
   return (
-    <Routes>
-      <Route element={<AppShell />}>
-        <Route path="/"                    element={<Navigate to="/catalogue" replace />} />
-        <Route path="/catalogue"           element={<CataloguePage />} />
-        <Route path="/catalogue/:order"    element={<CataloguePage />} />
-        <Route path="/species/:qrHash"     element={<SpeciesPage />} />
-        <Route path="/gazette"             element={<GazettePage />} />
-        <Route path="/cabinet"             element={<CabinetPage />} />
-        <Route path="/specimen/:id"        element={<SpecimenPage />} />
-        <Route path="/enter"               element={<AuthPage />} />
-        <Route path="/about"               element={<AboutPage />} />
-        <Route path="/privacy"             element={<PrivacyPage />} />
-        <Route path="/contact"             element={<ContactPage />} />
-        <Route path="/settings"            element={<SettingsPage />} />
-        <Route path="/admin"               element={<AdminPage />} />
-      </Route>
-      {/* Temporary design prototype — standalone, outside AppShell. Remove once layout is approved. */}
-      <Route path="/framework"             element={<FrameworkPage />} />
-    </Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
+        <Route element={<AppShell />}>
+          <Route path="/"                    element={<Navigate to="/catalogue" replace />} />
+          <Route path="/catalogue"           element={<CataloguePage />} />
+          <Route path="/catalogue/:order"    element={<CataloguePage />} />
+          <Route path="/species/:qrHash"     element={<SpeciesPage />} />
+          <Route path="/gazette"             element={<GazettePage />} />
+          <Route path="/cabinet"             element={<CabinetPage />} />
+          <Route path="/specimen/:id"        element={<SpecimenPage />} />
+          <Route path="/enter"               element={<AuthPage />} />
+          <Route path="/about"               element={<AboutPage />} />
+          <Route path="/privacy"             element={<PrivacyPage />} />
+          <Route path="/contact"             element={<ContactPage />} />
+          <Route path="/settings"            element={<SettingsPage />} />
+          <Route path="/admin"               element={<AdminPage />} />
+        </Route>
+        {/* Temporary design prototype — standalone, outside AppShell. Remove once layout is approved. */}
+        <Route path="/framework"             element={<FrameworkPage />} />
+      </Routes>
+    </>
   )
 }
 
