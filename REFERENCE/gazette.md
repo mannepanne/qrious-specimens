@@ -101,6 +101,8 @@ Fetched via `useExplorerRank(userId)` in `useBadges.ts`. Invalidated after badge
 
 The frontend writes to `activity_feed` after a successful excavation, but only if the user has a public Gazette profile (`explorerProfile.data?.is_public`). This is a deliberate architecture choice: the Worker does not know the user's profile visibility, and adding that join to the discovery RPC would add latency to the scan flow.
 
+**Insert contract:** `usePostActivity` callers must pass `user_id` — the column is `NOT NULL` with no default, and the `Insert own activity` RLS policy requires `user_id = auth.uid()`. Omitting it fails both checks and the row is rejected.
+
 **Current event types posted:**
 - `discovery` — any new species found
 - `first_discovery` — when `isFirstDiscoverer` flag is true from the Worker response

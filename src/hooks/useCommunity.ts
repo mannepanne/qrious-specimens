@@ -63,6 +63,7 @@ export interface BadgeResult {
 }
 
 export interface PostActivityParams {
+  user_id: string
   event_type: 'discovery' | 'rare_discovery' | 'first_discovery' | 'badge_earned'
   species_name?: string
   badge_slug?: string

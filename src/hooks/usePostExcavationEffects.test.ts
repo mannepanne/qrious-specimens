@@ -117,6 +117,7 @@ describe('fireEffects', () => {
     act(() => { result.current.fireEffects(creature, false) })
 
     expect(postActivityMutate).toHaveBeenCalledWith({
+      user_id: 'u1',
       event_type: 'discovery',
       species_name: 'Testus rex',
       qr_hash: 'abc123',
@@ -188,6 +189,7 @@ describe('fireEffects', () => {
     act(() => { result.current.fireEffects(creature, false) })
 
     expect(postActivityMutate).toHaveBeenCalledWith({
+      user_id: 'u1',
       event_type: 'badge_earned',
       badge_slug: 'first_steps',
     })

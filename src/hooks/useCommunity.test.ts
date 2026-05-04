@@ -231,9 +231,9 @@ describe('usePostActivity', () => {
     mockFrom.mockReturnValueOnce(chain as never)
     const { result } = renderHook(() => usePostActivity(), { wrapper: createWrapper() })
     await act(async () => {
-      await result.current.mutateAsync({ event_type: 'discovery', species_name: 'Testus rex', qr_hash: 'abc' })
+      await result.current.mutateAsync({ user_id: 'u1', event_type: 'discovery', species_name: 'Testus rex', qr_hash: 'abc' })
     })
-    expect(chain.insert).toHaveBeenCalledWith({ event_type: 'discovery', species_name: 'Testus rex', qr_hash: 'abc' })
+    expect(chain.insert).toHaveBeenCalledWith({ user_id: 'u1', event_type: 'discovery', species_name: 'Testus rex', qr_hash: 'abc' })
   })
 
   it('throws on insert error', async () => {
@@ -241,7 +241,7 @@ describe('usePostActivity', () => {
     mockFrom.mockReturnValueOnce(chain as never)
     const { result } = renderHook(() => usePostActivity(), { wrapper: createWrapper() })
     await act(async () => {
-      await expect(result.current.mutateAsync({ event_type: 'discovery' })).rejects.toThrow('DB fail')
+      await expect(result.current.mutateAsync({ user_id: 'u1', event_type: 'discovery' })).rejects.toThrow('DB fail')
     })
   })
 
@@ -250,7 +250,7 @@ describe('usePostActivity', () => {
     mockFrom.mockReturnValueOnce(chain as never)
     const { result } = renderHook(() => usePostActivity(), { wrapper: createWrapper() })
     await act(async () => {
-      await result.current.mutateAsync({ event_type: 'discovery' }).catch(() => {})
+      await result.current.mutateAsync({ user_id: 'u1', event_type: 'discovery' }).catch(() => {})
     })
     await waitFor(() => {
       expect(mockToastError).toHaveBeenCalledWith(
