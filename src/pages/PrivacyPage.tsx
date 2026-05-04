@@ -14,6 +14,11 @@ export function PrivacyPage() {
         </p>
       </div>
 
+      <p className="font-serif text-sm italic text-muted-foreground leading-relaxed">
+        An account of the data this cabinet gathers, where it goes, and the rights you hold over
+        it. No more, no less.
+      </p>
+
       {/* Sections */}
       <div className="space-y-8 font-serif text-base leading-relaxed">
 
@@ -212,7 +217,7 @@ export function PrivacyPage() {
             </li>
           </ul>
           <p>
-            To exercise any of these rights, contact us using the form below.
+            To exercise any of these rights, write to the curators via the contact form below.
           </p>
         </section>
 
@@ -262,30 +267,31 @@ export function PrivacyPage() {
         <section className="space-y-2">
           <h2 className="font-serif text-lg font-medium">Advertising</h2>
           <p>
-            We may in the future display simple advertisements to help support the running costs of
-            this project. If we do, these will be contextual and non-personalised — they will never
-            be targeted based on your account data, email address, browsing history, or specimen
-            collection. We will not share any personal information with advertisers.
+            Running this cabinet costs a little each month. Should support through simple
+            advertisements ever become necessary, those advertisements will be contextual and
+            non-personalised — never targeted based on your account data, email address, browsing
+            history, or specimen collection. We will not share any personal information with
+            advertisers.
           </p>
         </section>
 
         <section className="space-y-2">
           <h2 className="font-serif text-lg font-medium">Changes to this policy</h2>
           <p>
-            Given the limited scope of data collection, we do not anticipate significant changes to
-            this policy. If changes are made, the updated date above will be revised.
+            Given how little this cabinet collects, we do not anticipate significant changes.
+            Should any be made, the date at the top of the page will be updated to reflect them.
           </p>
         </section>
 
         <section className="space-y-2">
           <h2 className="font-serif text-lg font-medium">Contact</h2>
           <p>
-            If you have any questions about this policy or your data, please{' '}
+            If anything in this policy is unclear, please{' '}
             <Link
               to="/contact"
               className="underline underline-offset-4 hover:text-muted-foreground transition-colors"
             >
-              get in touch via our contact form
+              write to the curators via the contact form
             </Link>
             .
           </p>
