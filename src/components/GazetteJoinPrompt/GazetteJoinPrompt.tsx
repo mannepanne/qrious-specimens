@@ -1,8 +1,8 @@
 // ABOUT: Profile creation form for users who haven't joined the Gazette yet
-// ABOUT: Name input with Victorian sparkle generator, public/private toggle, submit
+// ABOUT: Auto-generated explorer name (regeneratable) + public/private toggle + submit
 
-import { useState, type ChangeEvent, type FormEvent } from 'react'
-import { randomExplorerName } from '@/lib/explorerNames'
+import { useState, type FormEvent } from 'react'
+import { generateExplorerName } from '@/lib/explorerNames'
 
 interface Props {
   onSubmit: (displayName: string, isPublic: boolean) => void
@@ -10,32 +10,18 @@ interface Props {
 }
 
 export default function GazetteJoinPrompt({ onSubmit, isSubmitting }: Props) {
-  const [displayName, setDisplayName] = useState('')
+  // Names are never typed by the user — only generated. This is the privacy-policy
+  // promise enforced from the frontend (see PrivacyPage.tsx and TD-028).
+  const [displayName, setDisplayName] = useState(() => generateExplorerName())
   const [isPublic, setIsPublic] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
-  function handleSparkle() {
-    setDisplayName(randomExplorerName())
-    setError(null)
-  }
-
-  function handleNameChange(e: ChangeEvent<HTMLInputElement>) {
-    setDisplayName(e.target.value)
-    setError(null)
+  function handleRegenerate() {
+    setDisplayName(generateExplorerName())
   }
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    const trimmed = displayName.trim()
-    if (trimmed.length < 2) {
-      setError('Display name must be at least 2 characters.')
-      return
-    }
-    if (trimmed.length > 30) {
-      setError('Display name must be 30 characters or fewer.')
-      return
-    }
-    onSubmit(trimmed, isPublic)
+    onSubmit(displayName, isPublic)
   }
 
   return (
@@ -43,43 +29,33 @@ export default function GazetteJoinPrompt({ onSubmit, isSubmitting }: Props) {
       <div>
         <h2 className="font-serif text-lg">Join the Gazette</h2>
         <p className="font-mono text-xs text-muted-foreground mt-0.5">
-          Choose a display name to share your discoveries with the community.
+          You&rsquo;ll appear under an auto-generated explorer name &mdash; never your real name. Regenerate as often as you like.
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-3">
-        {/* Name field + sparkle button */}
+        {/* Generated name + regenerate button */}
         <div className="space-y-1">
-          <label htmlFor="display-name" className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
+          <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
             Display name
-          </label>
-          <div className="flex gap-2">
-            <input
-              id="display-name"
-              type="text"
-              value={displayName}
-              onChange={handleNameChange}
-              placeholder="e.g. Dr. E. Blackwood"
-              maxLength={30}
-              required
-              aria-describedby={error ? 'display-name-error' : undefined}
-              className="flex-1 px-3 py-2 border border-border rounded font-mono text-xs bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-            />
+          </span>
+          <div className="flex gap-2 items-center">
+            <p
+              data-testid="explorer-name"
+              className="flex-1 px-3 py-2 border border-border rounded font-mono text-xs bg-muted/40"
+            >
+              {displayName}
+            </p>
             <button
               type="button"
-              onClick={handleSparkle}
-              aria-label="Generate a random Victorian explorer name"
-              title="Generate a random name"
+              onClick={handleRegenerate}
+              aria-label="Generate a new explorer name"
+              title="Generate a new explorer name"
               className="px-3 py-2 border border-border rounded font-mono text-sm hover:bg-accent transition-colors"
             >
               ✦
             </button>
           </div>
-          {error && (
-            <p id="display-name-error" role="alert" className="font-mono text-[11px] text-destructive">
-              {error}
-            </p>
-          )}
         </div>
 
         {/* Public / private toggle */}
@@ -97,7 +73,7 @@ export default function GazetteJoinPrompt({ onSubmit, isSubmitting }: Props) {
 
         <button
           type="submit"
-          disabled={isSubmitting || displayName.trim().length === 0}
+          disabled={isSubmitting}
           className="w-full px-4 py-2 border border-border rounded font-mono text-xs hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? 'Joining…' : 'Join the Gazette'}

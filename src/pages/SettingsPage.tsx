@@ -1,10 +1,8 @@
 // ABOUT: Field Kit page — account preferences, Gazette profile, badge visibility, and links
 // ABOUT: Two-column layout: left shows rank and badge list; right shows settings and information
 
-import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import {
   AlertDialog,
@@ -40,6 +38,7 @@ import { useIsAdmin } from '@/hooks/useIsAdmin'
 import {
   useExplorerProfile,
   useUpdateProfile,
+  useRegenerateDisplayName,
   useMyBadges,
   useToggleBadgeVisibility,
 } from '@/hooks/useCommunity'
@@ -186,17 +185,7 @@ function RankAndBadges({ userId }: { userId: string | null }) {
 function GazetteProfileSettings({ userId }: { userId: string | null }) {
   const { data: profile, isLoading: profileLoading } = useExplorerProfile(userId)
   const updateProfile = useUpdateProfile()
-
-  const [displayName, setDisplayName] = useState('')
-  const [isPublic, setIsPublic] = useState(false)
-  const [editing, setEditing] = useState(false)
-
-  useEffect(() => {
-    if (profile) {
-      setDisplayName(profile.display_name)
-      setIsPublic(profile.is_public)
-    }
-  }, [profile])
+  const regenerateDisplayName = useRegenerateDisplayName()
 
   if (profileLoading) {
     return (
@@ -223,18 +212,24 @@ function GazetteProfileSettings({ userId }: { userId: string | null }) {
     )
   }
 
-  const handleSave = async () => {
-    const name = displayName.trim()
-    if (name.length < 2) {
-      toast.error('Display name must be at least 2 characters.')
-      return
-    }
+  const handleRegenerate = async () => {
     try {
-      await updateProfile.mutateAsync({ user_id: profile.user_id, display_name: name, is_public: isPublic })
-      setEditing(false)
-      toast.success('Profile updated.')
+      await regenerateDisplayName.mutateAsync({
+        user_id: profile.user_id,
+        display_name: generateExplorerName(),
+      })
+      toast.success('New explorer name conjured.')
     } catch {
-      toast.error('Could not save profile.')
+      toast.error('Could not regenerate name.')
+    }
+  }
+
+  const handleVisibilityToggle = async (next: boolean) => {
+    try {
+      await updateProfile.mutateAsync({ user_id: profile.user_id, is_public: next })
+      toast.success(next ? 'Now visible on the Gazette.' : 'Profile hidden from the Gazette.')
+    } catch {
+      toast.error('Could not update visibility.')
     }
   }
 
@@ -246,91 +241,62 @@ function GazetteProfileSettings({ userId }: { userId: string | null }) {
       </h2>
 
       <div className="bg-card border rounded-sm p-4 space-y-4">
-        {editing ? (
-          <>
-            <div className="space-y-3">
-              <div className="flex gap-2">
-                <Input
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Your explorer name…"
-                  maxLength={30}
-                  className="font-serif flex-1"
-                />
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="outline" size="icon" title="Suggest a name" className="flex-shrink-0">
-                      <Sparkles className="h-4 w-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle className="font-serif">Regenerate display name?</AlertDialogTitle>
-                      <AlertDialogDescription className="font-serif">
-                        This will replace your current display name with a new randomly generated one.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel className="font-mono text-xs tracking-wider">
-                        KEEP CURRENT
-                      </AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => setDisplayName(generateExplorerName())}
-                        className="font-mono text-xs tracking-wider"
-                      >
-                        REGENERATE
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="font-serif text-xs text-muted-foreground">
-                    Show on the Gazette publicly
-                  </span>
-                </div>
-                <Switch checked={isPublic} onCheckedChange={setIsPublic} />
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                onClick={handleSave}
-                disabled={updateProfile.isPending}
-                className="font-mono text-xs tracking-wider"
-              >
-                {updateProfile.isPending ? 'SAVING…' : 'SAVE CHANGES'}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setDisplayName(profile.display_name)
-                  setIsPublic(profile.is_public)
-                  setEditing(false)
-                }}
-              >
-                Cancel
-              </Button>
-            </div>
-          </>
-        ) : (
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-serif text-sm font-medium">{profile.display_name}</p>
-              <p className="font-mono text-[10px] tracking-wider text-muted-foreground mt-0.5">
-                {profile.is_public ? 'VISIBLE ON THE GAZETTE' : 'PRIVATE — NOT SHOWN PUBLICLY'}
-              </p>
-            </div>
-            <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
-              Edit
-            </Button>
+        <div className="space-y-2">
+          <p className="font-mono text-[10px] tracking-[2px] text-muted-foreground uppercase">
+            Display name
+          </p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="font-serif text-sm font-medium">{profile.display_name}</p>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={regenerateDisplayName.isPending}
+                  className="font-mono text-[10px] tracking-wider gap-1.5 flex-shrink-0"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {regenerateDisplayName.isPending ? 'CONJURING…' : 'REGENERATE'}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="font-serif">Regenerate display name?</AlertDialogTitle>
+                  <AlertDialogDescription className="font-serif">
+                    This will replace your current display name with a new randomly generated one.
+                    Names cannot be chosen manually — this keeps every explorer pseudonymous, as
+                    promised in our privacy policy.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel className="font-mono text-xs tracking-wider">
+                    KEEP CURRENT
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleRegenerate}
+                    className="font-mono text-xs tracking-wider"
+                  >
+                    REGENERATE
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
-        )}
+        </div>
+
+        <div className="flex items-center justify-between gap-3 pt-2 border-t border-border">
+          <div className="flex items-center gap-2">
+            <Shield className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="font-serif text-xs text-muted-foreground">
+              Show on the Gazette publicly
+            </span>
+          </div>
+          <Switch
+            checked={profile.is_public}
+            disabled={updateProfile.isPending}
+            onCheckedChange={handleVisibilityToggle}
+          />
+        </div>
       </div>
     </div>
   )

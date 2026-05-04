@@ -85,8 +85,9 @@ Fetched via `useExplorerRank(userId)` in `useBadges.ts`. Invalidated after badge
 | Hook | Purpose | Cache |
 |---|---|---|
 | `useExplorerProfile(userId)` | Fetch or null the current user's profile | 5 min stale |
-| `useCreateProfile()` | Mutation: insert a new profile | Invalidates showcase + stats |
-| `useUpdateProfile()` | Mutation: update display name or `is_public` | Invalidates showcase + stats + feed |
+| `useCreateProfile()` | Mutation: insert a new profile (caller must pass a name from `generateExplorerName()`) | Invalidates showcase + stats |
+| `useUpdateProfile()` | Mutation: toggle profile visibility (`is_public`) only | Invalidates showcase + stats + feed |
+| `useRegenerateDisplayName()` | Mutation: replace `display_name` with a fresh `generateExplorerName()` value (the only client-side path that writes the name) | Invalidates showcase + stats + feed |
 | `useCommunityFeed(limit)` | Activity feed, polls every 30s | 30s stale |
 | `useExplorerShowcase()` | Public profiles ranked by count, polls 60s | 60s stale |
 | `useCommunityStats()` | Headline stats | 5 min stale |
@@ -114,6 +115,8 @@ Produces Victorian-style expedition-manifest names: `"Dr. E. Blackwood"`, `"Capt
 
 - `generateExplorerName(seed?)` — deterministic when given a seed (testable), random when not
 - `randomExplorerName()` — convenience wrapper for the sparkle button
+
+Generated names are the only allowed shape — the `GazetteJoinPrompt` and `SettingsPage` UIs render them read-only beside a regenerate action, and the `useCreateProfile` / `useRegenerateDisplayName` hooks are the only client-side writers. This enforces the privacy-policy promise that explorers appear under auto-generated names, never their real ones (see TD-028).
 
 Easter egg: ~1-in-2000 chance of generating `"A. Anning"` — a nod to Mary Anning.
 

@@ -272,6 +272,15 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ## Resolved items
 
+### ~~TD-028~~: Display name was freely editable, contradicting the privacy policy
+- **Resolved in:** PR #84 (2026-05-04)
+- **Resolution:** Locked both client-side `display_name` write paths so every persisted name originates from `generateExplorerName()`:
+  1. **Settings page** (`SettingsPage.tsx`): removed the free-text `<Input>`; `GazetteProfileSettings` now renders the display name read-only beside a "Regenerate" button.
+  2. **Join flow** (`GazetteJoinPrompt.tsx`): removed the free-text `<input>`; the prompt now seeds a generated name on mount and offers a regenerate button as the only way to change it before submitting.
+  3. **Hooks** (`useCommunity.ts`): narrowed `useUpdateProfile` to `{ user_id, is_public }`; added `useRegenerateDisplayName` (sole client-side path for writing an existing profile's name); documented `useCreateProfile`'s contract — callers must pass a name from `generateExplorerName()`. The UI never accepts user-typed names, so this is a convention enforced by call sites rather than the type system.
+
+  The privacy promise at `PrivacyPage.tsx:242-244` ("never your real name") is now mechanically enforced from the frontend across both create and update paths. Server-side defence-in-depth (SECURITY DEFINER RPC, CHECK constraint) deferred — current single-trusted-contributor threat model makes UI lock + hook discipline sufficient. Re-evaluate before opening external sign-ups.
+
 ### ~~TD-015~~: `finishExcavation` badge-toast and rank-up logic lacks integration tests
 - **Resolved in:** Phase 7 (same branch)
 - **Resolution:** Extracted all badge/rank side-effect logic from `finishExcavation` into `src/hooks/usePostExcavationEffects.ts`. The hook is tested by `usePostExcavationEffects.test.ts` (14 tests) using mocked inner hooks — covers discovery activity posting, badge toasts with tier labels, badge activity, rank invalidation, and the rank-up detection effect. `App.tsx` is now a thin caller.
