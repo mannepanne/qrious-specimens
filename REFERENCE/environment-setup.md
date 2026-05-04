@@ -116,6 +116,25 @@ wrangler secret put ANTHROPIC_API_KEY
 
 ---
 
+### `RESEND_API_KEY`
+Resend API key. Used in two places:
+
+- **Cloudflare Worker** (`src/worker.ts`) — sends contact-form admin notifications via Resend's HTTP API
+- **Supabase Auth** — used as the SMTP password for transactional email delivery (signup confirmation, magic link). See *Supabase dashboard configuration → Auth → SMTP Settings* below. Decision rationale in [ADR 2026-05-04](./decisions/2026-05-04-resend-smtp-for-supabase-auth.md).
+
+**How to obtain:** [Resend dashboard](https://resend.com) → API Keys → Create API key
+
+**Domain prerequisite:** The sending domain (`hultberg.org`) must be verified in Resend (DKIM/SPF). One-time setup in the Resend dashboard.
+
+**Production setup:**
+```bash
+wrangler secret put RESEND_API_KEY
+```
+
+The same key value is also pasted into Supabase's Custom SMTP settings (see below). A separate Resend key scoped to SMTP only can be used if independent rotation is preferred.
+
+---
+
 ### Cloudflare Images (`CF_ACCOUNT_ID`, `CF_IMAGES_TOKEN`, `CF_IMAGES_DELIVERY_HASH`)
 Specimen illustrations are stored in Cloudflare Images (see [ADR 2026-04-20](./decisions/2026-04-20-cloudflare-images-over-r2.md)).
 
@@ -177,8 +196,23 @@ These must be set before magic link auth works:
 | Redirect URLs (allowlist) | `https://qrious.hultberg.org/**` |
 | Redirect URLs (allowlist) | `http://localhost:5173/**` |
 
-### Auth → Email Templates (optional)
-The magic link emails can be customised with Victorian styling. The default Supabase template is functional but plain.
+### Auth → SMTP Settings (Custom SMTP)
+Auth transactional emails are delivered via Resend SMTP, not Supabase's built-in mailer. The built-in mailer is dev-only and rate-limits at roughly four emails per hour, which is incompatible with realistic onboarding. See [ADR 2026-05-04](./decisions/2026-05-04-resend-smtp-for-supabase-auth.md) for the full reasoning.
+
+| Setting | Value |
+|---|---|
+| Enable Custom SMTP | on |
+| Host | `smtp.resend.com` |
+| Port | `587` |
+| Username | `resend` (literal) |
+| Password | the `RESEND_API_KEY` value |
+| Sender email | `gazette@hultberg.org` |
+| Sender name | `QRious Specimens` |
+
+Verify with the **Send Test Email** button in the same panel before relying on it in production.
+
+### Auth → Email Templates
+On-brand HTML templates are configured in the Supabase dashboard for **Confirm signup** and **Magic Link**. They use the Victorian palette (parchment background `#f4eee3`, dark sepia button `#2d2419`, off-white button text `#f4eee3`) and EB Garamond headlines with Georgia button text. Subject lines: *"Welcome to QRious Specimens — verify your correspondence"* and *"Your QRious Specimens sign-in link"*. The template HTML lives only in Supabase's dashboard — there is no checked-in copy. To edit, go to **Authentication → Emails**, switch the body editor to the Source tab, paste the full HTML in one go (clear the field first to avoid partial-overlap), and verify in the Preview tab before saving.
 
 ---
 
@@ -252,7 +286,7 @@ Use only as a fallback. Normal flow is always push to main.
 | Cloudflare Images | Creature image storage (qriousoriginal, qrious512, qrious256 variants) | dash.cloudflare.com → Images |
 | Google Gemini | Victorian naturalist illustration generation | aistudio.google.com |
 | Anthropic | Field notes (Claude Haiku) | console.anthropic.com |
-| Resend (optional) | Custom email domain if needed | resend.com (hultberg.org configured) |
+| Resend | Auth transactional emails (SMTP) + contact-form admin notifications (HTTP API) | resend.com (hultberg.org verified) |
 
 ---
 
