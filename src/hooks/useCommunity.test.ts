@@ -12,6 +12,7 @@ import {
   useExplorerProfile,
   useCreateProfile,
   useUpdateProfile,
+  useRegenerateDisplayName,
   usePostActivity,
   useCheckBadges,
   useFirstDiscoverer,
@@ -202,6 +203,21 @@ describe('useUpdateProfile', () => {
     })
     expect(data).toEqual(updated)
     expect(chain.update).toHaveBeenCalledWith({ is_public: true })
+  })
+})
+
+describe('useRegenerateDisplayName', () => {
+  it('writes only display_name (the privacy-policy-promised pseudonymous shape)', async () => {
+    const updated = { id: 'p4', user_id: 'u4', display_name: 'M. Anning', is_public: true, created_at: '2026-01-01T00:00:00Z' }
+    const chain = makeFromChain({ data: updated, error: null })
+    mockFrom.mockReturnValueOnce(chain as never)
+    const { result } = renderHook(() => useRegenerateDisplayName(), { wrapper: createWrapper() })
+    let data: unknown
+    await act(async () => {
+      data = await result.current.mutateAsync({ user_id: 'u4', display_name: 'M. Anning' })
+    })
+    expect(data).toEqual(updated)
+    expect(chain.update).toHaveBeenCalledWith({ display_name: 'M. Anning' })
   })
 })
 

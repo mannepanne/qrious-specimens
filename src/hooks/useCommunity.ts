@@ -114,15 +114,53 @@ export function useCreateProfile() {
   })
 }
 
-/** Update display name or public/private toggle on an existing profile. */
+/**
+ * Toggle the public/private visibility of an existing explorer profile.
+ *
+ * Display name is intentionally NOT writable through this hook — see TD-028.
+ * Generated names are the only allowed shape (privacy policy promise); use
+ * `useRegenerateDisplayName` for the regenerate action.
+ */
 export function useUpdateProfile() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (params: { user_id: string; display_name?: string; is_public?: boolean }) => {
-      const { user_id, ...updates } = params
+    mutationFn: async (params: { user_id: string; is_public: boolean }) => {
+      const { user_id, is_public } = params
       const { data, error } = await supabase
         .from('explorer_profiles')
-        .update(updates)
+        .update({ is_public })
+        .eq('user_id', user_id)
+        .select()
+        .single()
+      if (error) throw error
+      return data as ExplorerProfile
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(['explorer-profile', data.user_id], data)
+      queryClient.invalidateQueries({ queryKey: ['community-showcase'] })
+      queryClient.invalidateQueries({ queryKey: ['community-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['community-feed'] })
+    },
+  })
+}
+
+/**
+ * Replace an explorer profile's display name with a freshly generated one.
+ *
+ * Callers must pass a name produced by `generateExplorerName()` from
+ * `@/lib/explorerNames`; this hook is the only path that writes
+ * `display_name` from the client. Pairs with `useUpdateProfile` (which is
+ * narrowed to `is_public` only) to enforce the privacy-policy promise that
+ * users only ever appear under auto-generated names.
+ */
+export function useRegenerateDisplayName() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { user_id: string; display_name: string }) => {
+      const { user_id, display_name } = params
+      const { data, error } = await supabase
+        .from('explorer_profiles')
+        .update({ display_name })
         .eq('user_id', user_id)
         .select()
         .single()
