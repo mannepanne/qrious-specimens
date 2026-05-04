@@ -1,5 +1,6 @@
 // ABOUT: Admin-only Worker handler — deletes a user's app data + auth row in one flow
-// ABOUT: Verifies caller's JWT, checks is_admin(), calls admin_delete_user_data RPC, then Supabase Auth Admin API delete
+// ABOUT: Verifies caller's JWT, rate-limits, blocks self-delete, checks is_admin(), calls admin_delete_user_data RPC, then Supabase Auth Admin API delete
+// ABOUT: Emits structured admin_delete_user audit lines on success / partial_failure / rejected_self / rejected_not_admin / rate_limited (TD-022, TD-023, TD-025)
 // ABOUT: Closes TD-019 per ADR REFERENCE/decisions/2026-05-04-worker-mediated-account-erasure.md
 
 /// <reference types="@cloudflare/workers-types" />
@@ -34,15 +35,19 @@ function json(body: unknown, status: number, origin: string | null): Response {
   })
 }
 
-// Structured audit line for irreversible admin operations. Single-line JSON so
-// Cloudflare Workers Logs can index fields. Closes TD-022.
+// Structured audit line for irreversible admin operations and the rejection
+// branches that gate them. Single-line JSON so Cloudflare Workers Logs can index
+// fields. `target_user_id` is optional because rate-limited rejections fire
+// before the body is parsed; `app_data` / `auth_user` are only present on the
+// branches that actually mutated state. Closes TD-022; extended to rejection
+// branches for TD-023 / TD-025 follow-up.
 function logAdminDeleteAudit(fields: {
-  outcome: 'success' | 'partial_failure'
+  outcome: 'success' | 'partial_failure' | 'rejected_self' | 'rejected_not_admin' | 'rate_limited'
   caller_sub: string
-  target_user_id: string
-  app_data: 'deleted'
-  auth_user: 'deleted' | 'absent' | 'failed'
   correlation_id: string
+  target_user_id?: string
+  app_data?: 'deleted'
+  auth_user?: 'deleted' | 'absent' | 'failed'
   detail?: string
 }): void {
   console.log(
@@ -169,7 +174,14 @@ export async function handleAdminDeleteUser(request: Request, env: Env): Promise
     'rate_limit_admin_delete',
     corsHeaders(origin),
   )
-  if (rateLimited) return rateLimited
+  if (rateLimited) {
+    logAdminDeleteAudit({
+      outcome: 'rate_limited',
+      caller_sub: callerSub,
+      correlation_id: correlationId,
+    })
+    return rateLimited
+  }
 
   // Step 2: Parse body
   let body: DeleteBody
@@ -189,7 +201,15 @@ export async function handleAdminDeleteUser(request: Request, env: Env): Promise
   // via Supabase Studio to flip is_admin = true on a freshly-seeded account).
   // Belt-and-braces with the UI guard in AdminPage and the RAISE EXCEPTION
   // in admin_delete_user_data. Closes TD-023.
-  if (callerSub === targetUserId) {
+  // Compare case-insensitively: UUID_RE allows mixed case, and JWT subs from
+  // different sources may serialise the same UUID with different casing.
+  if (callerSub.toLowerCase() === targetUserId.toLowerCase()) {
+    logAdminDeleteAudit({
+      outcome: 'rejected_self',
+      caller_sub: callerSub,
+      target_user_id: targetUserId,
+      correlation_id: correlationId,
+    })
     return json(
       { error: 'Cannot delete the calling admin', code: 'self_delete_blocked' },
       400,
@@ -210,6 +230,12 @@ export async function handleAdminDeleteUser(request: Request, env: Env): Promise
     )
   }
   if (!adminResult.isAdmin) {
+    logAdminDeleteAudit({
+      outcome: 'rejected_not_admin',
+      caller_sub: callerSub,
+      target_user_id: targetUserId,
+      correlation_id: correlationId,
+    })
     return json({ error: 'Not authorised' }, 403, origin)
   }
 
