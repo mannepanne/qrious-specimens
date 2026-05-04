@@ -25,7 +25,7 @@ The Gazette is the community layer of QRious Specimens. It shows a live activity
 
 - `explorer_profiles`: public reads for `is_public = true`; authenticated users read their own regardless of visibility
 - `explorer_badges`: public badges of public profiles are visible to all; users read all their own badges
-- `activity_feed`: entries are readable when the `user_id` has a public profile; users read and delete their own regardless
+- `activity_feed`: entries are readable when the `user_id` has a public profile; users read and delete their own regardless of profile visibility
 
 ---
 

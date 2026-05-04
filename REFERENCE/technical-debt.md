@@ -127,7 +127,7 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ### TD-014: `activity_feed` has no DELETE RLS policy (GDPR gap) — RESOLVED 2026-05-04
 
-- **Status:** Resolved by `supabase/migrations/20260504000002_activity_feed_delete_own_rls.sql`. The `"Delete own activity"` policy lets authenticated users remove their own rows; account-level erasure was already covered by `admin_delete_user_data()`, so the table now supports both row-level and bulk erasure paths. No UI yet — the policy future-proofs the API surface so a "delete this entry" affordance can be added without another migration.
+- **Status:** Resolved by `supabase/migrations/20260504000002_activity_feed_delete_own_rls.sql`. The `"Delete own activity"` policy lets authenticated users remove their own rows; account-level erasure was already covered by `admin_delete_user_data()`, so the table now supports both row-level and bulk erasure paths. No UI yet — the policy future-proofs the API surface so a "delete this entry" affordance can be added without another migration. UI affordance for per-entry delete is not yet shipped; tracked as backlog, not as debt.
 - **Phase introduced:** Phase 6
 
 ---
