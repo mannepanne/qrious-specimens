@@ -325,6 +325,10 @@ function UsersTab() {
 }
 
 function UserRow({ user }: { user: AdminUser }) {
+  const { authState } = useAuth()
+  const currentUserId = authState.status === 'authenticated' ? authState.session.user.id : undefined
+  const isSelf = currentUserId !== undefined && currentUserId === user.user_id
+
   const gdprExport = useGdprExport()
   const gdprDelete = useGdprDelete()
   const [deleteConfirm, setDeleteConfirm] = useState('')
@@ -355,6 +359,10 @@ function UserRow({ user }: { user: AdminUser }) {
         // the auth row needs clearing via Supabase Studio. Loud, specific toast
         // so the admin knows exactly what's left to do.
         toast.error('App data deleted, but auth row removal failed. Clear it via Supabase Studio.')
+      } else if (err instanceof AdminDeleteError && err.phase === 'auth_check_unavailable') {
+        toast.error('Auth check temporarily unavailable. Please try again in a moment.')
+      } else if (err instanceof AdminDeleteError && err.phase === 'self_delete') {
+        toast.error('Cannot delete your own account.')
       } else {
         toast.error('Delete failed — no data was removed.')
       }
@@ -406,45 +414,73 @@ function UserRow({ user }: { user: AdminUser }) {
                 variant="ghost"
                 size="sm"
                 className="h-7 px-2 font-mono text-[9px] tracking-wider gap-1.5 text-destructive hover:text-destructive"
-                title="Delete user data"
+                title={isSelf ? 'Cannot delete your own account' : 'Delete user data'}
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 Delete Data
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle className="font-serif">Delete user data?</AlertDialogTitle>
-                <AlertDialogDescription className="font-serif space-y-2">
-                  <span className="block">
-                    This will permanently delete all data for{' '}
-                    <strong>{user.email}</strong> — profile, specimens, badges, activity, and
-                    sign-in record (email). This cannot be undone.
-                  </span>
-                  <span className="block">
-                    Type <strong>DELETE USER DATA</strong> to confirm.
-                  </span>
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <Input
-                value={deleteConfirm}
-                onChange={(e) => setDeleteConfirm(e.target.value)}
-                placeholder="DELETE USER DATA"
-                className="font-mono text-xs"
-              />
-              <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setDeleteConfirm('')} className="font-mono text-xs tracking-wider">
-                  CANCEL
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDelete}
-                  disabled={deleteConfirm !== 'DELETE USER DATA' || gdprDelete.isPending}
-                  className="font-mono text-xs tracking-wider bg-destructive hover:bg-destructive/90"
-                >
-                  DELETE
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
+            {isSelf ? (
+              // Self-delete would lock the project out of its own admin surface
+              // (recovery requires direct DB access via Supabase Studio to flip
+              // is_admin = true on a freshly-seeded account). Belt-and-braces
+              // with the Worker 400 + DB RAISE EXCEPTION. Closes TD-023.
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="font-serif">Cannot delete your own account</AlertDialogTitle>
+                  <AlertDialogDescription className="font-serif space-y-2">
+                    <span className="block">
+                      Deleting the calling admin would lock this project out of its own admin
+                      surface — there is no UI path to restore <code>is_admin = true</code> on a
+                      freshly-seeded account.
+                    </span>
+                    <span className="block">
+                      To delete an admin account, first sign in as a different admin (or seed one
+                      via Supabase Studio), then run the deletion from there.
+                    </span>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel className="font-mono text-xs tracking-wider">
+                    CLOSE
+                  </AlertDialogCancel>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            ) : (
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="font-serif">Delete user data?</AlertDialogTitle>
+                  <AlertDialogDescription className="font-serif space-y-2">
+                    <span className="block">
+                      This will permanently delete all data for{' '}
+                      <strong>{user.email}</strong> — profile, specimens, badges, activity, and
+                      sign-in record (email). This cannot be undone.
+                    </span>
+                    <span className="block">
+                      Type <strong>DELETE USER DATA</strong> to confirm.
+                    </span>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <Input
+                  value={deleteConfirm}
+                  onChange={(e) => setDeleteConfirm(e.target.value)}
+                  placeholder="DELETE USER DATA"
+                  className="font-mono text-xs"
+                />
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setDeleteConfirm('')} className="font-mono text-xs tracking-wider">
+                    CANCEL
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDelete}
+                    disabled={deleteConfirm !== 'DELETE USER DATA' || gdprDelete.isPending}
+                    className="font-mono text-xs tracking-wider bg-destructive hover:bg-destructive/90"
+                  >
+                    DELETE
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            )}
           </AlertDialog>
         </div>
       </div>

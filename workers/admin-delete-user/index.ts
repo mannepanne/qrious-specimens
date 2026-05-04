@@ -1,5 +1,6 @@
 // ABOUT: Admin-only Worker handler — deletes a user's app data + auth row in one flow
-// ABOUT: Verifies caller's JWT, checks is_admin(), calls admin_delete_user_data RPC, then Supabase Auth Admin API delete
+// ABOUT: Verifies caller's JWT, rate-limits, blocks self-delete, checks is_admin(), calls admin_delete_user_data RPC, then Supabase Auth Admin API delete
+// ABOUT: Emits structured admin_delete_user audit lines on success / partial_failure / rejected_self / rejected_not_admin / rate_limited (TD-022, TD-023, TD-025)
 // ABOUT: Closes TD-019 per ADR REFERENCE/decisions/2026-05-04-worker-mediated-account-erasure.md
 
 /// <reference types="@cloudflare/workers-types" />
@@ -34,7 +35,39 @@ function json(body: unknown, status: number, origin: string | null): Response {
   })
 }
 
-async function callIsAdmin(supabaseUrl: string, serviceKey: string, callerJwt: string): Promise<boolean> {
+// Structured audit line for irreversible admin operations and the rejection
+// branches that gate them. Single-line JSON so Cloudflare Workers Logs can index
+// fields. `target_user_id` is optional because rate-limited rejections fire
+// before the body is parsed; `app_data` / `auth_user` are only present on the
+// branches that actually mutated state. Closes TD-022; extended to rejection
+// branches for TD-023 / TD-025 follow-up.
+function logAdminDeleteAudit(fields: {
+  outcome: 'success' | 'partial_failure' | 'rejected_self' | 'rejected_not_admin' | 'rate_limited'
+  caller_sub: string
+  correlation_id: string
+  target_user_id?: string
+  app_data?: 'deleted'
+  auth_user?: 'deleted' | 'absent' | 'failed'
+  detail?: string
+}): void {
+  console.log(
+    JSON.stringify({
+      event: 'admin_delete_user',
+      timestamp: new Date().toISOString(),
+      ...fields,
+    }),
+  )
+}
+
+type IsAdminResult =
+  | { kind: 'ok'; isAdmin: boolean }
+  | { kind: 'upstream_error'; status: number; detail: string }
+
+async function callIsAdmin(
+  supabaseUrl: string,
+  serviceKey: string,
+  callerJwt: string,
+): Promise<IsAdminResult> {
   // Caller's JWT in Authorization populates auth.uid() inside the SECURITY DEFINER
   // function; service-role apikey just identifies the project to PostgREST.
   const res = await fetch(`${supabaseUrl}/rest/v1/rpc/is_admin`, {
@@ -46,9 +79,15 @@ async function callIsAdmin(supabaseUrl: string, serviceKey: string, callerJwt: s
     },
     body: '{}',
   })
-  if (!res.ok) return false
+  // Distinguish upstream-unavailable from genuinely-not-admin so the caller
+  // sees a 503 (retryable) rather than a confusing 403. Closes TD-025.
+  if (res.status >= 500) {
+    const detail = await res.text().catch(() => '')
+    return { kind: 'upstream_error', status: res.status, detail }
+  }
+  if (!res.ok) return { kind: 'ok', isAdmin: false }
   const result = (await res.json()) as boolean | null
-  return result === true
+  return { kind: 'ok', isAdmin: result === true }
 }
 
 async function callAdminDeleteUserData(
@@ -77,7 +116,7 @@ async function callAuthAdminDeleteUser(
   supabaseUrl: string,
   serviceKey: string,
   targetUserId: string,
-): Promise<{ ok: true } | { ok: false; detail: string }> {
+): Promise<{ ok: true; status: 'deleted' | 'absent' } | { ok: false; detail: string }> {
   // Auth Admin API requires service-role key. This is the privileged step.
   const res = await fetch(`${supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(targetUserId)}`, {
     method: 'DELETE',
@@ -87,14 +126,17 @@ async function callAuthAdminDeleteUser(
     },
   })
   // Supabase returns 200 for a successful delete; 404 means the auth row was
-  // already absent (e.g. a partial-failure recovery retry) — treat as success.
-  if (res.ok || res.status === 404) return { ok: true }
+  // already absent (e.g. a partial-failure recovery retry) — treat as success
+  // but distinguish in the audit log so the trail-of-work is recoverable.
+  if (res.ok) return { ok: true, status: 'deleted' }
+  if (res.status === 404) return { ok: true, status: 'absent' }
   const detail = await res.text()
   return { ok: false, detail: `Auth Admin API failed: ${res.status} ${detail}` }
 }
 
 export async function handleAdminDeleteUser(request: Request, env: Env): Promise<Response> {
   const origin = request.headers.get('Origin')
+  const correlationId = crypto.randomUUID()
 
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders(origin) })
@@ -115,7 +157,6 @@ export async function handleAdminDeleteUser(request: Request, env: Env): Promise
     const payload = await verifyJWT(callerJwt, env)
     callerSub = payload.sub
   } catch (err) {
-    const correlationId = crypto.randomUUID()
     if (err instanceof JwksUnavailableError) {
       console.error(`[${correlationId}] JWKS unavailable: ${err.message}`)
       return json({ error: 'Auth provider unavailable', correlationId }, 503, origin)
@@ -133,7 +174,14 @@ export async function handleAdminDeleteUser(request: Request, env: Env): Promise
     'rate_limit_admin_delete',
     corsHeaders(origin),
   )
-  if (rateLimited) return rateLimited
+  if (rateLimited) {
+    logAdminDeleteAudit({
+      outcome: 'rate_limited',
+      caller_sub: callerSub,
+      correlation_id: correlationId,
+    })
+    return rateLimited
+  }
 
   // Step 2: Parse body
   let body: DeleteBody
@@ -148,9 +196,46 @@ export async function handleAdminDeleteUser(request: Request, env: Env): Promise
     return json({ error: 'Missing or malformed user_id' }, 400, origin)
   }
 
+  // Step 2.5: Self-delete guard. Removing the calling admin would lock the
+  // project out of its own admin surface (recovery requires direct DB access
+  // via Supabase Studio to flip is_admin = true on a freshly-seeded account).
+  // Belt-and-braces with the UI guard in AdminPage and the RAISE EXCEPTION
+  // in admin_delete_user_data. Closes TD-023.
+  // Compare case-insensitively: UUID_RE allows mixed case, and JWT subs from
+  // different sources may serialise the same UUID with different casing.
+  if (callerSub.toLowerCase() === targetUserId.toLowerCase()) {
+    logAdminDeleteAudit({
+      outcome: 'rejected_self',
+      caller_sub: callerSub,
+      target_user_id: targetUserId,
+      correlation_id: correlationId,
+    })
+    return json(
+      { error: 'Cannot delete the calling admin', code: 'self_delete_blocked' },
+      400,
+      origin,
+    )
+  }
+
   // Step 3: Authorise — caller must be admin
-  const isAdmin = await callIsAdmin(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, callerJwt)
-  if (!isAdmin) {
+  const adminResult = await callIsAdmin(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, callerJwt)
+  if (adminResult.kind === 'upstream_error') {
+    console.error(
+      `[${correlationId}] is_admin upstream ${adminResult.status}: ${adminResult.detail}`,
+    )
+    return json(
+      { error: 'Auth check temporarily unavailable, please retry', code: 'auth_check_unavailable', correlationId },
+      503,
+      origin,
+    )
+  }
+  if (!adminResult.isAdmin) {
+    logAdminDeleteAudit({
+      outcome: 'rejected_not_admin',
+      caller_sub: callerSub,
+      target_user_id: targetUserId,
+      correlation_id: correlationId,
+    })
     return json({ error: 'Not authorised' }, 403, origin)
   }
 
@@ -163,7 +248,7 @@ export async function handleAdminDeleteUser(request: Request, env: Env): Promise
     targetUserId,
   )
   if (!appDataResult.ok) {
-    console.error(`admin_delete_user_data failed: ${appDataResult.detail}`)
+    console.error(`[${correlationId}] admin_delete_user_data failed: ${appDataResult.detail}`)
     return json(
       { ok: false, app_data: 'failed', detail: appDataResult.detail },
       500,
@@ -181,13 +266,31 @@ export async function handleAdminDeleteUser(request: Request, env: Env): Promise
     targetUserId,
   )
   if (!authResult.ok) {
-    console.error(`Auth Admin API delete failed: ${authResult.detail}`)
+    console.error(`[${correlationId}] Auth Admin API delete failed: ${authResult.detail}`)
+    logAdminDeleteAudit({
+      outcome: 'partial_failure',
+      caller_sub: callerSub,
+      target_user_id: targetUserId,
+      app_data: 'deleted',
+      auth_user: 'failed',
+      correlation_id: correlationId,
+      detail: authResult.detail,
+    })
     return json(
       { ok: false, app_data: 'deleted', auth_user: 'failed', detail: authResult.detail },
       500,
       origin,
     )
   }
+
+  logAdminDeleteAudit({
+    outcome: 'success',
+    caller_sub: callerSub,
+    target_user_id: targetUserId,
+    app_data: 'deleted',
+    auth_user: authResult.status,
+    correlation_id: correlationId,
+  })
 
   return json({ ok: true, app_data: 'deleted', auth_user: 'deleted' }, 200, origin)
 }

@@ -167,24 +167,16 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
-### TD-022: No success-path audit log for destructive admin operations
+### TD-022: No success-path audit log for destructive admin operations — RESOLVED 2026-05-04
 
-- **Location:** `workers/admin-delete-user/index.ts` — `handleAdminDeleteUser()`
-- **Issue:** The Worker only writes to `console.error` on failure. Successful admin deletions (the privileged, two-system, irreversible path) leave no log line — no `{caller_sub, target_user_id, outcome, timestamp}` record. Post-hoc audits of "who was deleted, by whom, when" require correlating Supabase Auth Admin API logs with Postgres traces, which is brittle. The convergent finding from PR #83's team review (flagged independently by security, architect, and product reviewers).
-- **Why accepted:** No second admin exists today; the single trusted contributor is the only caller. Audit value compounds once a second admin is added or once the deletion path is exposed beyond the dashboard.
-- **Risk:** Low for the current single-admin model; Medium once a second admin appears or the project takes external GDPR requests.
-- **Future fix:** On the success path (after both `admin_delete_user_data` and the Auth Admin API call complete), log a structured line with `{caller_sub, target_user_id, app_data: 'deleted', auth_user: 'deleted'|'absent', timestamp, correlation_id}`. Same on partial failure (already logged on full failure). Cheapest landing spot: Cloudflare Workers Logs with a JSON-line format. Companion to ADR 2026-05-04 (which defers the orphan-`auth.users` audit query to TD-021's pgTAP harness).
+- **Status:** Resolved by adding `logAdminDeleteAudit()` in `workers/admin-delete-user/index.ts`. Emits a single-line JSON record on `console.log` (Cloudflare Workers Logs ingest stdout) on both the success path and the partial-failure path. Schema: `{event: 'admin_delete_user', outcome: 'success'|'partial_failure', caller_sub, target_user_id, app_data: 'deleted', auth_user: 'deleted'|'absent'|'failed', correlation_id, timestamp, detail?}`. The handler also promotes a per-request `correlationId` so all `console.error` lines now thread through the same id, making the audit trail recoverable end-to-end. `auth_user: 'absent'` is the 404-recovery branch (auth row already cleared by a prior partial-failure cleanup) — distinguishable from `'deleted'` for trail-of-work.
 - **Phase introduced:** Phase 8 (admin endpoint added in PR #83)
 
 ---
 
-### TD-023: Admin can delete themselves (and lock out the project)
+### TD-023: Admin can delete themselves (and lock out the project) — RESOLVED 2026-05-04
 
-- **Location:** `workers/admin-delete-user/index.ts` — request handler; `supabase/migrations/*` — `admin_delete_user_data` RPC
-- **Issue:** Neither the Worker nor the RPC blocks `targetUserId === caller.sub`. An admin deleting themselves removes their own profile + `auth.users` row; with a single admin, this locks the project out of its own admin surface (no UI path to restore `is_admin = true`). Operational footgun, not a security vulnerability.
-- **Why accepted:** Single trusted contributor, manually issuing each delete. The footgun is theoretical until a second admin or a less-careful caller appears.
-- **Risk:** Low under current single-admin manual-flow model; High blast radius if it triggers (recovery requires direct DB access via Supabase Studio to set `is_admin = true` on a freshly-created account).
-- **Future fix:** Cheap defence — `if (callerSub === targetUserId) return 400 'cannot delete the calling admin'` in the Worker, and/or guard at the dialog layer (`disabled` when target is current user). Belt-and-braces: same check inside `admin_delete_user_data` so the DB itself rejects self-deletion regardless of caller.
+- **Status:** Resolved with defence-in-depth across three layers, each fails-closed independently. (1) **UI**: `AdminPage.tsx` `UserRow` derives `isSelf = currentUserId === user.user_id` and renders an explanatory `AlertDialog` variant ("Cannot delete your own account") with a single CLOSE button — no confirm-text input, no destructive action — when self-targeting. (2) **Worker**: `workers/admin-delete-user/index.ts` rejects `callerSub === targetUserId` with `400 { code: 'self_delete_blocked' }` after JWT verify + rate limit + body validation, before the `is_admin` upstream RPC roundtrip. (3) **DB**: new migration `20260505000000_admin_delete_blocks_self.sql` re-issues `admin_delete_user_data()` adding `IF p_user_id = auth.uid() THEN RAISE EXCEPTION 'Cannot delete the calling admin' USING ERRCODE = '42501'` — preserves prior TD-018 anonymisation and TD-020 search_path hardening. Hook layer maps `code: 'self_delete_blocked'` → new `phase: 'self_delete'`, dashboard renders specific toast "Cannot delete your own account."
 - **Phase introduced:** Phase 8 (admin endpoint added in PR #83)
 
 ---
@@ -196,13 +188,9 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
-### TD-025: Worker `is_admin()` re-check collapses 5xx into "not admin"
+### TD-025: Worker `is_admin()` re-check collapses 5xx into "not admin" — RESOLVED 2026-05-04
 
-- **Location:** `workers/admin-delete-user/index.ts` — `is_admin()` re-check (around line 48)
-- **Issue:** The Worker's server-side `is_admin()` re-check returns `false` for any non-`ok` HTTP response, including upstream Supabase 5xx. A genuinely-admin user calling the endpoint while Postgres is having a bad day sees "Not authorised" rather than a transient infrastructure error. The DB-side re-check inside `admin_delete_user_data` would catch this if reached, but the Worker short-circuits before that.
-- **Why accepted:** Practical impact is low — Supabase 5xx is rare and self-resolves in 30 seconds; the user retries and the request succeeds. The wrong-toast behaviour is a UX paper-cut, not a correctness or security issue.
-- **Risk:** Low — misleading error message only.
-- **Future fix:** Distinguish 401/403 (genuinely not admin) from 5xx (upstream failure) in the `is_admin()` helper. Return a typed result so the Worker can emit a 503 with a "service temporarily unavailable, try again" message rather than a 403. Test by mocking a 503 response from the `is_admin` RPC.
+- **Status:** Resolved by changing `callIsAdmin()` in `workers/admin-delete-user/index.ts` to return a discriminated union: `{ kind: 'ok'; isAdmin: boolean } | { kind: 'upstream_error'; status: number; detail: string }`. `res.status >= 500` short-circuits to `upstream_error`; non-ok else (401/403/etc) collapses to `isAdmin: false` as before. The handler returns `503 { code: 'auth_check_unavailable' }` on the upstream-error branch instead of falling through to the generic 403 'Not authorised'. The hook (`useAdmin.ts`) maps `code: 'auth_check_unavailable'` (or any 503 with `body.error`) to a new `phase: 'auth_check_unavailable'`; dashboard renders a transient-blip toast "Auth check temporarily unavailable. Please try again in a moment." instead of the misleading "not authorised". Test coverage in `workers/admin-delete-user/index.test.ts` mocks both 200-with-`false`-body (still 403) and 5xx (now 503) to lock in the discrimination.
 - **Phase introduced:** Phase 8 (admin endpoint added in PR #83)
 
 ---

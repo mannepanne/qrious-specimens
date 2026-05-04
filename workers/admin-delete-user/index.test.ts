@@ -266,4 +266,180 @@ describe('handleAdminDeleteUser', () => {
     expect(status).toBe(200)
     expect(body.ok).toBe(true)
   })
+
+  // ── TD-023: self-delete guard ───────────────────────────────────────────────
+
+  it('returns 400 self_delete_blocked when caller targets themselves, before any upstream call', async () => {
+    // Token sub === target. is_admin / RPC / Auth Admin must not be called.
+    const selfToken = await makeJWT(TARGET_USER_ID)
+    const req = makeRequest({ token: selfToken, body: { user_id: TARGET_USER_ID } })
+    const res = await handleAdminDeleteUser(req, makeEnv())
+    const { status, body } = await readJson(res)
+
+    expect(status).toBe(400)
+    expect(body.error).toMatch(/calling admin/i)
+    expect(body.code).toBe('self_delete_blocked')
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  // ── TD-025: distinguish 5xx upstream from genuine non-admin ─────────────────
+
+  it('returns 503 auth_check_unavailable when is_admin RPC returns a 5xx', async () => {
+    mockFetch.mockResolvedValueOnce(new Response('upstream pg error', { status: 503 }))
+
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const req = makeRequest({ token: validToken, body: { user_id: TARGET_USER_ID } })
+    const res = await handleAdminDeleteUser(req, makeEnv())
+    const { status, body } = await readJson(res)
+
+    expect(status).toBe(503)
+    expect(body.code).toBe('auth_check_unavailable')
+    expect(body.error).toMatch(/temporarily unavailable/i)
+    // Only the is_admin call should have happened — RPC and Auth Admin must be skipped
+    expect(mockFetch).toHaveBeenCalledTimes(1)
+    errSpy.mockRestore()
+  })
+
+  it('still returns 403 when is_admin RPC returns 200 with body false', async () => {
+    // Confirms that the 5xx-vs-403 split didn't break the genuine-non-admin path.
+    mockFetch.mockResolvedValueOnce(new Response('false', { status: 200 }))
+
+    const req = makeRequest({ token: validToken, body: { user_id: TARGET_USER_ID } })
+    const res = await handleAdminDeleteUser(req, makeEnv())
+    expect(res.status).toBe(403)
+  })
+
+  // ── TD-022: structured audit log on irreversible operations ─────────────────
+
+  it('logs a structured admin_delete_user audit line on the success path', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('true', { status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(new Response('', { status: 200 }))
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const req = makeRequest({ token: validToken, body: { user_id: TARGET_USER_ID } })
+    const res = await handleAdminDeleteUser(req, makeEnv())
+
+    expect(res.status).toBe(200)
+    expect(logSpy).toHaveBeenCalledTimes(1)
+    const audit = JSON.parse(logSpy.mock.calls[0]![0] as string) as Record<string, unknown>
+    expect(audit.event).toBe('admin_delete_user')
+    expect(audit.outcome).toBe('success')
+    expect(audit.caller_sub).toBe('caller-user-id')
+    expect(audit.target_user_id).toBe(TARGET_USER_ID)
+    expect(audit.app_data).toBe('deleted')
+    expect(audit.auth_user).toBe('deleted')
+    expect(typeof audit.correlation_id).toBe('string')
+    expect(typeof audit.timestamp).toBe('string')
+    logSpy.mockRestore()
+  })
+
+  it('audit-logs auth_user=absent when the Auth Admin API returns 404 on retry', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('true', { status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(new Response('not found', { status: 404 }))
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const req = makeRequest({ token: validToken, body: { user_id: TARGET_USER_ID } })
+    await handleAdminDeleteUser(req, makeEnv())
+
+    const audit = JSON.parse(logSpy.mock.calls[0]![0] as string) as Record<string, unknown>
+    expect(audit.outcome).toBe('success')
+    expect(audit.auth_user).toBe('absent')
+    logSpy.mockRestore()
+  })
+
+  it('audit-logs rejected_self when the caller targets themselves', async () => {
+    const selfToken = await makeJWT(TARGET_USER_ID)
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const req = makeRequest({ token: selfToken, body: { user_id: TARGET_USER_ID } })
+    const res = await handleAdminDeleteUser(req, makeEnv())
+
+    expect(res.status).toBe(400)
+    expect(logSpy).toHaveBeenCalledTimes(1)
+    const audit = JSON.parse(logSpy.mock.calls[0]![0] as string) as Record<string, unknown>
+    expect(audit.event).toBe('admin_delete_user')
+    expect(audit.outcome).toBe('rejected_self')
+    expect(audit.caller_sub).toBe(TARGET_USER_ID)
+    expect(audit.target_user_id).toBe(TARGET_USER_ID)
+    expect(audit.app_data).toBeUndefined()
+    expect(audit.auth_user).toBeUndefined()
+    logSpy.mockRestore()
+  })
+
+  it('blocks self-delete regardless of UUID casing in the caller sub vs the body', async () => {
+    // JWT sub uppercase, body lowercase — same UUID, different serialisation.
+    // Without case-insensitive compare an attacker could bypass the guard by
+    // re-casing the same UUID in the body.
+    const upperUuid = TARGET_USER_ID.toUpperCase()
+    const selfToken = await makeJWT(upperUuid)
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const req = makeRequest({ token: selfToken, body: { user_id: TARGET_USER_ID } })
+    const res = await handleAdminDeleteUser(req, makeEnv())
+    const { status, body } = await readJson(res)
+
+    expect(status).toBe(400)
+    expect(body.code).toBe('self_delete_blocked')
+    expect(mockFetch).not.toHaveBeenCalled()
+    const audit = JSON.parse(logSpy.mock.calls[0]![0] as string) as Record<string, unknown>
+    expect(audit.outcome).toBe('rejected_self')
+    logSpy.mockRestore()
+  })
+
+  it('audit-logs rejected_not_admin when is_admin returns false', async () => {
+    mockFetch.mockResolvedValueOnce(new Response('false', { status: 200 }))
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const req = makeRequest({ token: validToken, body: { user_id: TARGET_USER_ID } })
+    const res = await handleAdminDeleteUser(req, makeEnv())
+
+    expect(res.status).toBe(403)
+    expect(logSpy).toHaveBeenCalledTimes(1)
+    const audit = JSON.parse(logSpy.mock.calls[0]![0] as string) as Record<string, unknown>
+    expect(audit.outcome).toBe('rejected_not_admin')
+    expect(audit.caller_sub).toBe('caller-user-id')
+    expect(audit.target_user_id).toBe(TARGET_USER_ID)
+    logSpy.mockRestore()
+  })
+
+  it('audit-logs rate_limited when the rate limiter rejects', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const limit = vi.fn().mockResolvedValue({ success: false })
+    const env = makeEnv({ ADMIN_DELETE_RATE_LIMITER: { limit } })
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const req = makeRequest({ token: validToken, body: { user_id: TARGET_USER_ID } })
+    const res = await handleAdminDeleteUser(req, env)
+
+    expect(res.status).toBe(429)
+    expect(logSpy).toHaveBeenCalledTimes(1)
+    const audit = JSON.parse(logSpy.mock.calls[0]![0] as string) as Record<string, unknown>
+    expect(audit.outcome).toBe('rate_limited')
+    expect(audit.caller_sub).toBe('caller-user-id')
+    expect(audit.target_user_id).toBeUndefined()
+    logSpy.mockRestore()
+  })
+
+  it('audit-logs partial_failure with a detail field when the Auth Admin API rejects', async () => {
+    mockFetch
+      .mockResolvedValueOnce(new Response('true', { status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(new Response('upstream error', { status: 502 }))
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const req = makeRequest({ token: validToken, body: { user_id: TARGET_USER_ID } })
+    const res = await handleAdminDeleteUser(req, makeEnv())
+
+    expect(res.status).toBe(500)
+    const audit = JSON.parse(logSpy.mock.calls[0]![0] as string) as Record<string, unknown>
+    expect(audit.outcome).toBe('partial_failure')
+    expect(audit.app_data).toBe('deleted')
+    expect(audit.auth_user).toBe('failed')
+    expect(typeof audit.detail).toBe('string')
+    logSpy.mockRestore()
+    errSpy.mockRestore()
+  })
 })
