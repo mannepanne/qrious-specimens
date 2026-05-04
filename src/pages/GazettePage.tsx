@@ -99,7 +99,7 @@ export function GazettePage() {
             <div>
               <p className="font-mono text-xs font-medium">{profile.display_name}</p>
               <p className="font-mono text-[10px] text-muted-foreground">
-                {profile.is_public ? 'Your discoveries are public' : 'Your profile is private'}
+                {profile.is_public ? 'Your discoveries are credited to you' : 'Your profile is private'}
               </p>
             </div>
             <button
