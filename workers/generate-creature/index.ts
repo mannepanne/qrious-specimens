@@ -30,6 +30,8 @@ export interface Env {
   CF_IMAGES_DELIVERY_HASH: string
   RESEND_API_KEY: string              // used by /api/contact handler
   CONTACT_RATE_LIMITER?: RateLimiter  // CF Rate Limiting binding — optional so local dev without it still works
+  GENERATE_CREATURE_RATE_LIMITER?: RateLimiter  // per-user limiter for /api/generate-creature
+  ADMIN_DELETE_RATE_LIMITER?: RateLimiter       // per-admin limiter for /api/admin-delete-user
 }
 
 interface SpeciesImageRow {
@@ -184,6 +186,16 @@ export async function handleGenerateCreature(request: Request, env: Env): Promis
     }
     console.error(`[${correlationId}] JWT verification failed: ${(err as Error).message}`)
     return json({ error: 'Invalid token', correlationId }, 401, origin)
+  }
+
+  // Step 1.5: Rate limit per authenticated user. Applied upfront — caps total
+  // request volume (cache hits included), not just expensive Gemini calls, so a
+  // stolen token can't fan out unbounded reads against species_images either.
+  if (env.GENERATE_CREATURE_RATE_LIMITER) {
+    const { success } = await env.GENERATE_CREATURE_RATE_LIMITER.limit({ key: userId })
+    if (!success) {
+      return json({ error: 'Too many requests — please slow down.' }, 429, origin)
+    }
   }
 
   // Step 2: Parse body

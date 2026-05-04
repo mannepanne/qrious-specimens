@@ -42,6 +42,8 @@ The Worker is registered in `src/worker.ts` and routes `POST /api/generate-creat
 ```
 Client → Worker (POST /api/generate-creature)
   Step 1: Verify JWT (ES256/RS256 via Supabase JWKS, or legacy HS256; checks exp + sub)
+  Step 1.5: Rate limit per user — GENERATE_CREATURE_RATE_LIMITER keyed on JWT sub
+            (5 req / 60s; cache hits count, so total request volume is bounded)
   Step 2: Parse body (qrHash + dna), validate qrHash format (/^[0-9a-f]{16}$/)
   Step 3: Check species_images cache — if hit, skip to Step 8
   Step 4: Generate illustration via Gemini

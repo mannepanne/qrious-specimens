@@ -109,8 +109,10 @@ export async function handleAdminDeleteUser(request: Request, env: Env): Promise
   }
   const callerJwt = authHeader.slice(7)
 
+  let callerSub: string
   try {
-    await verifyJWT(callerJwt, env)
+    const payload = await verifyJWT(callerJwt, env)
+    callerSub = payload.sub
   } catch (err) {
     const correlationId = crypto.randomUUID()
     if (err instanceof JwksUnavailableError) {
@@ -119,6 +121,16 @@ export async function handleAdminDeleteUser(request: Request, env: Env): Promise
     }
     console.error(`[${correlationId}] JWT verification failed: ${(err as Error).message}`)
     return json({ error: 'Invalid token', correlationId }, 401, origin)
+  }
+
+  // Step 1.5: Rate limit per admin caller. Applied before is_admin so a stolen
+  // session can't burn RPC capacity probing for admin status; legitimate admins
+  // doing a multi-user cleanup stay well below the cap.
+  if (env.ADMIN_DELETE_RATE_LIMITER) {
+    const { success } = await env.ADMIN_DELETE_RATE_LIMITER.limit({ key: callerSub })
+    if (!success) {
+      return json({ error: 'Too many requests — please slow down.' }, 429, origin)
+    }
   }
 
   // Step 2: Parse body

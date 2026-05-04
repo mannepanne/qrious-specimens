@@ -607,6 +607,43 @@ describe('handleGenerateCreature', () => {
     expect(res.status).toBe(401)
   })
 
+  it('returns 429 when the rate limiter rejects the request and skips downstream calls', async () => {
+    const limit = vi.fn().mockResolvedValue({ success: false })
+    const env = makeEnv({ GENERATE_CREATURE_RATE_LIMITER: { limit } })
+
+    const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
+    const res = await handleGenerateCreature(req, env)
+
+    expect(res.status).toBe(429)
+    const body = await res.json() as Record<string, unknown>
+    expect(body.error).toMatch(/too many requests/i)
+    expect(limit).toHaveBeenCalledWith({ key: 'test-user-id' })
+    // Should not have called Supabase/Gemini/Claude — limiter short-circuits before cache check
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('lets the request through (and serves cache) when the rate limiter allows it', async () => {
+    const limit = vi.fn().mockResolvedValue({ success: true })
+    const cachedRow = {
+      image_url: 'https://imagedelivery.net/test-hash/abc/qriousoriginal',
+      image_url_512: null,
+      image_url_256: null,
+      field_notes: 'notes',
+      discovery_count: 1,
+      first_discoverer_id: 'u1',
+    }
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify([cachedRow]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first: false, total_count: 1, scan_count: 1 }]), { status: 200 }))
+
+    const env = makeEnv({ GENERATE_CREATURE_RATE_LIMITER: { limit } })
+    const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
+    const res = await handleGenerateCreature(req, env)
+
+    expect(res.status).toBe(200)
+    expect(limit).toHaveBeenCalledWith({ key: 'test-user-id' })
+  })
+
   it('sets correct CORS headers for allowed origin', async () => {
     const req = makeRequest({
       token: validToken,
