@@ -10,11 +10,11 @@ Move completed specs to **ARCHIVE/** when a phase is merged to main.
 
 ---
 
-## Active implementation phases
+## Implementation phases
 
-Development is organised into 9 sequential phases. Work through them in order — each builds on the previous.
+Development was organised into 9 sequential phases — each archived once merged.
 
-**Current phase:** Phase 9 — Polish & launch
+**Current phase:** Launched. All 9 phases archived. Future work lives outside the phase model.
 
 ### Phase files
 
@@ -26,9 +26,7 @@ Development is organised into 9 sequential phases. Work through them in order �
 - ~~06-gazette.md~~ → [ARCHIVE](./ARCHIVE/06-gazette.md)
 - ~~07-gamification.md~~ → [ARCHIVE](./ARCHIVE/07-gamification.md)
 - ~~08-settings-admin.md~~ → [ARCHIVE](./ARCHIVE/08-settings-admin.md)
-
-9. **[09-polish-launch.md](./09-polish-launch.md)**
-   Mary Anning references, About/Privacy/Contact pages, Victorian captcha, analytics, error handling, production deployment
+- ~~09-polish-launch.md~~ → [ARCHIVE](./ARCHIVE/09-polish-launch.md)
 
 ### Supporting documentation
 

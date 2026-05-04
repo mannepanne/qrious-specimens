@@ -44,7 +44,7 @@ When asked to remember anything, add project memory in this CLAUDE.md (project r
 - Anthropic Claude Haiku (field notes generation)
 - Cloudflare Images (creature illustrations — qriousoriginal, qrious512, qrious256 variants served from `imagedelivery.net`)
 
-**Current status:** Phases 1–8 complete and merged to main; Phase 9 in progress
+**Current status:** All 9 phases complete and merged to main; live at `qrious.hultberg.org`
 
 ## Implementation phases
 
@@ -58,9 +58,9 @@ Development is organised into 9 sequential phases.
 6. ~~[06-gazette.md](./SPECIFICATIONS/ARCHIVE/06-gazette.md)~~ ✓ — Community activity feed, explorer showcase, Gazette profiles
 7. ~~[07-gamification.md](./SPECIFICATIONS/ARCHIVE/07-gamification.md)~~ ✓ — Badges, explorer rank, achievement notifications
 8. ~~[08-settings-admin.md](./SPECIFICATIONS/ARCHIVE/08-settings-admin.md)~~ ✓ — Account settings, admin dashboard, GDPR tools
-9. [09-polish-launch.md](./SPECIFICATIONS/09-polish-launch.md) — Mary Anning references, About/Privacy/Contact, error handling, production launch
+9. ~~[09-polish-launch.md](./SPECIFICATIONS/ARCHIVE/09-polish-launch.md)~~ ✓ — Mary Anning references, About/Privacy/Contact, error handling, production launch
 
-**Current phase:** Phase 9 — Polish & launch
+**Current phase:** Launched. Future work tracked as discrete features and tech-debt items rather than numbered phases.
 
 ### SPECIFICATIONS/
 - **Implementation phases** (numbered files) — Active work-in-progress
