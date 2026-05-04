@@ -3,6 +3,7 @@
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
 
 // Mock the submission hook so tests control the mutation outcome
 vi.mock('@/hooks/useCommunity', () => ({
@@ -47,6 +48,14 @@ function setupMutation(stub: Partial<MutationStub> = {}): MutationStub {
   return mutation
 }
 
+function renderPage() {
+  return render(
+    <MemoryRouter>
+      <ContactPage />
+    </MemoryRouter>,
+  )
+}
+
 function fillForm(opts: { name?: string; email: string; message: string }) {
   if (opts.name !== undefined) {
     fireEvent.change(screen.getByLabelText(/name \(optional\)/i), {
@@ -66,7 +75,7 @@ beforeEach(() => {
 describe('ContactPage — rendering', () => {
   it('renders all form fields and the dispatch button', () => {
     setupMutation()
-    render(<ContactPage />)
+    renderPage()
 
     expect(screen.getByLabelText(/name \(optional\)/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/correspondence address/i)).toBeInTheDocument()
@@ -77,14 +86,14 @@ describe('ContactPage — rendering', () => {
 
   it('renders the correspondence-desk heading', () => {
     setupMutation()
-    render(<ContactPage />)
+    renderPage()
     expect(screen.getByRole('heading', { name: /^contact$/i })).toBeInTheDocument()
     expect(screen.getByText(/correspondence desk/i)).toBeInTheDocument()
   })
 
   it('shows the live character counter for the message', () => {
     setupMutation()
-    render(<ContactPage />)
+    renderPage()
     expect(screen.getByText('0/2000')).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText(/^message/i), { target: { value: 'hello' } })
     expect(screen.getByText('5/2000')).toBeInTheDocument()
@@ -94,7 +103,7 @@ describe('ContactPage — rendering', () => {
 describe('ContactPage — captcha gating', () => {
   it('blocks submission and toasts when captcha is not verified', async () => {
     const mutation = setupMutation()
-    render(<ContactPage />)
+    renderPage()
 
     fillForm({ email: 'naturalist@example.com', message: 'Greetings.' })
     fireEvent.click(screen.getByRole('button', { name: /send correspondence/i }))
@@ -109,7 +118,7 @@ describe('ContactPage — captcha gating', () => {
 
   it('submits once captcha is verified', async () => {
     const mutation = setupMutation()
-    render(<ContactPage />)
+    renderPage()
 
     fillForm({
       name: '  Mary  ',
@@ -131,7 +140,7 @@ describe('ContactPage — captcha gating', () => {
 
   it('omits sender_name when the name field is left blank', async () => {
     const mutation = setupMutation()
-    render(<ContactPage />)
+    renderPage()
 
     fillForm({ email: 'naturalist@example.com', message: 'hi' })
     fireEvent.click(screen.getByTestId('mock-captcha-verify'))
@@ -148,7 +157,7 @@ describe('ContactPage — captcha gating', () => {
 describe('ContactPage — honeypot', () => {
   it('forwards the honeypot value to the worker when it is filled', async () => {
     const mutation = setupMutation()
-    const { container } = render(<ContactPage />)
+    const { container } = renderPage()
 
     const honeypot = container.querySelector<HTMLInputElement>('#contact-website')
     expect(honeypot).not.toBeNull()
@@ -169,7 +178,7 @@ describe('ContactPage — honeypot', () => {
 
   it('keeps honeypot undefined when the field is untouched', async () => {
     const mutation = setupMutation()
-    render(<ContactPage />)
+    renderPage()
 
     fillForm({ email: 'naturalist@example.com', message: 'hi' })
     fireEvent.click(screen.getByTestId('mock-captcha-verify'))
@@ -186,7 +195,7 @@ describe('ContactPage — honeypot', () => {
 describe('ContactPage — submit states', () => {
   it('shows the success state after a successful submission', async () => {
     setupMutation()
-    render(<ContactPage />)
+    renderPage()
 
     fillForm({ email: 'naturalist@example.com', message: 'hi' })
     fireEvent.click(screen.getByTestId('mock-captcha-verify'))
@@ -201,7 +210,7 @@ describe('ContactPage — submit states', () => {
   it('shows an error toast and stays on the form when submission fails', async () => {
     const mutateAsync = vi.fn().mockRejectedValue(new Error('network down'))
     setupMutation({ mutateAsync })
-    render(<ContactPage />)
+    renderPage()
 
     fillForm({ email: 'naturalist@example.com', message: 'hi' })
     fireEvent.click(screen.getByTestId('mock-captcha-verify'))
@@ -217,7 +226,7 @@ describe('ContactPage — submit states', () => {
 
   it('shows the dispatching label and disables the button while pending', () => {
     setupMutation({ isPending: true })
-    render(<ContactPage />)
+    renderPage()
 
     const button = screen.getByRole('button', { name: /dispatching/i })
     expect(button).toBeDisabled()

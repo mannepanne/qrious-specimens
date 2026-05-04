@@ -2,6 +2,7 @@
 // ABOUT: Includes naturalist verification challenge and honeypot spam protection
 
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -77,7 +78,18 @@ export function ContactPage() {
 
       <p className="font-serif text-sm leading-relaxed text-muted-foreground">
         Direct your enquiries, observations, or concerns to the cabinet curators. All correspondence
-        is reviewed personally.
+        is reviewed personally — typically within a few days.
+      </p>
+      <p className="font-serif text-sm leading-relaxed text-muted-foreground">
+        This is also the proper desk for matters of record: requesting a copy of your data, the
+        removal of your account, or the correction of details we hold. See the{' '}
+        <Link
+          to="/privacy"
+          className="underline underline-offset-4 hover:text-foreground transition-colors"
+        >
+          privacy notice
+        </Link>{' '}
+        for what each of these covers.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-5">
