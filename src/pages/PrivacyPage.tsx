@@ -146,9 +146,21 @@ export function PrivacyPage() {
           <h2 className="font-serif text-lg font-medium">How long we keep your data</h2>
           <p>
             We keep your account data — including your email, your specimens, and your page
-            navigation events — for as long as your account exists. If you delete your account, all
-            associated data is removed (with the limited exception of any prior contact-form
-            messages, described under "Your rights" below).
+            navigation events — for as long as your account exists. If you delete your account, we
+            remove your profile, your specimens, your badges, your activity, and your page
+            navigation events.
+          </p>
+          <p>
+            The species themselves — their taxonomy, illustrations, and field notes — are
+            deterministically generated from QR codes and form part of the shared catalogue. These
+            are retained so that other explorers who discover the same species are unaffected. Where
+            you were the first discoverer of a species, your name is removed from the public record,
+            but the species and its discovery date are kept.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            One further exception: if you have previously written to us via the contact form, those
+            messages may be retained as a record of our correspondence — a legitimate interest in
+            demonstrating that we received and acted on what you wrote (GDPR Article 17(3)).
           </p>
         </section>
 
@@ -179,9 +191,10 @@ export function PrivacyPage() {
             <li className="flex gap-2">
               <span className="shrink-0 text-muted-foreground">—</span>
               <span>
-                <span className="font-medium">Delete your account</span> — request complete removal
-                of your account and all associated data, including specimens, illustrations, field
-                notes, and page navigation events
+                <span className="font-medium">Delete your account</span> — request removal of your
+                profile, your specimens, your badges, your activity, and your page navigation
+                events. Shared species data (taxonomy, illustrations, field notes) is retained as
+                described under "How long we keep your data" above
               </span>
             </li>
             <li className="flex gap-2">
@@ -195,11 +208,6 @@ export function PrivacyPage() {
           <p>
             To exercise any of these rights, use the account settings within the app or contact us
             at the address below.
-          </p>
-          <p className="text-sm text-muted-foreground">
-            One small exception: if you have previously written to us via the contact form, those
-            messages may be retained as a record of our correspondence — a legitimate interest in
-            demonstrating that we received and acted on what you wrote (GDPR Article 17(3)).
           </p>
         </section>
 
