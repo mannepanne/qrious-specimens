@@ -149,8 +149,10 @@ export function PrivacyPage() {
           <p>
             We keep your account data — including your email, your specimens, and your page
             navigation events — for as long as your account exists. If you delete your account, we
-            remove your profile, your specimens, your badges, your activity, and your page
-            navigation events.
+            remove your profile, your specimens, your badges, and your activity. Your page
+            navigation events are de-identified — the link to your account is severed, but the
+            underlying analytics records are kept. Your sign-in record (which holds your email
+            address) is removed in a separate administrative step shortly after deletion.
           </p>
           <p>
             The species themselves — their taxonomy, illustrations, and field notes — are
@@ -196,22 +198,21 @@ export function PrivacyPage() {
               <span className="shrink-0 text-muted-foreground">—</span>
               <span>
                 <span className="font-medium">Delete your account</span> — request removal of your
-                profile, your specimens, your badges, your activity, and your page navigation
-                events. Shared species data (taxonomy, illustrations, field notes) is retained as
-                described under "How long we keep your data" above
+                profile, your specimens, your badges, and your activity, plus de-identification of
+                your page navigation events. Shared species data (taxonomy, illustrations, field
+                notes) is retained as described under "How long we keep your data" above
               </span>
             </li>
             <li className="flex gap-2">
               <span className="shrink-0 text-muted-foreground">—</span>
               <span>
-                <span className="font-medium">Correct your data</span> — update your email address
-                or other account details
+                <span className="font-medium">Correct your data</span> — request correction of your
+                account details
               </span>
             </li>
           </ul>
           <p>
-            To exercise any of these rights, use the account settings within the app or contact us
-            using the form below.
+            To exercise any of these rights, contact us using the form below.
           </p>
         </section>
 
