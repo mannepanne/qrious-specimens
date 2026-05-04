@@ -93,7 +93,16 @@ export function useExplorerProfile(userId: string | null) {
   })
 }
 
-/** Create a new explorer profile for the current user. */
+/**
+ * Create a new explorer profile for the current user.
+ *
+ * Callers must pass a `display_name` produced by `generateExplorerName()` from
+ * `@/lib/explorerNames`. The privacy policy promises pseudonymous names only —
+ * this hook is one of two paths that writes `display_name` from the client
+ * (the other is `useRegenerateDisplayName`); the `GazetteJoinPrompt` UI does
+ * not expose a free-text input, so every call site originates from the
+ * generator. See TD-028.
+ */
 export function useCreateProfile() {
   const queryClient = useQueryClient()
   return useMutation({
