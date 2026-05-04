@@ -334,25 +334,28 @@ function AppShell() {
 
 export function AppRoutes() {
   return (
-    <Routes>
-      <Route element={<AppShell />}>
-        <Route path="/"                    element={<Navigate to="/catalogue" replace />} />
-        <Route path="/catalogue"           element={<CataloguePage />} />
-        <Route path="/catalogue/:order"    element={<CataloguePage />} />
-        <Route path="/species/:qrHash"     element={<SpeciesPage />} />
-        <Route path="/gazette"             element={<GazettePage />} />
-        <Route path="/cabinet"             element={<CabinetPage />} />
-        <Route path="/specimen/:id"        element={<SpecimenPage />} />
-        <Route path="/enter"               element={<AuthPage />} />
-        <Route path="/about"               element={<AboutPage />} />
-        <Route path="/privacy"             element={<PrivacyPage />} />
-        <Route path="/contact"             element={<ContactPage />} />
-        <Route path="/settings"            element={<SettingsPage />} />
-        <Route path="/admin"               element={<AdminPage />} />
-      </Route>
-      {/* Temporary design prototype — standalone, outside AppShell. Remove once layout is approved. */}
-      <Route path="/framework"             element={<FrameworkPage />} />
-    </Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
+        <Route element={<AppShell />}>
+          <Route path="/"                    element={<Navigate to="/catalogue" replace />} />
+          <Route path="/catalogue"           element={<CataloguePage />} />
+          <Route path="/catalogue/:order"    element={<CataloguePage />} />
+          <Route path="/species/:qrHash"     element={<SpeciesPage />} />
+          <Route path="/gazette"             element={<GazettePage />} />
+          <Route path="/cabinet"             element={<CabinetPage />} />
+          <Route path="/specimen/:id"        element={<SpecimenPage />} />
+          <Route path="/enter"               element={<AuthPage />} />
+          <Route path="/about"               element={<AboutPage />} />
+          <Route path="/privacy"             element={<PrivacyPage />} />
+          <Route path="/contact"             element={<ContactPage />} />
+          <Route path="/settings"            element={<SettingsPage />} />
+          <Route path="/admin"               element={<AdminPage />} />
+        </Route>
+        {/* Temporary design prototype — standalone, outside AppShell. Remove once layout is approved. */}
+        <Route path="/framework"             element={<FrameworkPage />} />
+      </Routes>
+    </>
   )
 }
 
@@ -362,7 +365,6 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <ScrollToTop />
         <AppRoutes />
       </BrowserRouter>
       <Toaster />

@@ -1,6 +1,6 @@
 // ABOUT: Integration tests for App routing — auth gating, tab navigation, error state
 // ABOUT: Catalogue and Gazette are public; Cabinet and Specimen require auth
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -87,6 +87,8 @@ beforeEach(() => {
   vi.clearAllMocks()
   // Clean up jsdom's history state between tests
   window.history.replaceState(null, '', '/')
+  // jsdom does not implement window.scrollTo; ScrollToTop calls it on every route change
+  vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
 })
 
 describe('App', () => {
@@ -235,6 +237,26 @@ describe('App', () => {
       expect(screen.getByRole('heading', { name: /qrious specimens/i })).toBeInTheDocument()
     })
     expect(screen.getByRole('navigation', { name: /main navigation/i })).toBeInTheDocument()
+  })
+
+  it('resets window scroll to top on route change', async () => {
+    const scrollSpy = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    setupUnauthenticated()
+
+    renderApp({ initialPath: '/catalogue' })
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: /catalogue of known species/i })).toBeInTheDocument()
+    )
+
+    // Initial mount fires scrollTo once; clear and verify pathname change triggers it again
+    scrollSpy.mockClear()
+
+    fireEvent.click(screen.getByText('GAZETTE').closest('a')!)
+
+    await waitFor(() => {
+      expect(scrollSpy).toHaveBeenCalledWith(0, 0)
+    })
+    scrollSpy.mockRestore()
   })
 
   it("Gazette route renders The Explorer's Gazette heading", async () => {
