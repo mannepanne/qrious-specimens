@@ -156,13 +156,10 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
-### TD-019: Account deletion does not erase `auth.users` row (full GDPR Article 17)
+### TD-019: Account deletion does not erase `auth.users` row (full GDPR Article 17) — RESOLVED 2026-05-04
 
-- **Location:** `supabase/migrations/20260504000000_admin_delete_anonymises_first_discoverer.sql` — `admin_delete_user_data()`; admin self-delete flow
-- **Issue:** `admin_delete_user_data()` clears app-side data (profile, creatures, badges, activity, explorer_profile) and nulls first-discoverer credits, but does not touch `auth.users`. The auth row — which holds the email address, the actual PII per GDPR Article 4 — survives until a separate Supabase Admin API call (`auth.admin.deleteUser`). This means a "deleted" user's email remains queryable by anyone with service-role access until that follow-up runs.
-- **Why accepted:** The RPC was originally scoped to public-schema cleanup; cross-schema `auth.users` deletion can't run inside the same `SECURITY DEFINER` function without elevated privileges. The current admin flow performs the auth deletion separately via the Supabase JS Admin client, which works for the immediate need but isn't enforced by the migration.
-- **Risk:** Medium — a forgotten or failed Admin API call leaves email addresses stranded in `auth.users` after the user has been told their account is deleted. Must close before launch for full Article 17 compliance.
-- **Future fix:** Wrap `admin_delete_user_data()` + `auth.admin.deleteUser()` into a single transactional admin endpoint (Worker route or server-side function) so partial deletion is impossible. Alternatively, document the two-step protocol as a checklist in the admin runbook and add a periodic audit query that flags `auth.users` rows whose `id` no longer appears in `profiles`.
+- **Status:** Resolved by Worker-mediated erasure endpoint at `POST /api/admin-delete-user` (`workers/admin-delete-user/index.ts`), wired from the admin dashboard via `useGdprDelete`. See [ADR 2026-05-04 worker-mediated account erasure](./decisions/2026-05-04-worker-mediated-account-erasure.md).
+- **Resolution:** Single admin-gated Worker route runs `admin_delete_user_data` RPC followed by Supabase Auth Admin API `DELETE /auth/v1/admin/users/{id}`. JWT verification + server-side `is_admin()` re-check guard the endpoint; service-role key never reaches the browser. Two-system non-atomicity is surfaced in the response shape (`app_data`, `auth_user` phase fields) so the dashboard can render specific recovery guidance on partial failure rather than a generic "delete failed" message. A retry after manual cleanup is safe — the Auth Admin API returning 404 is treated as success. JWT helpers were extracted to `workers/shared/jwt.ts` for reuse. Worker tests in `workers/admin-delete-user/index.test.ts` cover OPTIONS/method handling, JWT validation, UUID validation, the is_admin gate (asserting the caller's JWT is forwarded — not service-role), RPC failure, partial-failure shape, happy path, and the 404 recovery scenario.
 - **Phase introduced:** Phase 8 (pre-existing); promoted to TD during PR #78 review
 
 ---

@@ -28,6 +28,7 @@ import {
   useMarkMessageRead,
   useGdprExport,
   useGdprDelete,
+  AdminDeleteError,
   type AdminUser,
   type ContactMessage,
 } from '@/hooks/useAdmin'
@@ -346,9 +347,17 @@ function UserRow({ user }: { user: AdminUser }) {
   const handleDelete = async () => {
     try {
       await gdprDelete.mutateAsync(user.user_id)
-      toast.success('User data deleted.')
-    } catch {
-      toast.error('Delete failed.')
+      toast.success('User data and auth row deleted.')
+    } catch (err) {
+      if (err instanceof AdminDeleteError && err.phase === 'auth_user') {
+        // Partial failure: app data is gone, auth row remains. The user is no
+        // longer in profiles, so a retry from the dashboard won't find them —
+        // the auth row needs clearing via Supabase Studio. Loud, specific toast
+        // so the admin knows exactly what's left to do.
+        toast.error('App data deleted, but auth row removal failed. Clear it via Supabase Studio.')
+      } else {
+        toast.error('Delete failed — no data was removed.')
+      }
     }
   }
 
