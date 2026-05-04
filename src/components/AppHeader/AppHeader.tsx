@@ -1,7 +1,7 @@
 // ABOUT: Shared branded page header — viewfinder logo mark + page-specific title and subtitle
 // ABOUT: Used across Catalogue, Gazette, and Field Kit; logo mark matches the Cabinet header
 
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Scan } from 'lucide-react'
 
 interface AppHeaderProps {
@@ -16,16 +16,25 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ title, eyebrow, subtitle, actions }: AppHeaderProps) {
+  const location = useLocation()
+  const isOnCatalogue = location.pathname === '/catalogue' || location.pathname.startsWith('/catalogue/')
+  const logoMark = <Scan className="h-4 w-4 text-background" />
+  const logoBoxClass = 'h-8 w-8 rounded-sm bg-foreground flex items-center justify-center shrink-0'
+
   return (
     <div className="px-4 pt-4 pb-3 shrink-0 border-b border-border">
       <div className="flex items-center gap-3">
-        <Link
-          to="/catalogue"
-          aria-label="QRious Specimens — Catalogue"
-          className="h-8 w-8 rounded-sm bg-foreground flex items-center justify-center shrink-0 hover:opacity-80 transition-opacity"
-        >
-          <Scan className="h-4 w-4 text-background" />
-        </Link>
+        {isOnCatalogue ? (
+          <div className={logoBoxClass}>{logoMark}</div>
+        ) : (
+          <Link
+            to="/catalogue"
+            aria-label="QRious Specimens — Catalogue"
+            className={`${logoBoxClass} hover:opacity-80 transition-opacity`}
+          >
+            {logoMark}
+          </Link>
+        )}
         <div className="flex-1 min-w-0">
           {eyebrow && (
             <p className="font-mono text-[9px] tracking-[2px] text-muted-foreground uppercase">
