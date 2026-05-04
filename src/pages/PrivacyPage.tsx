@@ -211,15 +211,46 @@ export function PrivacyPage() {
           </p>
         </section>
 
-        <section className="space-y-2">
+        <section className="space-y-3">
           <h2 className="font-serif text-lg font-medium">Children</h2>
           <p>
-            QRious Specimens is not specifically directed to children, but we recognise that its
-            themes — creatures, scanning, illustrated cabinets — may appeal to younger naturalists.
-            Account creation is intended for users aged 13 or over. If you are under 13, please use
-            the site under an account managed by a parent or guardian. If we become aware that a
-            child has registered an account without parental involvement, we will remove the
-            account and any associated data.
+            QRious Specimens isn't directed specifically at children, though its themes —
+            creatures, scanning, illustrated cabinets — may well appeal to younger naturalists. The
+            site is deliberately small in what it collects and what it exposes:
+          </p>
+          <ul className="space-y-2 ml-4">
+            <li className="flex gap-2">
+              <span className="shrink-0 text-muted-foreground">—</span>
+              <span>
+                Sign-in is by magic link to an email address. Your email is never shown to other
+                users.
+              </span>
+            </li>
+            <li className="flex gap-2">
+              <span className="shrink-0 text-muted-foreground">—</span>
+              <span>
+                On the site you appear under an auto-generated explorer name like{' '}
+                <span className="italic">M. Anning</span> — never your real name or your email.
+              </span>
+            </li>
+            <li className="flex gap-2">
+              <span className="shrink-0 text-muted-foreground">—</span>
+              <span>
+                There is no chat, no comments, no direct messaging — no way for users to contact
+                each other through the platform.
+              </span>
+            </li>
+            <li className="flex gap-2">
+              <span className="shrink-0 text-muted-foreground">—</span>
+              <span>
+                Aggregate analytics are anonymous and not linked to your account.
+              </span>
+            </li>
+          </ul>
+          <p>
+            Given this, the privacy risks are kept low. Saying that, if you are a parent or
+            guardian and would prefer your child's account be removed, contact us and we will do so
+            promptly.
           </p>
         </section>
 
