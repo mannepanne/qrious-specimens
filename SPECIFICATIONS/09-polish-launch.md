@@ -15,30 +15,30 @@ The finishing phase: Mary Anning references woven deliberately throughout the UI
 
 ### In scope
 - [x] **About page** — project description, credits, Mary Anning homage, links to Gazette and Catalogue (PR #75)
-- [ ] **Privacy page** — privacy policy (data collected, how it's used, GDPR rights)
-- [ ] **Contact page** — contact form with `VictorianCaptcha`, submits to `contact_messages` table
-- [ ] `VictorianCaptcha` component — themed CAPTCHA (simple maths or word puzzle in Victorian style, not Google reCAPTCHA)
-- [ ] `useTrackPageView` hook — fires analytics events to `page_events` table on tab/subpage changes
-- [ ] Mary Anning references — deliberate, non-forced, throughout:
+- [x] **Privacy page** — privacy policy (data collected, how it's used, GDPR rights)
+- [x] **Contact page** — contact form with `VictorianCaptcha`, submits to `contact_messages` table
+- [x] `VictorianCaptcha` component — themed CAPTCHA (simple maths or word puzzle in Victorian style, not Google reCAPTCHA)
+- [x] `useTrackPageView` hook — fires analytics events to `page_events` table on tab/subpage changes
+- [x] Mary Anning references — deliberate, non-forced, throughout:
   - AuthPage: a small epigraph about the Lyme Regis beach or the act of finding
   - About page: proper acknowledgement of her life and legacy
   - Hatching phase "SCANNING THE STRATA" — already a Lyme Regis reference
   - Explorer name generator: "A. Anning" as an Easter egg in the name list
   - Cabinet header: a rotating Victorian expedition quote
   - Taxonomy naming conventions: subtle nods to Jurassic Coast geology
-- [ ] Comprehensive error handling:
+- [x] Comprehensive error handling:
   - Network errors → toast with retry option
   - Camera permission denied → clear explanation + fallback message
   - AI generation failure → graceful fallback to client-side SVG render
   - Supabase query errors → informative toast, not silent failure
   - Auth errors → redirect to sign-in
-- [ ] Loading states: skeletons or spinners on all async content
-- [ ] Empty states: cabinet empty state (invite to scan first QR), catalogue empty state (no matching filters)
-- [ ] Image lazy loading in catalogue and cabinet grids
+- [x] Loading states: skeletons or spinners on all async content
+- [x] Empty states: cabinet empty state (invite to scan first QR), catalogue empty state (no matching filters)
+- [x] Image lazy loading in catalogue and cabinet grids
 - [ ] Post-merge verification pass (site is already live — see below)
   - [ ] Confirm Wrangler secrets audit (any new secrets introduced in Phase 9 set in production)
   - [ ] Confirm Supabase auth redirect URL still valid for `qrious.hultberg.org`
-  - [ ] Confirm GitHub Actions deploy run succeeds after merge, then smoke test
+  - [x] Confirm GitHub Actions deploy run succeeds after merge, then smoke test
 
 ### Out of scope
 - Native mobile app
@@ -50,16 +50,16 @@ The finishing phase: Mary Anning references woven deliberately throughout the UI
 - **Swipe navigation in the catalogue detail view** — The species detail view in the catalogue supports arrow-key / button navigation between species on desktop. Touch swipe left/right for mobile navigation was deferred from Phase 5. Add it here as part of the mobile polish pass, consistent with the swipe patterns used elsewhere in the app.
 
 ### Acceptance criteria
-- [ ] About, Privacy, and Contact pages render correctly
-- [ ] Contact form submits successfully; entry appears in Admin contact inbox
-- [ ] VictorianCaptcha blocks bot submissions (basic effectiveness)
-- [ ] Page view events recorded in `page_events` table on each tab visit
-- [ ] All error states display appropriate messages without crashing
-- [ ] Cabinet empty state appears for a new user with no specimens
-- [ ] Images in cabinet and catalogue lazy-load
+- [x] About, Privacy, and Contact pages render correctly
+- [x] Contact form submits successfully; entry appears in Admin contact inbox
+- [x] VictorianCaptcha blocks bot submissions (basic effectiveness)
+- [x] Page view events recorded in `page_events` table on each tab visit
+- [x] All error states display appropriate messages without crashing
+- [x] Cabinet empty state appears for a new user with no specimens
+- [x] Images in cabinet and catalogue lazy-load
 - [ ] `https://qrious.hultberg.org` remains healthy after merge: auth works, scanning works end-to-end
-- [ ] Mary Anning references present in at least 4 distinct places across the app
-- [ ] `bun run test` passes; `bun run typecheck` passes
+- [x] Mary Anning references present in at least 4 distinct places across the app
+- [x] `bun run test` passes; `bun run typecheck` passes
 
 ---
 
