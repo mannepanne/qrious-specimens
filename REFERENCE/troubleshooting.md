@@ -371,12 +371,15 @@ echo "path/to/large/files/" >> .gitignore
 - Verify correct script paths in HTML
 
 ### CORS errors
-```javascript
-// Backend needs appropriate CORS headers
-res.setHeader('Access-Control-Allow-Origin', 'https://yourdomain.com');
-res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
-res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+Worker API routes serve CORS headers via `workers/shared/cors.ts`. The allowlist is controlled by the `ALLOWED_ORIGINS` env var in `wrangler.toml` `[vars]` — production ships with `https://qrious.hultberg.org` only. Methods are fixed at `POST, OPTIONS`; default `Access-Control-Allow-Headers` is `Content-Type, Authorization`, with the public contact endpoint scoped down to `Content-Type` only.
+
+To test cross-origin against the deployed Worker from a non-default port locally:
+
+```bash
+wrangler dev --var ALLOWED_ORIGINS:"https://qrious.hultberg.org,http://localhost:XXXX"
 ```
+
+See `REFERENCE/environment-setup.md` for the full allowlist contract and fallback semantics.
 
 ### Authentication/session issues
 - Clear browser cookies

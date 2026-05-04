@@ -34,6 +34,10 @@ export interface Env {
   CF_IMAGES_DELIVERY_HASH: string
   RESEND_API_KEY: string
 
+  // Comma-separated CORS allowlist. Set in wrangler.toml [vars]; falls back to
+  // the canonical production origin when unset (see `workers/shared/cors.ts`).
+  ALLOWED_ORIGINS?: string
+
   // Rate limiter bindings — see wrangler.toml for cap and namespace_id.
   CONTACT_RATE_LIMITER?: RateLimiter
   GENERATE_CREATURE_RATE_LIMITER?: RateLimiter

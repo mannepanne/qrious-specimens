@@ -63,12 +63,20 @@ describe('handleContact — method and CORS', () => {
     expect(res.headers.get('Access-Control-Allow-Methods')).toContain('POST')
   })
 
-  it('echoes localhost origin when allowed', async () => {
+  it('echoes localhost when ALLOWED_ORIGINS includes it', async () => {
+    const res = await handleContact(
+      makeRequest(null, { method: 'OPTIONS', origin: 'http://localhost:5173' }),
+      makeEnv({ ALLOWED_ORIGINS: 'https://qrious.hultberg.org,http://localhost:5173' }),
+    )
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:5173')
+  })
+
+  it('rejects localhost under the production default allowlist', async () => {
     const res = await handleContact(
       makeRequest(null, { method: 'OPTIONS', origin: 'http://localhost:5173' }),
       makeEnv(),
     )
-    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:5173')
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('https://qrious.hultberg.org')
   })
 
   it('falls back to production origin for disallowed origins', async () => {

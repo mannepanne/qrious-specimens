@@ -8,6 +8,7 @@
 import type { Env } from '../shared/env'
 import { verifyJWT, JwksUnavailableError } from '../shared/jwt'
 import { enforceRateLimit } from '../shared/rateLimit'
+import { corsHeaders } from '../shared/cors'
 
 interface DeleteBody {
   user_id?: string
@@ -17,23 +18,6 @@ interface DeleteBody {
 // Loose enough to allow any RFC 4122 variant; strict enough to reject path
 // traversal and obvious injection attempts before they hit Supabase.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-function corsHeaders(origin: string | null): Record<string, string> {
-  const allowed = ['https://qrious.hultberg.org', 'http://localhost:5173']
-  const allowedOrigin = origin && allowed.includes(origin) ? origin : allowed[0]
-  return {
-    'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  }
-}
-
-function json(body: unknown, status: number, origin: string | null): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders(origin), 'Content-Type': 'application/json' },
-  })
-}
 
 // Structured audit line for irreversible admin operations and the rejection
 // branches that gate them. Single-line JSON so Cloudflare Workers Logs can index
@@ -136,19 +120,25 @@ async function callAuthAdminDeleteUser(
 
 export async function handleAdminDeleteUser(request: Request, env: Env): Promise<Response> {
   const origin = request.headers.get('Origin')
+  const cors = corsHeaders(origin, env)
+  const json = (body: unknown, status: number): Response =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
   const correlationId = crypto.randomUUID()
 
   if (request.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: corsHeaders(origin) })
+    return new Response(null, { status: 204, headers: cors })
   }
   if (request.method !== 'POST') {
-    return json({ error: 'Method not allowed' }, 405, origin)
+    return json({ error: 'Method not allowed' }, 405)
   }
 
   // Step 1: Verify JWT
   const authHeader = request.headers.get('Authorization')
   if (!authHeader?.startsWith('Bearer ')) {
-    return json({ error: 'Missing or malformed Authorization header' }, 401, origin)
+    return json({ error: 'Missing or malformed Authorization header' }, 401)
   }
   const callerJwt = authHeader.slice(7)
 
@@ -159,10 +149,10 @@ export async function handleAdminDeleteUser(request: Request, env: Env): Promise
   } catch (err) {
     if (err instanceof JwksUnavailableError) {
       console.error(`[${correlationId}] JWKS unavailable: ${err.message}`)
-      return json({ error: 'Auth provider unavailable', correlationId }, 503, origin)
+      return json({ error: 'Auth provider unavailable', correlationId }, 503)
     }
     console.error(`[${correlationId}] JWT verification failed: ${(err as Error).message}`)
-    return json({ error: 'Invalid token', correlationId }, 401, origin)
+    return json({ error: 'Invalid token', correlationId }, 401)
   }
 
   // Step 1.5: Rate limit per admin caller. Applied before is_admin so a stolen
@@ -172,7 +162,7 @@ export async function handleAdminDeleteUser(request: Request, env: Env): Promise
     env.ADMIN_DELETE_RATE_LIMITER,
     callerSub,
     'rate_limit_admin_delete',
-    corsHeaders(origin),
+    cors,
   )
   if (rateLimited) {
     logAdminDeleteAudit({
@@ -188,12 +178,12 @@ export async function handleAdminDeleteUser(request: Request, env: Env): Promise
   try {
     body = (await request.json()) as DeleteBody
   } catch {
-    return json({ error: 'Invalid JSON body' }, 400, origin)
+    return json({ error: 'Invalid JSON body' }, 400)
   }
 
   const targetUserId = body.user_id
   if (!targetUserId || !UUID_RE.test(targetUserId)) {
-    return json({ error: 'Missing or malformed user_id' }, 400, origin)
+    return json({ error: 'Missing or malformed user_id' }, 400)
   }
 
   // Step 2.5: Self-delete guard. Removing the calling admin would lock the
@@ -213,7 +203,6 @@ export async function handleAdminDeleteUser(request: Request, env: Env): Promise
     return json(
       { error: 'Cannot delete the calling admin', code: 'self_delete_blocked' },
       400,
-      origin,
     )
   }
 
@@ -226,7 +215,6 @@ export async function handleAdminDeleteUser(request: Request, env: Env): Promise
     return json(
       { error: 'Auth check temporarily unavailable, please retry', code: 'auth_check_unavailable', correlationId },
       503,
-      origin,
     )
   }
   if (!adminResult.isAdmin) {
@@ -236,7 +224,7 @@ export async function handleAdminDeleteUser(request: Request, env: Env): Promise
       target_user_id: targetUserId,
       correlation_id: correlationId,
     })
-    return json({ error: 'Not authorised' }, 403, origin)
+    return json({ error: 'Not authorised' }, 403)
   }
 
   // Step 4: Delete app data via RPC. The RPC re-checks is_admin() internally
@@ -252,7 +240,6 @@ export async function handleAdminDeleteUser(request: Request, env: Env): Promise
     return json(
       { ok: false, app_data: 'failed', detail: appDataResult.detail },
       500,
-      origin,
     )
   }
 
@@ -279,7 +266,6 @@ export async function handleAdminDeleteUser(request: Request, env: Env): Promise
     return json(
       { ok: false, app_data: 'deleted', auth_user: 'failed', detail: authResult.detail },
       500,
-      origin,
     )
   }
 
@@ -292,5 +278,5 @@ export async function handleAdminDeleteUser(request: Request, env: Env): Promise
     correlation_id: correlationId,
   })
 
-  return json({ ok: true, app_data: 'deleted', auth_user: 'deleted' }, 200, origin)
+  return json({ ok: true, app_data: 'deleted', auth_user: 'deleted' }, 200)
 }
