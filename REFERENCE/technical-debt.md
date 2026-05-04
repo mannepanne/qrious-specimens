@@ -167,14 +167,22 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
-### TD-020: Phase 8 admin RPC cluster lacks explicit `SET search_path = public`
+### TD-020: Phase 8 admin RPC cluster lacks explicit `SET search_path = public` — RESOLVED 2026-05-04
 
-- **Location:** `supabase/migrations/20260419000000_phase8_settings_admin.sql` — `is_admin`, `admin_list_users`, `admin_export_user_data`, `admin_delete_user_data`, `admin_get_stats`; `supabase/migrations/20260504000000_admin_delete_anonymises_first_discoverer.sql` — `admin_delete_user_data`
-- **Issue:** All Phase 6 and Phase 9 `SECURITY DEFINER` RPCs explicitly `SET search_path = public` to prevent search-path-injection attacks (where a hostile user creates objects in their own schema that shadow `public.*` references). The entire Phase 8 admin cluster predates that convention and lacks the setting. Defence-in-depth gap, not an active vulnerability under the current threat model (single trusted admin), but breaks consistency with the rest of the codebase.
-- **Why accepted:** Threat surface is bounded — only `is_admin()` admins can call these RPCs, and the project follows a single-trusted-contributor model (see `REFERENCE/decisions/2026-04-25-pr-review-threat-model.md`). One-off fixing it inside an unrelated PR (e.g. PR #78) creates inconsistency in the other direction; better to do the whole cluster in a single dedicated PR.
-- **Risk:** Low — defence-in-depth only; not exploitable under the current admin trust model.
-- **Future fix:** Single dedicated migration that re-issues `CREATE OR REPLACE FUNCTION` for each Phase 8 admin RPC with `SET search_path = public` added to the function definition. No behavioural change, just hardens the function metadata.
+- **Status:** Resolved by `supabase/migrations/20260504000001_phase8_admin_search_path_hardening.sql` (and `SET search_path = public` added to `admin_delete_user_data` in the TD-018 migration). All five Phase 8 admin RPCs (`is_admin`, `admin_list_users`, `admin_export_user_data`, `admin_delete_user_data`, `admin_get_stats`) now carry the setting, matching the Phase 6 / Phase 9 convention.
+- **Resolution:** Single dedicated sweep migration re-issued the four remaining admin RPCs with `SET search_path = public`. No behavioural change; GRANTs survived `CREATE OR REPLACE`. Verified by reading the resulting `pg_proc.proconfig` rows; future regressions can be caught by the pgTAP harness once TD-021 lands.
 - **Phase introduced:** Phase 8 (identified during PR #78 review)
+
+---
+
+### TD-021: No database-level test harness for `SECURITY DEFINER` RPCs and RLS policies
+
+- **Location:** `supabase/migrations/*.sql` — eleven `SECURITY DEFINER` RPCs across Phases 4, 5, 6, 8, 9; RLS policies on `profiles`, `creatures`, `activity_feed`, `explorer_profiles`, `contact_messages`
+- **Issue:** Vitest hook tests (`useAdmin.test.ts`, `useCommunity.test.ts`) mock the Supabase client and verify the *frontend calls the right RPC with the right shape*, but no test asserts on what the RPC actually does. The current safety net for an RPC behavioural regression — wrong column reference, missed FK, broken `COALESCE` fallback, search_path injection — is manual post-deploy smoke testing. RLS policies are entirely untested.
+- **Why accepted:** Acceptable through Phase 8 because the RPC surface was small and deployments were infrequent; PR #78 (TD-018) raised the visibility of the gap. Setting up the harness is real work (~half a day) and Phase 9 has more user-visible launch-critical work in flight.
+- **Risk:** Medium — increases as the RPC surface grows. A silent regression in `admin_delete_user_data` or any `get_*` RPC ships to production until a manual smoke test catches it. Particularly load-bearing once public sign-ups open.
+- **Future fix:** Adopt pgTAP per ADR `REFERENCE/decisions/2026-05-04-pgtap-smoke-suite.md`. Single dedicated PR introduces `supabase/tests/setup.sql` + `supabase/tests/admin_rpcs.sql` (~50–80 lines covering the six smoke assertions in the ADR), wires `pg_prove` into a GitHub Actions step against a `postgres:16` container with the `pgtap` extension, and updates `REFERENCE/testing-strategy.md` to point to the SQL test path. From that PR onwards, every migration that adds or changes an RPC adds (or extends) a pgTAP test in the same PR. Sequenced after Phase 9 user-facing work, before public launch.
+- **Phase introduced:** Phase 9 (gap surfaced during PR #78 review)
 
 ---
 

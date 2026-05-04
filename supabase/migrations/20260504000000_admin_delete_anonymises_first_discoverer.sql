@@ -27,7 +27,11 @@
 -- retention rationale (ADR 2026-04-19-retain-contact-messages-on-gdpr-delete).
 
 CREATE OR REPLACE FUNCTION public.admin_delete_user_data(p_user_id uuid)
-RETURNS void AS $$
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
   IF NOT public.is_admin() THEN
     RAISE EXCEPTION 'Unauthorized';
@@ -42,7 +46,7 @@ BEGIN
   DELETE FROM explorer_profiles WHERE user_id = p_user_id;
   DELETE FROM profiles          WHERE id      = p_user_id;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- Backfill: clear orphaned first_discoverer_id references left behind by
 -- account deletions performed under the previous RPC. Idempotent and bounded.
