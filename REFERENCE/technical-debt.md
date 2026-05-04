@@ -148,14 +148,41 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
-### TD-018: Account deletion does not anonymise `species_discoveries.first_discoverer_id`
+### TD-018: Account deletion does not anonymise `species_discoveries.first_discoverer_id` — RESOLVED 2026-05-04
 
-- **Location:** `supabase/migrations/20260419000000_phase8_settings_admin.sql` — `admin_delete_user_data()`; `species_discoveries.first_discoverer_id`
-- **Issue:** When a user deletes their account, `admin_delete_user_data` removes their `creatures`, `explorer_badges`, `activity_feed`, `explorer_profiles`, and `profiles` rows, but does not touch `species_discoveries`. The `first_discoverer_id` column on any species they first discovered continues to point at a now-deleted user — a dangling reference. The privacy policy promises that "where you were the first discoverer of a species, your name is removed from the public record" — the policy and the code are currently out of sync.
-- **Why accepted:** The Privacy page (PR #77) sets the intended behaviour correctly. The schema/RPC change is a follow-up that needs its own migration, RPC update, and test pass. Shared species data (taxonomy, illustrations, field notes) is correctly retained — only the `first_discoverer_id` link needs to be cleared.
-- **Risk:** Medium — gap between stated policy and actual behaviour. Practically there is no public surface that resolves a dangling `first_discoverer_id` to a profile (the profile row is gone, so any join returns null and the UI falls back gracefully), so the privacy harm is limited. But it must be fixed before launch to honour the policy.
-- **Future fix:** Update `admin_delete_user_data()` to also run `UPDATE species_discoveries SET first_discoverer_id = NULL WHERE first_discoverer_id = p_user_id`. Verify any catalogue / Gazette UI that reads `first_discoverer_id` handles `NULL` cleanly (display "an explorer who is no longer with us" or similar). Add an integration test covering the anonymisation.
+- **Status:** Resolved for the first-discoverer-credit scope by `supabase/migrations/20260504000000_admin_delete_anonymises_first_discoverer.sql`. Account-level erasure of `auth.users` (which holds the email) remains a separate admin step per Phase 8 design — tracked as TD-019.
+- **Resolution:** `admin_delete_user_data()` now nulls `first_discoverer_id` on both `species_discoveries` and `species_images` for the deleted user before removing the profile row. The same migration backfills orphaned references left by earlier deletions performed under the previous RPC. UI null-handling was already correct (`useFirstDiscoverer` returns null via `maybeSingle()`; `SpeciesDetail` guards on `firstDiscovererName` before rendering the "FIRST BY" credit), so no UI change was needed.
 - **Phase introduced:** Phase 9 (identified during Privacy page review)
+
+---
+
+### TD-019: Account deletion does not erase `auth.users` row (full GDPR Article 17)
+
+- **Location:** `supabase/migrations/20260504000000_admin_delete_anonymises_first_discoverer.sql` — `admin_delete_user_data()`; admin self-delete flow
+- **Issue:** `admin_delete_user_data()` clears app-side data (profile, creatures, badges, activity, explorer_profile) and nulls first-discoverer credits, but does not touch `auth.users`. The auth row — which holds the email address, the actual PII per GDPR Article 4 — survives until a separate Supabase Admin API call (`auth.admin.deleteUser`). This means a "deleted" user's email remains queryable by anyone with service-role access until that follow-up runs.
+- **Why accepted:** The RPC was originally scoped to public-schema cleanup; cross-schema `auth.users` deletion can't run inside the same `SECURITY DEFINER` function without elevated privileges. The current admin flow performs the auth deletion separately via the Supabase JS Admin client, which works for the immediate need but isn't enforced by the migration.
+- **Risk:** Medium — a forgotten or failed Admin API call leaves email addresses stranded in `auth.users` after the user has been told their account is deleted. Must close before launch for full Article 17 compliance.
+- **Future fix:** Wrap `admin_delete_user_data()` + `auth.admin.deleteUser()` into a single transactional admin endpoint (Worker route or server-side function) so partial deletion is impossible. Alternatively, document the two-step protocol as a checklist in the admin runbook and add a periodic audit query that flags `auth.users` rows whose `id` no longer appears in `profiles`.
+- **Phase introduced:** Phase 8 (pre-existing); promoted to TD during PR #78 review
+
+---
+
+### TD-020: Phase 8 admin RPC cluster lacks explicit `SET search_path = public` — RESOLVED 2026-05-04
+
+- **Status:** Resolved by `supabase/migrations/20260504000001_phase8_admin_search_path_hardening.sql` (and `SET search_path = public` added to `admin_delete_user_data` in the TD-018 migration). All five Phase 8 admin RPCs (`is_admin`, `admin_list_users`, `admin_export_user_data`, `admin_delete_user_data`, `admin_get_stats`) now carry the setting, matching the Phase 6 / Phase 9 convention.
+- **Resolution:** Single dedicated sweep migration re-issued the four remaining admin RPCs with `SET search_path = public`. No behavioural change; GRANTs survived `CREATE OR REPLACE`. Verified by reading the resulting `pg_proc.proconfig` rows; future regressions can be caught by the pgTAP harness once TD-021 lands.
+- **Phase introduced:** Phase 8 (identified during PR #78 review)
+
+---
+
+### TD-021: No database-level test harness for `SECURITY DEFINER` RPCs and RLS policies
+
+- **Location:** `supabase/migrations/*.sql` — eleven `SECURITY DEFINER` RPCs across Phases 4, 5, 6, 8, 9; RLS policies on `profiles`, `creatures`, `activity_feed`, `explorer_profiles`, `contact_messages`
+- **Issue:** Vitest hook tests (`useAdmin.test.ts`, `useCommunity.test.ts`) mock the Supabase client and verify the *frontend calls the right RPC with the right shape*, but no test asserts on what the RPC actually does. The current safety net for an RPC behavioural regression — wrong column reference, missed FK, broken `COALESCE` fallback, search_path injection — is manual post-deploy smoke testing. RLS policies are entirely untested.
+- **Why accepted:** Acceptable through Phase 8 because the RPC surface was small and deployments were infrequent; PR #78 (TD-018) raised the visibility of the gap. Setting up the harness is real work (~half a day) and Phase 9 has more user-visible launch-critical work in flight.
+- **Risk:** Medium — increases as the RPC surface grows. A silent regression in `admin_delete_user_data` or any `get_*` RPC ships to production until a manual smoke test catches it. Particularly load-bearing once public sign-ups open.
+- **Future fix:** Adopt pgTAP per ADR `REFERENCE/decisions/2026-05-04-pgtap-smoke-suite.md`. Single dedicated PR introduces `supabase/tests/setup.sql` + `supabase/tests/admin_rpcs.sql` (~50–80 lines covering the six smoke assertions in the ADR), wires `pg_prove` into a GitHub Actions step against a `postgres:16` container with the `pgtap` extension, and updates `REFERENCE/testing-strategy.md` to point to the SQL test path. From that PR onwards, every migration that adds or changes an RPC adds (or extends) a pgTAP test in the same PR. Sequenced after Phase 9 user-facing work, before public launch.
+- **Phase introduced:** Phase 9 (gap surfaced during PR #78 review)
 
 ---
 
