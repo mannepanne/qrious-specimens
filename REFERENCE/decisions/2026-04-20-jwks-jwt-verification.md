@@ -88,7 +88,7 @@ Two concerns had to be addressed simultaneously:
 
 ## References
 
-- Code: `workers/generate-creature/index.ts` — `verifyJWT`, `fetchJwks`, `JwksUnavailableError`
+- Code: `workers/shared/jwt.ts` — `verifyJWT`, `fetchJwks`, `JwksUnavailableError` (extracted in [PR #83](https://github.com/mannepanne/qrious-specimens/pull/83) for reuse across `generate-creature` and `admin-delete-user`; `workers/generate-creature/index.ts` re-exports for backwards compatibility)
 - Tests: `workers/generate-creature/index.test.ts` — 25 tests covering HS256 and ES256 paths, kid-rotation refetch, empty-map negative TTL, 503-vs-401 taxonomy, `exp`/`iss` enforcement, correlation ID surface
 - Resolves: TD-007 (JWT `alg` header not validated — now whitelisted and dispatched)
 - Partially addresses: #43 (ES256 verification was the root cause of line-art specimens)

@@ -156,13 +156,10 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
-### TD-019: Account deletion does not erase `auth.users` row (full GDPR Article 17)
+### TD-019: Account deletion does not erase `auth.users` row (full GDPR Article 17) — RESOLVED 2026-05-04
 
-- **Location:** `supabase/migrations/20260504000000_admin_delete_anonymises_first_discoverer.sql` — `admin_delete_user_data()`; admin self-delete flow
-- **Issue:** `admin_delete_user_data()` clears app-side data (profile, creatures, badges, activity, explorer_profile) and nulls first-discoverer credits, but does not touch `auth.users`. The auth row — which holds the email address, the actual PII per GDPR Article 4 — survives until a separate Supabase Admin API call (`auth.admin.deleteUser`). This means a "deleted" user's email remains queryable by anyone with service-role access until that follow-up runs.
-- **Why accepted:** The RPC was originally scoped to public-schema cleanup; cross-schema `auth.users` deletion can't run inside the same `SECURITY DEFINER` function without elevated privileges. The current admin flow performs the auth deletion separately via the Supabase JS Admin client, which works for the immediate need but isn't enforced by the migration.
-- **Risk:** Medium — a forgotten or failed Admin API call leaves email addresses stranded in `auth.users` after the user has been told their account is deleted. Must close before launch for full Article 17 compliance.
-- **Future fix:** Wrap `admin_delete_user_data()` + `auth.admin.deleteUser()` into a single transactional admin endpoint (Worker route or server-side function) so partial deletion is impossible. Alternatively, document the two-step protocol as a checklist in the admin runbook and add a periodic audit query that flags `auth.users` rows whose `id` no longer appears in `profiles`.
+- **Status:** Resolved by Worker-mediated erasure endpoint at `POST /api/admin-delete-user` (`workers/admin-delete-user/index.ts`), wired from the admin dashboard via `useGdprDelete`. See [ADR 2026-05-04 worker-mediated account erasure](./decisions/2026-05-04-worker-mediated-account-erasure.md).
+- **Resolution:** Single admin-gated Worker route runs `admin_delete_user_data` RPC followed by Supabase Auth Admin API `DELETE /auth/v1/admin/users/{id}`. JWT verification + server-side `is_admin()` re-check guard the endpoint; service-role key never reaches the browser. Two-system non-atomicity is surfaced in the response shape (`app_data`, `auth_user` phase fields) so the dashboard can render specific recovery guidance on partial failure rather than a generic "delete failed" message. A retry after manual cleanup is safe — the Auth Admin API returning 404 is treated as success. JWT helpers were extracted to `workers/shared/jwt.ts` for reuse. Worker tests in `workers/admin-delete-user/index.test.ts` cover OPTIONS/method handling, JWT validation, UUID validation, the is_admin gate (asserting the caller's JWT is forwarded — not service-role), RPC failure, partial-failure shape, happy path, and the 404 recovery scenario.
 - **Phase introduced:** Phase 8 (pre-existing); promoted to TD during PR #78 review
 
 ---
@@ -183,6 +180,72 @@ Items here are accepted risks or pragmatic choices made during development, not 
 - **Risk:** Medium — increases as the RPC surface grows. A silent regression in `admin_delete_user_data` or any `get_*` RPC ships to production until a manual smoke test catches it. Particularly load-bearing once public sign-ups open.
 - **Future fix:** Adopt pgTAP per ADR `REFERENCE/decisions/2026-05-04-pgtap-smoke-suite.md`. Single dedicated PR introduces `supabase/tests/setup.sql` + `supabase/tests/admin_rpcs.sql` (~50–80 lines covering the six smoke assertions in the ADR), wires `pg_prove` into a GitHub Actions step against a `postgres:16` container with the `pgtap` extension, and updates `REFERENCE/testing-strategy.md` to point to the SQL test path. From that PR onwards, every migration that adds or changes an RPC adds (or extends) a pgTAP test in the same PR. Sequenced after Phase 9 user-facing work, before public launch.
 - **Phase introduced:** Phase 9 (gap surfaced during PR #78 review)
+
+---
+
+### TD-022: No success-path audit log for destructive admin operations
+
+- **Location:** `workers/admin-delete-user/index.ts` — `handleAdminDeleteUser()`
+- **Issue:** The Worker only writes to `console.error` on failure. Successful admin deletions (the privileged, two-system, irreversible path) leave no log line — no `{caller_sub, target_user_id, outcome, timestamp}` record. Post-hoc audits of "who was deleted, by whom, when" require correlating Supabase Auth Admin API logs with Postgres traces, which is brittle. The convergent finding from PR #83's team review (flagged independently by security, architect, and product reviewers).
+- **Why accepted:** No second admin exists today; the single trusted contributor is the only caller. Audit value compounds once a second admin is added or once the deletion path is exposed beyond the dashboard.
+- **Risk:** Low for the current single-admin model; Medium once a second admin appears or the project takes external GDPR requests.
+- **Future fix:** On the success path (after both `admin_delete_user_data` and the Auth Admin API call complete), log a structured line with `{caller_sub, target_user_id, app_data: 'deleted', auth_user: 'deleted'|'absent', timestamp, correlation_id}`. Same on partial failure (already logged on full failure). Cheapest landing spot: Cloudflare Workers Logs with a JSON-line format. Companion to ADR 2026-05-04 (which defers the orphan-`auth.users` audit query to TD-021's pgTAP harness).
+- **Phase introduced:** Phase 8 (admin endpoint added in PR #83)
+
+---
+
+### TD-023: Admin can delete themselves (and lock out the project)
+
+- **Location:** `workers/admin-delete-user/index.ts` — request handler; `supabase/migrations/*` — `admin_delete_user_data` RPC
+- **Issue:** Neither the Worker nor the RPC blocks `targetUserId === caller.sub`. An admin deleting themselves removes their own profile + `auth.users` row; with a single admin, this locks the project out of its own admin surface (no UI path to restore `is_admin = true`). Operational footgun, not a security vulnerability.
+- **Why accepted:** Single trusted contributor, manually issuing each delete. The footgun is theoretical until a second admin or a less-careful caller appears.
+- **Risk:** Low under current single-admin manual-flow model; High blast radius if it triggers (recovery requires direct DB access via Supabase Studio to set `is_admin = true` on a freshly-created account).
+- **Future fix:** Cheap defence — `if (callerSub === targetUserId) return 400 'cannot delete the calling admin'` in the Worker, and/or guard at the dialog layer (`disabled` when target is current user). Belt-and-braces: same check inside `admin_delete_user_data` so the DB itself rejects self-deletion regardless of caller.
+- **Phase introduced:** Phase 8 (admin endpoint added in PR #83)
+
+---
+
+### TD-024: No rate limiting on `/api/admin-delete-user`
+
+- **Location:** `workers/admin-delete-user/index.ts` — request handler; `src/worker.ts` — route registration
+- **Issue:** `/api/contact` carries a per-IP rate limiter (`CONTACT_RATE_LIMITER`); `/api/admin-delete-user` does not. JWT verification + `is_admin()` already rejects unauthenticated floods at the gate, but a compromised admin session could enumerate user deletions at line rate. Sibling concern to TD-004 (no rate limit on `/api/generate-creature`).
+- **Why accepted:** Admin compromise is already game-over for the data layer under the current single-trusted-contributor threat model — the JWT itself authorises arbitrary `admin_delete_user_data` calls via the regular Supabase client. Rate limiting only narrows the window during which a leaked admin session does damage.
+- **Risk:** Low under the current threat model; Medium once a second admin appears or admin sessions could plausibly be exfiltrated (e.g. shared device, browser extension compromise).
+- **Future fix:** Add a per-admin rate limiter (e.g. 10 deletions/hour) using Cloudflare's rate-limiting binding with `caller.sub` as the key. Same pattern as `CONTACT_RATE_LIMITER` but keyed on JWT subject rather than IP. Consider applying alongside the wider rate-limit work in TD-004.
+- **Phase introduced:** Phase 8 (admin endpoint added in PR #83)
+
+---
+
+### TD-025: Worker `is_admin()` re-check collapses 5xx into "not admin"
+
+- **Location:** `workers/admin-delete-user/index.ts` — `is_admin()` re-check (around line 48)
+- **Issue:** The Worker's server-side `is_admin()` re-check returns `false` for any non-`ok` HTTP response, including upstream Supabase 5xx. A genuinely-admin user calling the endpoint while Postgres is having a bad day sees "Not authorised" rather than a transient infrastructure error. The DB-side re-check inside `admin_delete_user_data` would catch this if reached, but the Worker short-circuits before that.
+- **Why accepted:** Practical impact is low — Supabase 5xx is rare and self-resolves in 30 seconds; the user retries and the request succeeds. The wrong-toast behaviour is a UX paper-cut, not a correctness or security issue.
+- **Risk:** Low — misleading error message only.
+- **Future fix:** Distinguish 401/403 (genuinely not admin) from 5xx (upstream failure) in the `is_admin()` helper. Return a typed result so the Worker can emit a 503 with a "service temporarily unavailable, try again" message rather than a 403. Test by mocking a 503 response from the `is_admin` RPC.
+- **Phase introduced:** Phase 8 (admin endpoint added in PR #83)
+
+---
+
+### TD-026: CORS allowlist duplicated across three Workers
+
+- **Location:** `workers/admin-delete-user/index.ts`, `workers/contact/index.ts`, `workers/generate-creature/index.ts` — each carries its own `['https://qrious.hultberg.org', 'http://localhost:5173']` array
+- **Issue:** Three copies of the same allowlist drift over time. Adding a new origin (e.g. a staging domain) requires three coordinated edits. Now that `workers/shared/` exists for JWT helpers, CORS is the natural next extraction. Companion to TD-010 (which is about *what's in* the allowlist; this is about *where it lives*).
+- **Why accepted:** Three Workers are the entire surface today and the allowlist hasn't changed in three Workers' worth of edits. Premature to dedup on first repetition; warranted now that the third Worker has shipped.
+- **Risk:** Low — duplication, not divergence (yet). Becomes Medium once a fourth Worker arrives or when staging domains enter the picture.
+- **Future fix:** Extract to `workers/shared/cors.ts` exporting `corsHeaders(origin)` and `ALLOWED_ORIGINS`. Each Worker imports rather than redeclares. Combines naturally with the TD-010 fix (move allowlist to `ALLOWED_ORIGINS` env var) so production builds drop localhost automatically.
+- **Phase introduced:** Phase 8 (third Worker landed in PR #83)
+
+---
+
+### TD-027: No `REFERENCE/workers.md` inventory of Worker routes
+
+- **Location:** `REFERENCE/` — only `ai-generation-worker.md` exists; no overview of `/api/contact` or `/api/admin-delete-user`
+- **Issue:** Three Worker routes now (`/api/generate-creature`, `/api/contact`, `/api/admin-delete-user`) but only one is documented in REFERENCE/. New contributors and future-Claude-Code sessions can't easily discover the full server-side surface, its auth model, or where to find each Worker's source.
+- **Why accepted:** Each Worker's source is well-commented and the routes are easy to find via grep; redundant documentation is a maintenance tax.
+- **Risk:** Low — discoverability friction only. Becomes Medium if the surface grows to 5+ routes.
+- **Future fix:** Single `REFERENCE/workers.md` table covering: route, source file, auth model (public / JWT-required / admin-gated), bindings used, rate limiting, key invariants. Update `REFERENCE/CLAUDE.md` index. Per-Worker deep-dive docs (like the existing `ai-generation-worker.md`) only for Workers complex enough to warrant them.
+- **Phase introduced:** Phase 8 (third Worker landed in PR #83)
 
 ---
 

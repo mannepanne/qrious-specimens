@@ -112,15 +112,67 @@ export function useGdprExport() {
   })
 }
 
-/** Delete all app data for a user. Does not delete their auth account. */
+// `phase` indicates how far the two-step erasure got. Total failure → app-data
+// step never completed (RPC failed). Partial failure → app-data deleted but
+// auth.users row remained (Admin API call failed). Both let the dashboard
+// render specific recovery guidance instead of a generic "delete failed".
+export type AdminDeletePhase = 'app_data' | 'auth_user' | 'unknown'
+
+export class AdminDeleteError extends Error {
+  constructor(public readonly phase: AdminDeletePhase, message: string) {
+    super(message)
+    this.name = 'AdminDeleteError'
+  }
+}
+
+interface AdminDeleteResponse {
+  ok?: boolean
+  app_data?: 'deleted' | 'failed'
+  auth_user?: 'deleted' | 'failed'
+  detail?: string
+  error?: string
+}
+
+/**
+ * Admin-only erasure: removes a user's app data via the `admin_delete_user_data`
+ * RPC and then their `auth.users` row via the Supabase Auth Admin API. Both calls
+ * happen server-side in the `/api/admin-delete-user` Worker so the service-role
+ * key never reaches the browser. See ADR 2026-05-04-worker-mediated-account-erasure.md.
+ */
 export function useGdprDelete() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (userId: string) => {
-      const { error } = await supabase.rpc('admin_delete_user_data', {
-        p_user_id: userId,
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new AdminDeleteError('unknown', 'Not authenticated')
+
+      const res = await fetch('/api/admin-delete-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ user_id: userId }),
       })
-      if (error) throw error
+
+      const body = (await res.json().catch(() => ({}))) as AdminDeleteResponse
+
+      if (res.ok && body.ok) return
+
+      // Map Worker response shape to a phase-aware error.
+      if (body.app_data === 'deleted' && body.auth_user === 'failed') {
+        throw new AdminDeleteError(
+          'auth_user',
+          body.detail ?? 'Auth row removal failed after app data was deleted.',
+        )
+      }
+      if (body.app_data === 'failed') {
+        throw new AdminDeleteError(
+          'app_data',
+          body.detail ?? 'App data deletion failed; auth row not touched.',
+        )
+      }
+      throw new AdminDeleteError('unknown', body.error ?? body.detail ?? `Request failed (${res.status})`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] })

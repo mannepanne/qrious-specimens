@@ -1,9 +1,11 @@
 // ABOUT: Cloudflare Worker entrypoint — serves the SPA and handles API routes
 // ABOUT: POST /api/generate-creature → Gemini illustration + Claude field notes + Cloudflare Images upload
 // ABOUT: POST /api/contact → contact form submission + Resend admin notification
+// ABOUT: POST /api/admin-delete-user → admin-only erasure (app data RPC + Supabase Auth row)
 
 import { handleGenerateCreature, type Env } from '../workers/generate-creature/index'
 import { handleContact } from '../workers/contact/index'
+import { handleAdminDeleteUser } from '../workers/admin-delete-user/index'
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -15,6 +17,10 @@ export default {
 
     if (url.pathname === '/api/contact') {
       return handleContact(request, env)
+    }
+
+    if (url.pathname === '/api/admin-delete-user') {
+      return handleAdminDeleteUser(request, env)
     }
 
     // All other paths — static assets and SPA routes — are served by the assets binding.
