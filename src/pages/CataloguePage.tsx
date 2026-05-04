@@ -347,6 +347,10 @@ export function CataloguePage() {
                 </button>
               )}
             </div>
+            {/* Sort-order caption — currently fixed; replace with a control when alternate sorts arrive */}
+            <p className="font-serif text-xs italic text-muted-foreground">
+              Catalogued in order of discovery — most recent specimens first.
+            </p>
           </div>
           </div>
 

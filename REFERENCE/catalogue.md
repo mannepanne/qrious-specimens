@@ -60,6 +60,10 @@ The `dna->>'hash'` field is the same 16-char hex hash stored as `species_images.
 
 Each row includes all taxonomy fields extracted from `creatures.dna`, image URLs, field notes, discovery metadata, and a `total_count` window-function column (total matching rows regardless of LIMIT).
 
+### Sort order
+
+Results are returned `ORDER BY first_discovered_at DESC` — most recent discoveries first. The Catalogue page surfaces this with the caption "Catalogued in order of discovery — most recent specimens first" so visitors are never guessing why specimens appear in a given order.
+
 ### Security
 
 - `SECURITY DEFINER` with `SET search_path = public` (prevents search path hijacking)
