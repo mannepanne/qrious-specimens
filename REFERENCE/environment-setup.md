@@ -196,6 +196,13 @@ These must be set before magic link auth works:
 | Redirect URLs (allowlist) | `https://qrious.hultberg.org/**` |
 | Redirect URLs (allowlist) | `http://localhost:5173/**` |
 
+### Worker CORS allowlist (`ALLOWED_ORIGINS`)
+The three Worker API routes (`/api/generate-creature`, `/api/contact`, `/api/admin-delete-user`) read their CORS allowlist from `ALLOWED_ORIGINS` in `wrangler.toml` `[vars]`. Production ships with `https://qrious.hultberg.org` only — localhost is intentionally absent. The shared helper at `workers/shared/cors.ts` falls back to the canonical production origin when the var is missing or empty, so `vitest` runs and misconfigured deploys remain safe. `bun run dev` (Vite) calls `/api/...` same-origin and never triggers CORS preflight, so most local development needs no override. To test cross-origin against the deployed Worker locally — for example from a separate Storybook port or a standalone test harness — add the extra origin via the CLI:
+
+```bash
+wrangler dev --var ALLOWED_ORIGINS:"https://qrious.hultberg.org,http://localhost:5173"
+```
+
 ### Auth → SMTP Settings (Custom SMTP)
 Auth transactional emails are delivered via Resend SMTP, not Supabase's built-in mailer. The built-in mailer is dev-only and rate-limits at roughly four emails per hour, which is incompatible with realistic onboarding. See [ADR 2026-05-04](./decisions/2026-05-04-resend-smtp-for-supabase-auth.md) for the full reasoning.
 
