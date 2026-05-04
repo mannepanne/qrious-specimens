@@ -214,7 +214,7 @@ export function SpecimenPage() {
                 <img
                   src={imageUrl512}
                   alt={`${dna.genus} ${dna.species} — Victorian naturalist illustration`}
-                  className="w-52 h-52 object-contain"
+                  className="w-full h-auto object-contain"
                 />
               ) : (
                 <div className={imageLoading ? 'animate-pulse' : undefined}>
@@ -321,7 +321,7 @@ export function SpecimenPage() {
             <h3 className="font-mono text-[10px] tracking-[2px] text-muted-foreground uppercase mb-4">
               Field Notes
             </h3>
-            <p className="font-serif text-sm leading-relaxed text-foreground/80 italic">
+            <p className="font-serif text-base leading-relaxed text-foreground/80 italic">
               {fieldNotes ? (
                 <TypewriterText
                   text={fieldNotes}

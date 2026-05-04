@@ -162,7 +162,7 @@ export default function SpeciesDetail({ entry, isAuthenticated, onPrev, onNext, 
             <div className="bg-card border rounded-sm p-4 space-y-3">
               {showTeaser ? (
                 <>
-                  <p className="font-serif text-sm leading-relaxed text-foreground/80 italic">
+                  <p className="font-serif text-base leading-relaxed text-foreground/80 italic">
                     {fieldNotesTeaserText}<span className="text-muted-foreground/60">…</span>
                   </p>
                   <p className="font-mono text-[11px] text-muted-foreground border border-border rounded px-3 py-2">
@@ -171,7 +171,7 @@ export default function SpeciesDetail({ entry, isAuthenticated, onPrev, onNext, 
                 </>
               ) : (
                 fieldNotesFull.split('\n\n').map((para, i) => (
-                  <p key={i} className="font-serif text-sm leading-relaxed text-foreground/80 italic">
+                  <p key={i} className="font-serif text-base leading-relaxed text-foreground/80 italic">
                     {para}
                   </p>
                 ))
