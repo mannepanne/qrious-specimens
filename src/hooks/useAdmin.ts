@@ -116,10 +116,10 @@ export function useGdprExport() {
 // step never completed (RPC failed). Partial failure → app-data deleted but
 // auth.users row remained (Admin API call failed). Both let the dashboard
 // render specific recovery guidance instead of a generic "delete failed".
-export type AdminDeletePhase = 'app_data' | 'auth_user'
+export type AdminDeletePhase = 'app_data' | 'auth_user' | 'unknown'
 
 export class AdminDeleteError extends Error {
-  constructor(public readonly phase: AdminDeletePhase | 'unknown', message: string) {
+  constructor(public readonly phase: AdminDeletePhase, message: string) {
     super(message)
     this.name = 'AdminDeleteError'
   }

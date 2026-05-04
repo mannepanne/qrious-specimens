@@ -26,7 +26,8 @@ All Worker code lives in `workers/generate-creature/`:
 
 | File | Responsibility |
 |---|---|
-| `index.ts` | Main handler — JWT verification, cache check, orchestration, Supabase REST calls |
+| `index.ts` | Main handler — cache check, orchestration, Supabase REST calls. Re-exports `verifyJWT` from `workers/shared/jwt.ts` |
+| `../shared/jwt.ts` | Shared JWT verifier — JWKS fetch, ES256/RS256 verification with HS256 fallback, kid-rotation refetch, per-isolate cache (used by `generate-creature` and `admin-delete-user`) |
 | `gemini.ts` | Gemini API client — illustration generation with model fallback |
 | `claude.ts` | Anthropic API client — field notes generation (Claude Haiku, multimodal) |
 | `prompt.ts` | Prompt builders — `buildGeminiPrompt(dna)` and `buildClaudePrompt(dna, hasImage)` |

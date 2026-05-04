@@ -418,8 +418,8 @@ function UserRow({ user }: { user: AdminUser }) {
                 <AlertDialogDescription className="font-serif space-y-2">
                   <span className="block">
                     This will permanently delete all data for{' '}
-                    <strong>{user.email}</strong> — profile, specimens, badges, and activity. This
-                    cannot be undone.
+                    <strong>{user.email}</strong> — profile, specimens, badges, activity, and
+                    sign-in record (email). This cannot be undone.
                   </span>
                   <span className="block">
                     Type <strong>DELETE USER DATA</strong> to confirm.

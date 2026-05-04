@@ -1,7 +1,7 @@
 # ADR: Worker-mediated account erasure for full GDPR Article 17 compliance
 
 **Date:** 2026-05-04
-**Status:** Active (planned — implementation tracked as TD-019)
+**Status:** Active (implemented in [PR #83](https://github.com/mannepanne/qrious-specimens/pull/83) — TD-019 resolved)
 **Supersedes:** N/A
 
 ---
