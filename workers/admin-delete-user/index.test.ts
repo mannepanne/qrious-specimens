@@ -217,6 +217,39 @@ describe('handleAdminDeleteUser', () => {
     expect(headers.apikey).toBe('service-role-key')
   })
 
+  it('returns 429 with Retry-After + structured code when the rate limiter rejects, and skips downstream calls', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const limit = vi.fn().mockResolvedValue({ success: false })
+    const env = makeEnv({ ADMIN_DELETE_RATE_LIMITER: { limit } })
+
+    const req = makeRequest({ token: validToken, body: { user_id: TARGET_USER_ID } })
+    const res = await handleAdminDeleteUser(req, env)
+    expect(res.headers.get('Retry-After')).toBe('60')
+    const { status, body } = await readJson(res)
+
+    expect(status).toBe(429)
+    expect(body.error).toMatch(/too many requests/i)
+    expect(body.code).toBe('rate_limit_admin_delete')
+    expect(limit).toHaveBeenCalledWith({ key: 'caller-user-id' })
+    // No is_admin / RPC / Auth Admin calls should have happened
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('lets the request through when the rate limiter allows it', async () => {
+    const limit = vi.fn().mockResolvedValue({ success: true })
+    mockFetch
+      .mockResolvedValueOnce(new Response('true', { status: 200 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(new Response('', { status: 200 }))
+
+    const env = makeEnv({ ADMIN_DELETE_RATE_LIMITER: { limit } })
+    const req = makeRequest({ token: validToken, body: { user_id: TARGET_USER_ID } })
+    const res = await handleAdminDeleteUser(req, env)
+
+    expect(res.status).toBe(200)
+    expect(limit).toHaveBeenCalledWith({ key: 'caller-user-id' })
+  })
+
   it('treats a 404 from the Auth Admin API as success (auth row already absent)', async () => {
     // Recovery scenario: a previous run deleted app data, the auth-admin step
     // failed, and an admin retried. The auth row was cleared manually in the

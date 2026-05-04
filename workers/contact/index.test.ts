@@ -43,6 +43,8 @@ beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock)
   // Silence the worker's console.error output for negative-path tests
   vi.spyOn(console, 'error').mockImplementation(() => {})
+  // Silence the rate-limit helper's structured warn line
+  vi.spyOn(console, 'warn').mockImplementation(() => {})
 })
 
 afterEach(() => {
@@ -176,7 +178,7 @@ describe('handleContact — validation', () => {
 })
 
 describe('handleContact — rate limiting', () => {
-  it('returns 429 when the per-IP rate limiter rejects', async () => {
+  it('returns 429 with Retry-After + structured code when the per-IP rate limiter rejects', async () => {
     const limit = vi.fn().mockResolvedValue({ success: false })
     const env = makeEnv({ CONTACT_RATE_LIMITER: { limit } })
 
@@ -188,6 +190,10 @@ describe('handleContact — rate limiting', () => {
       env,
     )
     expect(res.status).toBe(429)
+    expect(res.headers.get('Retry-After')).toBe('60')
+    const body = await res.json() as Record<string, unknown>
+    expect(body.error).toMatch(/too many requests/i)
+    expect(body.code).toBe('rate_limit_contact')
     expect(limit).toHaveBeenCalledWith({ key: '10.0.0.1' })
     expect(fetchMock).not.toHaveBeenCalled()
   })

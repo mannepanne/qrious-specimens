@@ -26,12 +26,12 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
-### TD-002: `cabinetCreaturesRef` stale across infinite-scroll page loads
-- **Location:** `src/App.tsx` — `cabinetCreaturesRef`, `handleViewCreature`
-- **Issue:** Opening a specimen from the cabinet snapshots the current `allCreatures` list into a ref. Subsequent infinite-scroll page fetches don't update the ref, so prev/next navigation on `SpecimenPage` operates on a stale list — creatures loaded after the snapshot are unreachable via the arrows.
-- **Why accepted:** Requires a more involved refactor (lifting creature state or passing a live query reference). The failure mode is invisible to users with small cabinets (< 30 specimens). Will become noticeable only once pagination is common.
-- **Risk:** Low — no data loss, no corruption. Worst case: prev/next navigation ends at the last creature in the first page.
-- **Future fix:** Pass a stable reference to the live query data into `SpecimenPage`, or derive prev/next indices from the infinite query directly rather than a snapshot.
+### TD-002: Cabinet specimen list snapshotted at navigation time
+- **Location:** `src/pages/CabinetPage.tsx` — `handleViewCreature()` (passes `cabinetCreatures` via React Router `state`); `src/pages/SpecimenPage.tsx` — reads `state.cabinetCreatures`
+- **Issue:** Opening a specimen from the cabinet passes the current `allCreatures` list into the route's location state. Subsequent infinite-scroll fetches in `CabinetPage` don't propagate to the open `SpecimenPage`, so prev/next navigation operates on the snapshot — creatures loaded after navigation are unreachable via the arrows.
+- **Why accepted:** Requires a more involved refactor (lifting creature state to a shared query, or having `SpecimenPage` re-derive neighbours from the live infinite-query data). The failure mode is invisible to users with small cabinets (< 30 specimens). Will become noticeable only once pagination is common.
+- **Risk:** Low — no data loss, no corruption. Worst case: prev/next navigation ends at the last creature in the snapshot.
+- **Future fix:** Have `SpecimenPage` consume `useCreatures(userId)` directly and derive prev/next from the live query, falling back to the location-state snapshot only when not yet hydrated.
 - **Phase introduced:** Phase 3
 
 ---
@@ -43,12 +43,9 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
-### TD-004: No rate limiting on `/api/generate-creature`
-- **Location:** `src/worker.ts` — route handler; `workers/generate-creature/index.ts` — `handleGenerateCreature()`
-- **Issue:** No per-user rate limit on the generation endpoint. Each novel `qrHash` triggers a Gemini image generation + Claude Haiku call. An authenticated user scripting novel QR content could exhaust API quotas. The `species_images` cache only protects against repeated hashes, not novel ones.
-- **Why accepted:** Physical QR scanning naturally limits legitimate use (1–2 scans/min at most). The threat requires a valid authenticated account. Acceptable for an early-stage app with a small user base.
-- **Risk:** Medium — becomes High once the app grows or moves to paid API keys. Each Gemini call costs ~$0.01–0.05 in image generation credits.
-- **Future fix:** Add per-user rate limit in Cloudflare KV: `ratelimit:{userId}` key with TTL, checked before calling Gemini. Alternatively, use Cloudflare's built-in rate limiting rule (Pro plan). Target: ~10 generations per user per hour.
+### TD-004: No rate limiting on `/api/generate-creature` — RESOLVED 2026-05-04
+- **Status:** Resolved by adding `GENERATE_CREATURE_RATE_LIMITER` (Cloudflare ratelimit binding) keyed on the verified Supabase JWT `sub`, plus `GENERATE_CREATURE_GLOBAL_RATE_LIMITER` as a Sybil-amplification backstop. Both checks run immediately after JWT verification — before the species_images cache lookup — so cache hits also count, which bounds total request volume against credential-replay, scripted-scan, and many-account abuse alike.
+- **Resolution detail:** Per-user cap is 5/60s; global cap is 100/60s with a constant key. The original future-fix targeted "10/hour" but the `simple` ratelimit binding only accepts `period` 10 or 60 seconds; per-minute is the tightest practical setting. 5/min is well above legitimate physical-scan cadence (1–2/min) and still throttles a script to ~5× normal traffic. If we later need a true hourly cap we'd switch to a KV-backed sliding window.
 - **Phase introduced:** Phase 4
 
 ---
@@ -60,12 +57,8 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
-### TD-006: `register_discovery` RPC accepts arbitrary `p_user_id` without auth check
-- **Location:** Supabase database function `register_discovery` (migration file) — not in Worker code
-- **Issue:** The `SECURITY DEFINER` RPC accepts `p_user_id uuid` as a parameter without verifying it matches `auth.uid()`. Any authenticated user could call the RPC directly via the Supabase client with a different user's ID to spoof first-discoverer credit. The Worker path is safe (passes JWT-verified `userId`), but the direct client path is not.
-- **Why accepted:** The first-discoverer badge is cosmetic — no financial or account-integrity consequence. Exploiting this requires knowing another user's UUID. The fix is a DB migration, out of scope for Phase 4.
-- **Risk:** Low-Medium — affects data integrity of the first-discoverer feature but no security escalation beyond badge cosmetics.
-- **Future fix:** Add `IF p_user_id != auth.uid() THEN RAISE EXCEPTION 'Unauthorised'` inside the function, or restrict RPC access to service role only (`REVOKE EXECUTE ON FUNCTION register_discovery FROM authenticated`).
+### TD-006: `register_discovery` RPC accepts arbitrary `p_user_id` without auth check — RESOLVED 2026-04-25
+- **Status:** Resolved by `supabase/migrations/20260425000003_register_discovery_revoke_public_execute.sql`. The "restrict to service role" alternative from the original future-fix was taken: `REVOKE EXECUTE ... FROM PUBLIC, authenticated, anon` and `GRANT EXECUTE ... TO service_role`. The direct-client spoof path is closed; only the Worker (which holds the service-role key and passes a JWT-verified `userId`) can call the function.
 - **Phase introduced:** Phase 4 (identified during review; function pre-existed)
 
 ---
@@ -126,13 +119,8 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
-### TD-013: Cross-tab species auto-open fails for species beyond loaded catalogue pages
-
-- **Location:** `src/pages/CataloguePage.tsx` — `useEffect` for `selectedSpeciesHash` (lines 77–86)
-- **Issue:** When the Gazette's "view species" action sets `selectedCatalogueHash`, `CataloguePage` searches only `allEntries` (the currently loaded infinite-scroll pages). If the target species is on an unloaded page, it won't be found, `onSpeciesViewed` never fires, and `selectedCatalogueHash` stays set indefinitely — the user sees the catalogue with nothing opened and no feedback.
-- **Why accepted:** Fixing this properly requires a single-species RPC lookup by `qr_hash`, or prefetching all pages — both add complexity. The current catalogue is small enough that the first 24 entries cover most linked species. The failure mode is silent (nothing bad happens, just nothing opens).
-- **Risk:** Low — no data loss. Worsens as the catalogue grows beyond 24 entries.
-- **Future fix:** Add a `get_species_by_hash(p_qr_hash text)` RPC (or reuse `get_catalogue` with an exact hash filter) and fall back to it when `selectedSpeciesHash` is not found in `allEntries`. Clear `selectedCatalogueHash` after the fallback fetch resolves.
+### TD-013: Cross-tab species auto-open fails for species beyond loaded catalogue pages — RESOLVED
+- **Status:** Resolved structurally when species navigation moved to URL-based routing (`/species/:qrHash`). The proposed-future-fix RPC `get_species_by_hash(p_qr_hash text)` shipped in `supabase/migrations/20260412000001_get_species_by_hash.sql` and now backs the species route directly, so any qr_hash resolves regardless of how many catalogue pages are loaded. The `selectedSpeciesHash` / `selectedCatalogueHash` / `onSpeciesViewed` plumbing this entry described no longer exists in the codebase.
 - **Phase introduced:** Phase 6
 
 ---
@@ -205,13 +193,9 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
-### TD-024: No rate limiting on `/api/admin-delete-user`
-
-- **Location:** `workers/admin-delete-user/index.ts` — request handler; `src/worker.ts` — route registration
-- **Issue:** `/api/contact` carries a per-IP rate limiter (`CONTACT_RATE_LIMITER`); `/api/admin-delete-user` does not. JWT verification + `is_admin()` already rejects unauthenticated floods at the gate, but a compromised admin session could enumerate user deletions at line rate. Sibling concern to TD-004 (no rate limit on `/api/generate-creature`).
-- **Why accepted:** Admin compromise is already game-over for the data layer under the current single-trusted-contributor threat model — the JWT itself authorises arbitrary `admin_delete_user_data` calls via the regular Supabase client. Rate limiting only narrows the window during which a leaked admin session does damage.
-- **Risk:** Low under the current threat model; Medium once a second admin appears or admin sessions could plausibly be exfiltrated (e.g. shared device, browser extension compromise).
-- **Future fix:** Add a per-admin rate limiter (e.g. 10 deletions/hour) using Cloudflare's rate-limiting binding with `caller.sub` as the key. Same pattern as `CONTACT_RATE_LIMITER` but keyed on JWT subject rather than IP. Consider applying alongside the wider rate-limit work in TD-004.
+### TD-024: No rate limiting on `/api/admin-delete-user` — RESOLVED 2026-05-04
+- **Status:** Resolved by adding `ADMIN_DELETE_RATE_LIMITER` (Cloudflare ratelimit binding) keyed on the verified caller `sub`. The check runs after JWT verification but before the `is_admin()` RPC, so a stolen session can't burn RPC capacity probing for admin status either. Implementation uses the shared `enforceRateLimit` helper in `workers/shared/rateLimit.ts` (introduced alongside this fix), which centralises the 429 body shape, distinct `code` per call site, and `Retry-After: 60` header.
+- **Resolution detail:** Cap is 3 requests per admin caller per 60 seconds (the `simple` ratelimit binding only accepts `period` 10 or 60). The original future-fix target was "10/hour" which the binding can't express directly; 3/min keeps the practical throttle close (180 deletions/hour worst case versus 10 originally) while leaving headroom for a legitimate multi-account cleanup session.
 - **Phase introduced:** Phase 8 (admin endpoint added in PR #83)
 
 ---

@@ -607,6 +607,73 @@ describe('handleGenerateCreature', () => {
     expect(res.status).toBe(401)
   })
 
+  it('returns 429 with Retry-After + structured code when the per-user limiter rejects, and skips downstream calls', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const limit = vi.fn().mockResolvedValue({ success: false })
+    const env = makeEnv({ GENERATE_CREATURE_RATE_LIMITER: { limit } })
+
+    const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
+    const res = await handleGenerateCreature(req, env)
+
+    expect(res.status).toBe(429)
+    expect(res.headers.get('Retry-After')).toBe('60')
+    const body = await res.json() as Record<string, unknown>
+    expect(body.error).toMatch(/too many requests/i)
+    expect(body.code).toBe('rate_limit_generate_user')
+    expect(limit).toHaveBeenCalledWith({ key: 'test-user-id' })
+    // Should not have called Supabase/Gemini/Claude — limiter short-circuits before cache check
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('returns 429 from the global backstop even when the per-user limiter passes (Sybil amplification guard)', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const userLimit = vi.fn().mockResolvedValue({ success: true })
+    const globalLimit = vi.fn().mockResolvedValue({ success: false })
+    const env = makeEnv({
+      GENERATE_CREATURE_RATE_LIMITER: { limit: userLimit },
+      GENERATE_CREATURE_GLOBAL_RATE_LIMITER: { limit: globalLimit },
+    })
+
+    const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
+    const res = await handleGenerateCreature(req, env)
+
+    expect(res.status).toBe(429)
+    expect(res.headers.get('Retry-After')).toBe('60')
+    const body = await res.json() as Record<string, unknown>
+    expect(body.code).toBe('rate_limit_generate_global')
+    expect(userLimit).toHaveBeenCalledWith({ key: 'test-user-id' })
+    expect(globalLimit).toHaveBeenCalledWith({ key: 'global' })
+    // Backstop runs before the cache check — no DB / AI traffic should leak through.
+    expect(mockFetch).not.toHaveBeenCalled()
+  })
+
+  it('lets the request through (and serves cache) when both limiters allow it', async () => {
+    const userLimit = vi.fn().mockResolvedValue({ success: true })
+    const globalLimit = vi.fn().mockResolvedValue({ success: true })
+    const cachedRow = {
+      image_url: 'https://imagedelivery.net/test-hash/abc/qriousoriginal',
+      image_url_512: null,
+      image_url_256: null,
+      field_notes: 'notes',
+      discovery_count: 1,
+      first_discoverer_id: 'u1',
+    }
+    mockFetch
+      .mockResolvedValueOnce(new Response(JSON.stringify([cachedRow]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first: false, total_count: 1, scan_count: 1 }]), { status: 200 }))
+
+    const env = makeEnv({
+      GENERATE_CREATURE_RATE_LIMITER: { limit: userLimit },
+      GENERATE_CREATURE_GLOBAL_RATE_LIMITER: { limit: globalLimit },
+    })
+    const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
+    const res = await handleGenerateCreature(req, env)
+
+    expect(res.status).toBe(200)
+    expect(userLimit).toHaveBeenCalledWith({ key: 'test-user-id' })
+    expect(globalLimit).toHaveBeenCalledWith({ key: 'global' })
+  })
+
   it('sets correct CORS headers for allowed origin', async () => {
     const req = makeRequest({
       token: validToken,

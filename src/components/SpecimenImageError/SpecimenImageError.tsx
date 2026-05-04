@@ -24,6 +24,15 @@ function copyForError(error: Error): Copy {
         showRetry: false, // Re-login is the right action, not retry
       }
     }
+    if (error.status === 429) {
+      // Suppress retry — clicking it inside the limit window just 429s again,
+      // which makes the app look broken. Cooldown is ~60s.
+      return {
+        headline: 'You are scanning a little fast.',
+        body: 'Give the illustrator about a minute and try again.',
+        showRetry: false,
+      }
+    }
     if (error.status >= 500) {
       return {
         headline: "The illustrator's atelier is temporarily closed.",

@@ -4,8 +4,9 @@
 
 /// <reference types="@cloudflare/workers-types" />
 
-import type { Env } from '../generate-creature/index'
+import type { Env } from '../shared/env'
 import { verifyJWT, JwksUnavailableError } from '../shared/jwt'
+import { enforceRateLimit } from '../shared/rateLimit'
 
 interface DeleteBody {
   user_id?: string
@@ -109,8 +110,10 @@ export async function handleAdminDeleteUser(request: Request, env: Env): Promise
   }
   const callerJwt = authHeader.slice(7)
 
+  let callerSub: string
   try {
-    await verifyJWT(callerJwt, env)
+    const payload = await verifyJWT(callerJwt, env)
+    callerSub = payload.sub
   } catch (err) {
     const correlationId = crypto.randomUUID()
     if (err instanceof JwksUnavailableError) {
@@ -120,6 +123,17 @@ export async function handleAdminDeleteUser(request: Request, env: Env): Promise
     console.error(`[${correlationId}] JWT verification failed: ${(err as Error).message}`)
     return json({ error: 'Invalid token', correlationId }, 401, origin)
   }
+
+  // Step 1.5: Rate limit per admin caller. Applied before is_admin so a stolen
+  // session can't burn RPC capacity probing for admin status; legitimate admins
+  // doing a multi-user cleanup stay well below the cap.
+  const rateLimited = await enforceRateLimit(
+    env.ADMIN_DELETE_RATE_LIMITER,
+    callerSub,
+    'rate_limit_admin_delete',
+    corsHeaders(origin),
+  )
+  if (rateLimited) return rateLimited
 
   // Step 2: Parse body
   let body: DeleteBody

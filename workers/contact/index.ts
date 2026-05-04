@@ -1,7 +1,8 @@
 // ABOUT: Contact form Worker handler — inserts contact_messages and sends Resend notification
 // ABOUT: No auth required; per-IP rate limit + server-side honeypot drop; VictorianCaptcha is client-side
 
-import type { Env } from '../generate-creature/index'
+import type { Env } from '../shared/env'
+import { enforceRateLimit } from '../shared/rateLimit'
 
 interface ContactBody {
   sender_email?: string
@@ -87,16 +88,14 @@ export async function handleContact(request: Request, env: Env): Promise<Respons
   // Order matters: rate limit runs BEFORE the honeypot check so bots that trip the trap still
   // burn their per-IP quota. Reversing it would give attackers an unlimited probing oracle to
   // map changes to the validation pipeline.
-  if (env.CONTACT_RATE_LIMITER) {
-    const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown'
-    const { success } = await env.CONTACT_RATE_LIMITER.limit({ key: ip })
-    if (!success) {
-      return new Response(JSON.stringify({ error: 'Too many requests — please wait before submitting again.' }), {
-        status: 429,
-        headers: { ...cors, 'Content-Type': 'application/json' },
-      })
-    }
-  }
+  const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown'
+  const rateLimited = await enforceRateLimit(
+    env.CONTACT_RATE_LIMITER,
+    ip,
+    'rate_limit_contact',
+    cors,
+  )
+  if (rateLimited) return rateLimited
 
   const { sender_email, sender_name, message, honeypot } = body
 
