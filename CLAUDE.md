@@ -34,7 +34,7 @@ When asked to remember anything, add project memory in this CLAUDE.md (project r
 - **Image storage:** Cloudflare Images
 - **AI — illustrations:** Google Gemini API (via Cloudflare Worker)
 - **AI — field notes:** Anthropic Claude API (via Cloudflare Worker)
-- **Email:** Supabase Auth (magic link emails); Resend available via hultberg.org domain if needed
+- **Email:** Resend — auth transactional emails (signup, magic link) via Supabase Custom SMTP; contact-form admin notifications via Cloudflare Worker HTTP API. Sender `gazette@hultberg.org`.
 - **Domain:** `qrious.hultberg.org`
 
 **Key integrations:**
