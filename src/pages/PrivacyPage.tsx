@@ -207,7 +207,7 @@ export function PrivacyPage() {
           </ul>
           <p>
             To exercise any of these rights, use the account settings within the app or contact us
-            at the address below.
+            using the form below.
           </p>
         </section>
 
