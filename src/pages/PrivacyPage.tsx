@@ -66,8 +66,8 @@ export function PrivacyPage() {
               identifier and a timestamp. This is the minimum signal we need to calculate your
               Explorer Rank — your activity, days active, and account age all factor into the rank
               score. We do not record the contents of any page, your interactions within a page,
-              or anything beyond the route name itself. Anonymous (signed-out) visits are not
-              stored against any account.
+              or anything beyond the route name itself. Visits while signed out are recorded only
+              as a route and an anonymous session identifier — no account is associated with them.
             </p>
           </div>
         </section>
@@ -87,8 +87,10 @@ export function PrivacyPage() {
           <h2 className="font-serif text-lg font-medium">Third-party services we use</h2>
           <p>
             To deliver the experience of QRious Specimens we rely on a small number of third-party
-            services. None of them are sent your email address or any directly identifying
-            information beyond what is described above.
+            services. Supabase, as our database and authentication provider, holds the data
+            described above (including your email address). The remaining services receive only
+            what is described in the relevant section below — none of them is sent your email
+            address.
           </p>
           <ul className="space-y-2 ml-4">
             <li className="flex gap-2">
@@ -168,12 +170,14 @@ export function PrivacyPage() {
           <h2 className="font-serif text-lg font-medium">International transfers</h2>
           <p>
             Our Supabase database is hosted in Ireland (within the European Economic Area).
-            Cloudflare's services are global, and your specimen illustrations may be served from
-            edge locations close to you. The AI services we use (Google Gemini and Anthropic
-            Claude) are operated by US-based providers; calls to these services may therefore
-            transfer the trait description outside the EEA. These providers operate under their
-            own privacy commitments and rely on standard contractual clauses for international
-            transfers where applicable.
+            Cloudflare, our hosting and image delivery provider, is a US-headquartered company
+            operating globally — your specimen illustrations may be served from edge locations
+            close to you, and Cloudflare operates under standard contractual clauses for
+            international transfers. The AI services we use (Google Gemini and Anthropic Claude)
+            are also operated by US-based providers; calls to these services may transfer the
+            trait description outside the EEA. These providers operate under their own privacy
+            commitments and rely on standard contractual clauses for international transfers where
+            applicable.
           </p>
         </section>
 
