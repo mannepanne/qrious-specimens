@@ -88,12 +88,9 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
-### TD-010: `http://localhost:5173` in production CORS allowlist
-- **Location:** `workers/generate-creature/index.ts` — `corsHeaders()`; `workers/contact/index.ts` — inline `allowed` list
-- **Issue:** The CORS allowlist includes `http://localhost:5173` in production on both Workers. This allows a local dev server to make cross-origin requests to the production Workers. The generate-creature Worker still requires a valid Supabase JWT (no auth bypass); the contact Worker is a public form protected by per-IP rate limiting and a server-side honeypot, so CORS hygiene is the only concern there.
-- **Why accepted:** Convenient for development against the production Workers when local Cloudflare dev isn't practical. CORS protects browsers, not direct HTTP clients (curl, scripts), so the localhost entry adds no real attack surface.
-- **Risk:** Informational — no practical security impact.
-- **Future fix:** Move the allowlist to an `ALLOWED_ORIGINS` environment variable so localhost is excluded from the production Wrangler deployment automatically. Apply to both Workers when fixed.
+### TD-010: `http://localhost:5173` in production CORS allowlist — RESOLVED 2026-05-04
+- **Status:** Resolved alongside TD-026 by extracting the allowlist into the `ALLOWED_ORIGINS` env var (set in `wrangler.toml` `[vars]` to `"https://qrious.hultberg.org"`). All three Workers read it via the new `workers/shared/cors.ts` helper, so the production deployment automatically excludes localhost. The fallback path inside `parseAllowedOrigins()` returns the canonical production origin when the var is missing or empty, keeping existing local `vitest` runs (which don't set the var) on the prod-default behaviour.
+- **Resolution detail:** Local development against the deployed Worker can still opt in via `wrangler dev --var ALLOWED_ORIGINS:"https://qrious.hultberg.org,http://localhost:5173"`. Note that `bun run dev` (Vite) calls `/api/...` same-origin, so the Worker's CORS allowlist isn't on the local-dev hot path today.
 - **Phase introduced:** Phase 4 (generate-creature); Phase 9 (contact)
 
 ---
@@ -195,13 +192,9 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
-### TD-026: CORS allowlist duplicated across three Workers
-
-- **Location:** `workers/admin-delete-user/index.ts`, `workers/contact/index.ts`, `workers/generate-creature/index.ts` — each carries its own `['https://qrious.hultberg.org', 'http://localhost:5173']` array
-- **Issue:** Three copies of the same allowlist drift over time. Adding a new origin (e.g. a staging domain) requires three coordinated edits. Now that `workers/shared/` exists for JWT helpers, CORS is the natural next extraction. Companion to TD-010 (which is about *what's in* the allowlist; this is about *where it lives*).
-- **Why accepted:** Three Workers are the entire surface today and the allowlist hasn't changed in three Workers' worth of edits. Premature to dedup on first repetition; warranted now that the third Worker has shipped.
-- **Risk:** Low — duplication, not divergence (yet). Becomes Medium once a fourth Worker arrives or when staging domains enter the picture.
-- **Future fix:** Extract to `workers/shared/cors.ts` exporting `corsHeaders(origin)` and `ALLOWED_ORIGINS`. Each Worker imports rather than redeclares. Combines naturally with the TD-010 fix (move allowlist to `ALLOWED_ORIGINS` env var) so production builds drop localhost automatically.
+### TD-026: CORS allowlist duplicated across three Workers — RESOLVED 2026-05-04
+- **Status:** Resolved by `workers/shared/cors.ts` exporting `corsHeaders(origin, env, allowHeaders?)` and `parseAllowedOrigins(env)`. All three Workers (`generate-creature`, `contact`, `admin-delete-user`) now import the helper rather than redeclaring the allowlist. The `allowHeaders` argument carries the per-route variation (`'Content-Type, Authorization'` for JWT routes, `'Content-Type'` for the public contact endpoint) without splitting the helper into per-route variants.
+- **Resolution detail:** Combined with TD-010 — the allowlist itself moved into `wrangler.toml` `[vars] ALLOWED_ORIGINS`, so the helper purely consumes config. Adding a staging domain is now one edit to `wrangler.toml`. Locked in by `workers/shared/cors.test.ts` (13 tests covering env parsing, fallbacks, origin echo, and `allowHeaders` defaults).
 - **Phase introduced:** Phase 8 (third Worker landed in PR #83)
 
 ---

@@ -10,6 +10,7 @@ import { generateFieldNotes } from './claude'
 import { uploadToCloudflareImages } from '../cloudflare-images/index'
 import { verifyJWT, JwksUnavailableError, __resetJwksCache } from '../shared/jwt'
 import { enforceRateLimit } from '../shared/rateLimit'
+import { corsHeaders } from '../shared/cors'
 import type { Env } from '../shared/env'
 
 export { JwksUnavailableError, __resetJwksCache }
@@ -113,42 +114,29 @@ async function callRegisterDiscovery(
   return { is_first_discoverer: row.is_first, discovery_count: row.total_count }
 }
 
-// ── CORS helpers ────────────────────────────────────────────────────────────
-
-function corsHeaders(origin: string | null): Record<string, string> {
-  const allowed = ['https://qrious.hultberg.org', 'http://localhost:5173']
-  const allowedOrigin = origin && allowed.includes(origin) ? origin : allowed[0]
-  return {
-    'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  }
-}
-
-function json(body: unknown, status = 200, origin: string | null = null): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders(origin), 'Content-Type': 'application/json' },
-  })
-}
-
 // ── Main handler ────────────────────────────────────────────────────────────
 
 export async function handleGenerateCreature(request: Request, env: Env): Promise<Response> {
   const origin = request.headers.get('Origin')
+  const cors = corsHeaders(origin, env)
+  const json = (body: unknown, status = 200): Response =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...cors, 'Content-Type': 'application/json' },
+    })
 
   if (request.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: corsHeaders(origin) })
+    return new Response(null, { status: 204, headers: cors })
   }
 
   if (request.method !== 'POST') {
-    return json({ error: 'Method not allowed' }, 405, origin)
+    return json({ error: 'Method not allowed' }, 405)
   }
 
   // Step 1: Verify JWT
   const authHeader = request.headers.get('Authorization')
   if (!authHeader?.startsWith('Bearer ')) {
-    return json({ error: 'Missing or malformed Authorization header' }, 401, origin)
+    return json({ error: 'Missing or malformed Authorization header' }, 401)
   }
   const token = authHeader.slice(7)
 
@@ -163,10 +151,10 @@ export async function handleGenerateCreature(request: Request, env: Env): Promis
     const correlationId = crypto.randomUUID()
     if (err instanceof JwksUnavailableError) {
       console.error(`[${correlationId}] JWKS unavailable: ${err.message}`)
-      return json({ error: 'Auth provider unavailable', correlationId }, 503, origin)
+      return json({ error: 'Auth provider unavailable', correlationId }, 503)
     }
     console.error(`[${correlationId}] JWT verification failed: ${(err as Error).message}`)
-    return json({ error: 'Invalid token', correlationId }, 401, origin)
+    return json({ error: 'Invalid token', correlationId }, 401)
   }
 
   // Step 1.5: Rate limit per authenticated user, then enforce a global backstop.
@@ -174,8 +162,6 @@ export async function handleGenerateCreature(request: Request, env: Env): Promis
   // while the global cap (100/min, constant key) bounds Sybil amplification when
   // an attacker spreads load across many accounts. Both run before the cache
   // check so total request volume is bounded, not just novel-hash generations.
-  // The cors object the helper needs is already built above.
-  const cors = corsHeaders(origin)
   const userRateLimited = await enforceRateLimit(
     env.GENERATE_CREATURE_RATE_LIMITER,
     userId,
@@ -198,16 +184,16 @@ export async function handleGenerateCreature(request: Request, env: Env): Promis
   try {
     const body = (await request.json()) as { qrHash?: string; dna?: CreatureDNA }
     if (!body.qrHash || !body.dna) {
-      return json({ error: 'Missing qrHash or dna in request body' }, 400, origin)
+      return json({ error: 'Missing qrHash or dna in request body' }, 400)
     }
     qrHash = body.qrHash
     dna = body.dna
   } catch {
-    return json({ error: 'Invalid JSON body' }, 400, origin)
+    return json({ error: 'Invalid JSON body' }, 400)
   }
 
   if (!/^[0-9a-f]{16}$/.test(qrHash)) {
-    return json({ error: 'Invalid qrHash format' }, 400, origin)
+    return json({ error: 'Invalid qrHash format' }, 400)
   }
 
   // Step 3: Check species_images cache
@@ -230,7 +216,6 @@ export async function handleGenerateCreature(request: Request, env: Env): Promis
         cached: true,
       },
       200,
-      origin,
     )
   }
 
@@ -243,7 +228,7 @@ export async function handleGenerateCreature(request: Request, env: Env): Promis
     imageBase64 = result.imageBase64
     imageMimeType = result.mimeType
   } catch (err) {
-    return json({ error: 'Illustration generation failed', detail: (err as Error).message }, 500, origin)
+    return json({ error: 'Illustration generation failed', detail: (err as Error).message }, 500)
   }
 
   // Step 5: Upload to Cloudflare Images (single upload; CDN serves named variants
@@ -260,7 +245,7 @@ export async function handleGenerateCreature(request: Request, env: Env): Promis
       imageMimeType,
     )
   } catch (err) {
-    return json({ error: 'Image upload failed', detail: (err as Error).message }, 500, origin)
+    return json({ error: 'Image upload failed', detail: (err as Error).message }, 500)
   }
 
   // Step 6: Generate field notes via Claude Haiku (multimodal with the generated image)
@@ -310,6 +295,5 @@ export async function handleGenerateCreature(request: Request, env: Env): Promis
       cached: false,
     },
     200,
-    origin,
   )
 }

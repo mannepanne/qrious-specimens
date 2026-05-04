@@ -20,6 +20,12 @@ enabled = true
 # e.g. https://imagedelivery.net/XXXXXX/<image_id>/<variant>  ← XXXXXX is the hash
 CF_IMAGES_DELIVERY_HASH = "3c8s33-8vy1yKLZpGBolkQ"
 
+# CORS allowlist for Worker API routes — comma-separated. Deploys to production
+# as the prod-only origin; localhost is intentionally absent. For ad-hoc cross-
+# origin testing against the deployed Worker, override at the CLI:
+#   wrangler dev --var ALLOWED_ORIGINS:"https://qrious.hultberg.org,http://localhost:5173"
+ALLOWED_ORIGINS = "https://qrious.hultberg.org"
+
 # Secrets — set via `wrangler secret put <NAME>` (never in this file):
 #   GEMINI_API_KEY
 #   ANTHROPIC_API_KEY
