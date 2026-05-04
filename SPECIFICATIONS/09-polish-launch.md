@@ -14,7 +14,7 @@ The finishing phase: Mary Anning references woven deliberately throughout the UI
 ## Scope and deliverables
 
 ### In scope
-- [ ] **About page** — project description, credits, Mary Anning homage, links to Gazette and Catalogue
+- [x] **About page** — project description, credits, Mary Anning homage, links to Gazette and Catalogue (PR #75)
 - [ ] **Privacy page** — privacy policy (data collected, how it's used, GDPR rights)
 - [ ] **Contact page** — contact form with `VictorianCaptcha`, submits to `contact_messages` table
 - [ ] `VictorianCaptcha` component — themed CAPTCHA (simple maths or word puzzle in Victorian style, not Google reCAPTCHA)
