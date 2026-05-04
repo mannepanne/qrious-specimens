@@ -249,6 +249,17 @@ Items here are accepted risks or pragmatic choices made during development, not 
 
 ---
 
+### TD-028: Display name is freely editable, contradicting the privacy policy
+
+- **Location:** `src/pages/SettingsPage.tsx` — display-name `<Input>` around line 253-259; `src/hooks/useCommunity.ts` — `useUpdateProfile` accepts arbitrary `display_name` strings; `supabase/migrations/20260412000000_phase6_gazette.sql` — `explorer_profiles.display_name` has no CHECK constraint
+- **Issue:** The privacy policy at `src/pages/PrivacyPage.tsx:242-244` tells users *"On the site you appear under an auto-generated explorer name like M. Anning — never your real name or your email."* The Settings page contradicts this: a free-text input lets the user replace the generated name with any string between 2 and 30 characters, including their real name. The "Regenerate" button next to the input is the path the privacy promise actually describes; the input itself shouldn't exist.
+- **Why accepted:** Pre-launch — caught while reviewing the policy/implementation alignment after PR #83 closed TD-019. No external users have signed up yet, so there's no migration burden; the fix can ship as part of the Phase 9 polish pass.
+- **Risk:** Medium pre-launch (privacy promise is materially false until fixed); High once external sign-ups open (each user becomes able to write PII into a public field, and the system would carry the policy mismatch forward).
+- **Future fix:** Replace the free-text input on the Settings page with a read-only display of the current name plus the existing "Regenerate" action — no manual edit. Update `useExplorerNames` callers to ensure the regenerate path always passes through `generateExplorerName()`. Optional belt-and-braces (only if a second admin or open sign-ups appear): tighten `useUpdateProfile` to accept only `is_public` updates, and have a separate `regenerateDisplayName` mutation that calls a SECURITY DEFINER RPC which sets `display_name = generate_random_explorer_name()` server-side — frontend never supplies the string. Under the current single-trusted-contributor threat model, the UI-only lock is sufficient. Tests: update `SettingsPage` test (if present) to assert no input exists, and add a hook test asserting `useUpdateProfile` rejects `display_name` payloads (if the server-side guard is added).
+- **Phase introduced:** Phase 6 (free-text edit shipped with Gazette); identified Phase 9 during privacy policy review
+
+---
+
 ### TD-016: Contact form captcha is client-side only
 
 - **Location:** `src/components/VictorianCaptcha/VictorianCaptcha.tsx`
