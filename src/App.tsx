@@ -142,6 +142,10 @@ function AppShell() {
           toast('Your credentials have lapsed.', {
             description: `Please sign in again to commission this illustration.${correlationSuffix}`,
           })
+        } else if (err?.status === 429) {
+          toast('You are scanning a little fast.', {
+            description: 'Give the illustrator about a minute and try again.',
+          })
         } else if (err && err.status >= 500) {
           toast("The illustrator's atelier is temporarily closed.", {
             description: `Try viewing the specimen again in a moment.${correlationSuffix}`,

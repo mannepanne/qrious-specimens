@@ -43,17 +43,29 @@ simple = { limit = 5, period = 60 }
 # Keyed on the verified Supabase JWT `sub` (user UUID), not IP, so a shared NAT doesn't punish
 # unrelated users. Cap covers cache hits as well as full Gemini+Claude generations to bound
 # total request volume against credential-stuffing or replay attacks. The `simple` binding only
-# accepts period 10 or 60, so 5/min is the tightest practical setting; closes TD-004.
+# accepts period 10 or 60, so 5/min is the tightest practical setting.
 [[unsafe.bindings]]
 name = "GENERATE_CREATURE_RATE_LIMITER"
 type = "ratelimit"
 namespace_id = "1002"
 simple = { limit = 5, period = 60 }
 
+# Global backstop on /api/generate-creature. Per-user limit prevents abuse from a single
+# stolen token; this binding adds Sybil resistance against an attacker who registers many
+# accounts to multiply the per-user cap. Constant key (`global`) so every request shares the
+# same bucket. Cap of 100/min sits well above any realistic legitimate concurrent-user load
+# while bounding worst-case Gemini+Claude spend. If a real user ever hits this, it's the
+# signal we need to revisit capacity planning.
+[[unsafe.bindings]]
+name = "GENERATE_CREATURE_GLOBAL_RATE_LIMITER"
+type = "ratelimit"
+namespace_id = "1004"
+simple = { limit = 100, period = 60 }
+
 # Rate limiting — /api/admin-delete-user: max 3 requests per admin caller per 60 seconds.
 # Keyed on the verified caller sub. Admin tooling is low-volume and destructive, so the cap is
 # tight enough to slow down a stolen session yet loose enough to absorb a normal multi-delete
-# session. Closes TD-024.
+# session.
 [[unsafe.bindings]]
 name = "ADMIN_DELETE_RATE_LIMITER"
 type = "ratelimit"

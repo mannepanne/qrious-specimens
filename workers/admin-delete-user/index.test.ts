@@ -217,16 +217,19 @@ describe('handleAdminDeleteUser', () => {
     expect(headers.apikey).toBe('service-role-key')
   })
 
-  it('returns 429 when the rate limiter rejects the request and skips downstream calls', async () => {
+  it('returns 429 with Retry-After + structured code when the rate limiter rejects, and skips downstream calls', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
     const limit = vi.fn().mockResolvedValue({ success: false })
     const env = makeEnv({ ADMIN_DELETE_RATE_LIMITER: { limit } })
 
     const req = makeRequest({ token: validToken, body: { user_id: TARGET_USER_ID } })
     const res = await handleAdminDeleteUser(req, env)
+    expect(res.headers.get('Retry-After')).toBe('60')
     const { status, body } = await readJson(res)
 
     expect(status).toBe(429)
     expect(body.error).toMatch(/too many requests/i)
+    expect(body.code).toBe('rate_limit_admin_delete')
     expect(limit).toHaveBeenCalledWith({ key: 'caller-user-id' })
     // No is_admin / RPC / Auth Admin calls should have happened
     expect(mockFetch).not.toHaveBeenCalled()

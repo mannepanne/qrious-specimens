@@ -43,6 +43,7 @@ When asked to remember anything, add project memory in this CLAUDE.md (project r
 - Google Gemini (Victorian naturalist creature illustrations)
 - Anthropic Claude Haiku (field notes generation)
 - Cloudflare Images (creature illustrations — qriousoriginal, qrious512, qrious256 variants served from `imagedelivery.net`)
+- Cloudflare rate limiting on all three Worker routes — see `workers/shared/rateLimit.ts` and the `[[unsafe.bindings]]` blocks in `wrangler.toml`
 
 **Current status:** All 9 phases complete and merged to main; live at `qrious.hultberg.org`
 

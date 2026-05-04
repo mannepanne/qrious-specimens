@@ -44,8 +44,8 @@ Items here are accepted risks or pragmatic choices made during development, not 
 ---
 
 ### TD-004: No rate limiting on `/api/generate-creature` — RESOLVED 2026-05-04
-- **Status:** Resolved by adding `GENERATE_CREATURE_RATE_LIMITER` (Cloudflare ratelimit binding) keyed on the verified Supabase JWT `sub`. The check runs immediately after JWT verification — before the species_images cache lookup — so cache hits also count, which bounds total request volume against credential-replay or scripted-scan abuse, not just novel-hash Gemini calls.
-- **Resolution detail:** Cap is 5 requests per user per 60 seconds. The original future-fix targeted "10/hour" but the `simple` ratelimit binding only accepts `period` 10 or 60 seconds; per-minute is the tightest practical setting. 5/min is well above legitimate physical-scan cadence (1–2/min) and still throttles a script to ~5× normal traffic. If we later need a true hourly cap we'd switch to a KV-backed sliding window — see comment in `wrangler.toml`.
+- **Status:** Resolved by adding `GENERATE_CREATURE_RATE_LIMITER` (Cloudflare ratelimit binding) keyed on the verified Supabase JWT `sub`, plus `GENERATE_CREATURE_GLOBAL_RATE_LIMITER` as a Sybil-amplification backstop. Both checks run immediately after JWT verification — before the species_images cache lookup — so cache hits also count, which bounds total request volume against credential-replay, scripted-scan, and many-account abuse alike.
+- **Resolution detail:** Per-user cap is 5/60s; global cap is 100/60s with a constant key. The original future-fix targeted "10/hour" but the `simple` ratelimit binding only accepts `period` 10 or 60 seconds; per-minute is the tightest practical setting. 5/min is well above legitimate physical-scan cadence (1–2/min) and still throttles a script to ~5× normal traffic. If we later need a true hourly cap we'd switch to a KV-backed sliding window.
 - **Phase introduced:** Phase 4
 
 ---
@@ -194,7 +194,7 @@ Items here are accepted risks or pragmatic choices made during development, not 
 ---
 
 ### TD-024: No rate limiting on `/api/admin-delete-user` — RESOLVED 2026-05-04
-- **Status:** Resolved by adding `ADMIN_DELETE_RATE_LIMITER` (Cloudflare ratelimit binding) keyed on the verified caller `sub`. The check runs after JWT verification but before the `is_admin()` RPC, so a stolen session can't burn RPC capacity probing for admin status either.
+- **Status:** Resolved by adding `ADMIN_DELETE_RATE_LIMITER` (Cloudflare ratelimit binding) keyed on the verified caller `sub`. The check runs after JWT verification but before the `is_admin()` RPC, so a stolen session can't burn RPC capacity probing for admin status either. Implementation uses the shared `enforceRateLimit` helper in `workers/shared/rateLimit.ts` (introduced alongside this fix), which centralises the 429 body shape, distinct `code` per call site, and `Retry-After: 60` header.
 - **Resolution detail:** Cap is 3 requests per admin caller per 60 seconds (the `simple` ratelimit binding only accepts `period` 10 or 60). The original future-fix target was "10/hour" which the binding can't express directly; 3/min keeps the practical throttle close (180 deletions/hour worst case versus 10 originally) while leaving headroom for a legitimate multi-account cleanup session.
 - **Phase introduced:** Phase 8 (admin endpoint added in PR #83)
 

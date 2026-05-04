@@ -4,8 +4,9 @@
 
 /// <reference types="@cloudflare/workers-types" />
 
-import type { Env } from '../generate-creature/index'
+import type { Env } from '../shared/env'
 import { verifyJWT, JwksUnavailableError } from '../shared/jwt'
+import { enforceRateLimit } from '../shared/rateLimit'
 
 interface DeleteBody {
   user_id?: string
@@ -126,12 +127,13 @@ export async function handleAdminDeleteUser(request: Request, env: Env): Promise
   // Step 1.5: Rate limit per admin caller. Applied before is_admin so a stolen
   // session can't burn RPC capacity probing for admin status; legitimate admins
   // doing a multi-user cleanup stay well below the cap.
-  if (env.ADMIN_DELETE_RATE_LIMITER) {
-    const { success } = await env.ADMIN_DELETE_RATE_LIMITER.limit({ key: callerSub })
-    if (!success) {
-      return json({ error: 'Too many requests — please slow down.' }, 429, origin)
-    }
-  }
+  const rateLimited = await enforceRateLimit(
+    env.ADMIN_DELETE_RATE_LIMITER,
+    callerSub,
+    'rate_limit_admin_delete',
+    corsHeaders(origin),
+  )
+  if (rateLimited) return rateLimited
 
   // Step 2: Parse body
   let body: DeleteBody

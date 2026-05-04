@@ -37,13 +37,23 @@ The Worker is registered in `src/worker.ts` and routes `POST /api/generate-creat
 
 ---
 
-## Request flow (8 steps)
+## Request flow
+
+**Architectural rule for limiter placement:** rate limiters sit at the cheapest
+checkpoint that still has the key they need to throttle on. The per-user limiter
+runs immediately after JWT verify (the first point at which `sub` exists), the
+global backstop runs straight after, and the contact-form per-IP limiter runs
+before any DB write — each as early as the keying material allows. This keeps
+abusive traffic from spending DB or AI capacity before being shed.
 
 ```
 Client → Worker (POST /api/generate-creature)
   Step 1: Verify JWT (ES256/RS256 via Supabase JWKS, or legacy HS256; checks exp + sub)
   Step 1.5: Rate limit per user — GENERATE_CREATURE_RATE_LIMITER keyed on JWT sub
             (5 req / 60s; cache hits count, so total request volume is bounded)
+  Step 1.6: Global backstop — GENERATE_CREATURE_GLOBAL_RATE_LIMITER keyed on the
+            literal "global" (100 req / 60s). Catches Sybil amplification where
+            an attacker spreads load across many accounts to multiply Step 1.5.
   Step 2: Parse body (qrHash + dna), validate qrHash format (/^[0-9a-f]{16}$/)
   Step 3: Check species_images cache — if hit, skip to Step 8
   Step 4: Generate illustration via Gemini

@@ -9,30 +9,11 @@ import { generateIllustration } from './gemini'
 import { generateFieldNotes } from './claude'
 import { uploadToCloudflareImages } from '../cloudflare-images/index'
 import { verifyJWT, JwksUnavailableError, __resetJwksCache } from '../shared/jwt'
+import { enforceRateLimit } from '../shared/rateLimit'
+import type { Env } from '../shared/env'
 
 export { JwksUnavailableError, __resetJwksCache }
-
-interface RateLimiter {
-  limit(options: { key: string }): Promise<{ success: boolean }>
-}
-
-export interface Env {
-  ASSETS: Fetcher
-  SUPABASE_URL: string
-  SUPABASE_SERVICE_ROLE_KEY: string
-  // Optional — only required for legacy HS256-signed projects. Modern Supabase
-  // projects sign with asymmetric keys and are verified via the JWKS endpoint.
-  SUPABASE_JWT_SECRET?: string
-  GEMINI_API_KEY: string
-  ANTHROPIC_API_KEY: string
-  CF_ACCOUNT_ID: string
-  CF_IMAGES_TOKEN: string
-  CF_IMAGES_DELIVERY_HASH: string
-  RESEND_API_KEY: string              // used by /api/contact handler
-  CONTACT_RATE_LIMITER?: RateLimiter  // CF Rate Limiting binding — optional so local dev without it still works
-  GENERATE_CREATURE_RATE_LIMITER?: RateLimiter  // per-user limiter for /api/generate-creature
-  ADMIN_DELETE_RATE_LIMITER?: RateLimiter       // per-admin limiter for /api/admin-delete-user
-}
+export type { Env } from '../shared/env'
 
 interface SpeciesImageRow {
   image_url: string
@@ -188,15 +169,28 @@ export async function handleGenerateCreature(request: Request, env: Env): Promis
     return json({ error: 'Invalid token', correlationId }, 401, origin)
   }
 
-  // Step 1.5: Rate limit per authenticated user. Applied upfront — caps total
-  // request volume (cache hits included), not just expensive Gemini calls, so a
-  // stolen token can't fan out unbounded reads against species_images either.
-  if (env.GENERATE_CREATURE_RATE_LIMITER) {
-    const { success } = await env.GENERATE_CREATURE_RATE_LIMITER.limit({ key: userId })
-    if (!success) {
-      return json({ error: 'Too many requests — please slow down.' }, 429, origin)
-    }
-  }
+  // Step 1.5: Rate limit per authenticated user, then enforce a global backstop.
+  // Per-user cap (5/min) covers the dominant abuse case — a single stolen token —
+  // while the global cap (100/min, constant key) bounds Sybil amplification when
+  // an attacker spreads load across many accounts. Both run before the cache
+  // check so total request volume is bounded, not just novel-hash generations.
+  // The cors object the helper needs is already built above.
+  const cors = corsHeaders(origin)
+  const userRateLimited = await enforceRateLimit(
+    env.GENERATE_CREATURE_RATE_LIMITER,
+    userId,
+    'rate_limit_generate_user',
+    cors,
+  )
+  if (userRateLimited) return userRateLimited
+
+  const globalRateLimited = await enforceRateLimit(
+    env.GENERATE_CREATURE_GLOBAL_RATE_LIMITER,
+    'global',
+    'rate_limit_generate_global',
+    cors,
+  )
+  if (globalRateLimited) return globalRateLimited
 
   // Step 2: Parse body
   let qrHash: string

@@ -110,6 +110,11 @@ export interface VerifyEnv {
  *
  * Returns payload on success. Throws on any verification failure — callers
  * classify exceptions: `JwksUnavailableError` → 503, all other throws → 401.
+ *
+ * Postcondition: a successful return guarantees a non-empty `sub` (the
+ * function rejects payloads without one before any signature work). Callers
+ * can therefore use `payload.sub` directly as a rate-limit key without a
+ * defensive null check.
  */
 export async function verifyJWT(token: string, env: VerifyEnv): Promise<{ sub: string }> {
   const parts = token.split('.')
