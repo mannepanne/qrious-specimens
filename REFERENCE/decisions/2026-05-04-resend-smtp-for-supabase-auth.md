@@ -77,8 +77,7 @@ Verification is the **Send Test Email** button in the same panel, followed by an
 
 ## Follow-ups
 
-- Update `REFERENCE/environment-setup.md` to describe the new email path (Supabase Auth → Resend SMTP) alongside the existing contact-form path (Worker → Resend HTTP API)
-- If the existing `RESEND_API_KEY` is reused, no secret changes are needed; if a new SMTP-scoped key is created, document its location and rotation cadence
+- If a separate SMTP-scoped Resend key is ever created (rather than reusing the contact-form key), document its location and rotation cadence in `REFERENCE/environment-setup.md`
 
 ---
 
