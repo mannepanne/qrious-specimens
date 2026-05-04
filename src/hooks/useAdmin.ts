@@ -114,9 +114,17 @@ export function useGdprExport() {
 
 // `phase` indicates how far the two-step erasure got. Total failure → app-data
 // step never completed (RPC failed). Partial failure → app-data deleted but
-// auth.users row remained (Admin API call failed). Both let the dashboard
-// render specific recovery guidance instead of a generic "delete failed".
-export type AdminDeletePhase = 'app_data' | 'auth_user' | 'unknown'
+// auth.users row remained (Admin API call failed). `auth_check_unavailable`
+// → upstream Supabase 5xx during the is_admin() re-check (transient infra
+// blip, not an authorisation failure — TD-025). `self_delete` → admin tried
+// to delete their own account (TD-023). Each lets the dashboard render
+// specific recovery guidance instead of a generic "delete failed".
+export type AdminDeletePhase =
+  | 'app_data'
+  | 'auth_user'
+  | 'auth_check_unavailable'
+  | 'self_delete'
+  | 'unknown'
 
 export class AdminDeleteError extends Error {
   constructor(public readonly phase: AdminDeletePhase, message: string) {
@@ -131,6 +139,7 @@ interface AdminDeleteResponse {
   auth_user?: 'deleted' | 'failed'
   detail?: string
   error?: string
+  code?: string
 }
 
 /**
@@ -159,7 +168,20 @@ export function useGdprDelete() {
 
       if (res.ok && body.ok) return
 
-      // Map Worker response shape to a phase-aware error.
+      // Map Worker response shape to a phase-aware error. Order matters: more
+      // specific signals (codes, partial-failure shape) before broader fallbacks.
+      if (body.code === 'self_delete_blocked') {
+        throw new AdminDeleteError(
+          'self_delete',
+          body.error ?? 'Cannot delete the calling admin.',
+        )
+      }
+      if (body.code === 'auth_check_unavailable' || (res.status === 503 && body.error)) {
+        throw new AdminDeleteError(
+          'auth_check_unavailable',
+          body.error ?? 'Auth check temporarily unavailable, please retry.',
+        )
+      }
       if (body.app_data === 'deleted' && body.auth_user === 'failed') {
         throw new AdminDeleteError(
           'auth_user',

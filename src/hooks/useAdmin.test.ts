@@ -259,6 +259,41 @@ describe('useGdprDelete', () => {
     expect((caught as AdminDeleteError).phase).toBe('unknown')
   })
 
+  it('throws AdminDeleteError with phase=self_delete when Worker rejects self-targeting', async () => {
+    mockSession()
+    mockFetchResponse(400, { error: 'Cannot delete the calling admin', code: 'self_delete_blocked' })
+
+    const { wrapper } = createWrapper()
+    const { result } = renderHook(() => useGdprDelete(), { wrapper })
+
+    let caught: unknown
+    await act(async () => {
+      try { await result.current.mutateAsync('11111111-1111-4111-8111-111111111111') }
+      catch (e) { caught = e }
+    })
+    expect(caught).toBeInstanceOf(AdminDeleteError)
+    expect((caught as AdminDeleteError).phase).toBe('self_delete')
+  })
+
+  it('throws AdminDeleteError with phase=auth_check_unavailable on 503 from Worker is_admin re-check', async () => {
+    mockSession()
+    mockFetchResponse(503, {
+      error: 'Auth check temporarily unavailable, please retry',
+      code: 'auth_check_unavailable',
+    })
+
+    const { wrapper } = createWrapper()
+    const { result } = renderHook(() => useGdprDelete(), { wrapper })
+
+    let caught: unknown
+    await act(async () => {
+      try { await result.current.mutateAsync('11111111-1111-4111-8111-111111111111') }
+      catch (e) { caught = e }
+    })
+    expect(caught).toBeInstanceOf(AdminDeleteError)
+    expect((caught as AdminDeleteError).phase).toBe('auth_check_unavailable')
+  })
+
   it('throws AdminDeleteError with phase=unknown when the user is not signed in', async () => {
     mockGetSession.mockResolvedValue({ data: { session: null }, error: null } as never)
     const fetchMock = vi.fn()
