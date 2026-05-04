@@ -65,7 +65,9 @@ function renderSpeciesPage(qrHash = 'abc12345', locationState?: object) {
       >
         <Routes>
           <Route path="/species/:qrHash" element={<SpeciesPage />} />
-          <Route path="/" element={<div>Catalogue</div>} />
+          <Route path="/" element={<div>Root</div>} />
+          <Route path="/catalogue" element={<div>Catalogue</div>} />
+          <Route path="/gazette" element={<div>Gazette</div>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>
@@ -152,7 +154,7 @@ describe('SpeciesPage', () => {
     expect(screen.getByText('Catalogue')).toBeInTheDocument()
   })
 
-  it('close button navigates back', () => {
+  it('close button navigates to /catalogue by default', () => {
     mockUseCatalogueEntry.mockReturnValue({
       data: fakeEntry,
       isLoading: false,
@@ -160,11 +162,20 @@ describe('SpeciesPage', () => {
     } as ReturnType<typeof useCatalogueEntry>)
 
     renderSpeciesPage()
-    // Close is rendered by the mocked SpeciesDetail
-    expect(screen.getByRole('button', { name: /close/i })).toBeInTheDocument()
-    // navigate(-1) is called — just verifying the button is present and clickable
     fireEvent.click(screen.getByRole('button', { name: /close/i }))
-    // No assertion on navigation result — jsdom history has nowhere to go back to
+    expect(screen.getByText('Catalogue')).toBeInTheDocument()
+  })
+
+  it('close button navigates to /gazette when origin=gazette', () => {
+    mockUseCatalogueEntry.mockReturnValue({
+      data: fakeEntry,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useCatalogueEntry>)
+
+    renderSpeciesPage('abc12345', { origin: 'gazette' })
+    fireEvent.click(screen.getByRole('button', { name: /close/i }))
+    expect(screen.getByText('Gazette')).toBeInTheDocument()
   })
 
   it('does not fetch from DB when entry is in navigation state', () => {

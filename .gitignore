@@ -162,6 +162,9 @@ service-account*.json
 # dogfooding on the template repo) without flipping the committed default.
 .claude/project-config.local.json
 
+# Scheduled-task lock file (ephemeral runtime state)
+.claude/scheduled_tasks.lock
+
 # Project-specific
 # Downloaded reference material from original app builder — imported to Supabase/R2 in Phase 1
 downloads-claude-ship/

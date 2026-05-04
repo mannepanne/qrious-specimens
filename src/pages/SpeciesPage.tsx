@@ -10,10 +10,14 @@ import { useFirstDiscoverer } from '@/hooks/useCommunity'
 import { useAuth } from '@/hooks/useAuth'
 import SpeciesDetail from '@/components/SpeciesDetail/SpeciesDetail'
 
+type SpeciesOrigin = 'catalogue' | 'gazette'
+
 interface LocationState {
   entry?: CatalogueEntry
   catalogueEntries?: CatalogueEntry[]
   catalogueIndex?: number
+  /** Where the user came from — close button returns there. Defaults to catalogue. */
+  origin?: SpeciesOrigin
 }
 
 export function SpeciesPage() {
@@ -26,6 +30,8 @@ export function SpeciesPage() {
   const stateEntry = state.entry
   const catalogueEntries = state.catalogueEntries ?? []
   const catalogueIndex = state.catalogueIndex ?? -1
+  const origin: SpeciesOrigin = state.origin ?? 'catalogue'
+  const closeTarget = origin === 'gazette' ? '/gazette' : '/catalogue'
 
   const { data: fetchedEntry, isLoading, error } = useCatalogueEntry(
     stateEntry ? undefined : qrHash
@@ -46,17 +52,17 @@ export function SpeciesPage() {
     if (!hasPrev) return
     const prev = catalogueEntries[catalogueIndex - 1]
     navigate(`/species/${prev.qr_hash}`, {
-      state: { entry: prev, catalogueEntries, catalogueIndex: catalogueIndex - 1 },
+      state: { entry: prev, catalogueEntries, catalogueIndex: catalogueIndex - 1, origin },
     })
-  }, [hasPrev, catalogueEntries, catalogueIndex, navigate])
+  }, [hasPrev, catalogueEntries, catalogueIndex, navigate, origin])
 
   const handleNext = useCallback(() => {
     if (!hasNext) return
     const next = catalogueEntries[catalogueIndex + 1]
     navigate(`/species/${next.qr_hash}`, {
-      state: { entry: next, catalogueEntries, catalogueIndex: catalogueIndex + 1 },
+      state: { entry: next, catalogueEntries, catalogueIndex: catalogueIndex + 1, origin },
     })
-  }, [hasNext, catalogueEntries, catalogueIndex, navigate])
+  }, [hasNext, catalogueEntries, catalogueIndex, navigate, origin])
 
   // Touch swipe — left swipe → next, right swipe → prev (min 50px threshold)
   const touchStartXRef = useRef<number | null>(null)
@@ -89,7 +95,7 @@ export function SpeciesPage() {
       <div className="flex min-h-screen flex-col items-center justify-center p-6 text-center gap-4">
         <p className="font-serif text-lg text-muted-foreground italic">Species not found</p>
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate('/catalogue')}
           className="font-mono text-xs underline text-muted-foreground hover:text-foreground"
         >
           Browse the catalogue
@@ -97,9 +103,6 @@ export function SpeciesPage() {
       </div>
     )
   }
-
-  // When opened via direct URL or bookmark there is no prior history entry — fall back to catalogue
-  const canGoBack = location.key !== 'default'
 
   return (
     <div
@@ -112,7 +115,7 @@ export function SpeciesPage() {
         isAuthenticated={isAuthenticated}
         onPrev={hasPrev ? handlePrev : null}
         onNext={hasNext ? handleNext : null}
-        onClose={() => canGoBack ? navigate(-1) : navigate('/')}
+        onClose={() => navigate(closeTarget)}
         firstDiscovererName={firstDiscoverer.data}
       />
     </div>

@@ -120,7 +120,7 @@ export function GazettePage() {
           <ActivityTimeline
             entries={feed.data ?? []}
             isLoading={feed.isLoading}
-            onViewSpecies={(qrHash) => navigate(`/species/${qrHash}`)}
+            onViewSpecies={(qrHash) => navigate(`/species/${qrHash}`, { state: { origin: 'gazette' } })}
           />
         </section>
 

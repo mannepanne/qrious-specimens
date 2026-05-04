@@ -393,6 +393,12 @@ describe('SpecimenPage', () => {
     expect(screen.queryByText(/name this specimen/i)).not.toBeInTheDocument()
   })
 
+  it('back button navigates to /cabinet', () => {
+    renderSpecimenPage('creature-uuid-1', { creature: fakeCreature })
+    fireEvent.click(screen.getByRole('button', { name: /back to cabinet/i }))
+    expect(screen.getByText('Cabinet')).toBeInTheDocument()
+  })
+
   it('shows prev/next navigation when cabinetCreatures is provided', () => {
     const second = { ...fakeCreature, id: 'creature-uuid-2', dna: { ...fakeDna, genus: 'Secondus', species: 'alter' } }
 

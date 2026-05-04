@@ -1,7 +1,7 @@
 // ABOUT: Cabinet page — the authenticated naturalist's personal specimen collection
 // ABOUT: Infinite-scroll grid of SpecimenTeaser cards; scan CTA triggers the QR scanner overlay
 
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useMemo } from 'react'
 import { BookOpen, LogOut, Scan, ScanLine, Settings } from 'lucide-react'
 import { useCreatures, useDiscoveryCounts } from '@/hooks/useCreatures'
@@ -64,9 +64,13 @@ export function CabinetPage() {
       {/* Cabinet header */}
       <div className="px-4 pt-4 pb-3 shrink-0 border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-sm bg-foreground flex items-center justify-center shrink-0">
+          <Link
+            to="/catalogue"
+            aria-label="QRious Specimens — Catalogue"
+            className="h-8 w-8 rounded-sm bg-foreground flex items-center justify-center shrink-0 hover:opacity-80 transition-opacity"
+          >
             <Scan className="h-4 w-4 text-background" />
-          </div>
+          </Link>
           <div className="flex-1 min-w-0">
             <h1 className="font-serif text-lg font-medium leading-tight">QRious Specimens</h1>
             <p className="font-serif text-[10px] italic text-muted-foreground/60 leading-tight truncate">
