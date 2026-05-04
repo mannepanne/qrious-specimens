@@ -15,6 +15,16 @@
 --
 -- The UPDATEs run before the DELETE FROM profiles so that any FK constraint
 -- is satisfied regardless of its ON DELETE rule.
+--
+-- This migration also backfills any orphaned references from earlier
+-- deletions performed under the previous RPC: the standalone UPDATE pair
+-- below the function nulls first_discoverer_id wherever no matching profile
+-- row exists. profiles is the semantic anchor for "removed from the public
+-- record" — auth.users may retain a row until a separate Admin API call
+-- erases it (see TD-019).
+--
+-- See 20260419000000_phase8_settings_admin.sql for the contact_messages
+-- retention rationale (ADR 2026-04-19-retain-contact-messages-on-gdpr-delete).
 
 CREATE OR REPLACE FUNCTION public.admin_delete_user_data(p_user_id uuid)
 RETURNS void AS $$
@@ -33,3 +43,13 @@ BEGIN
   DELETE FROM profiles          WHERE id      = p_user_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Backfill: clear orphaned first_discoverer_id references left behind by
+-- account deletions performed under the previous RPC. Idempotent and bounded.
+UPDATE species_discoveries SET first_discoverer_id = NULL
+  WHERE first_discoverer_id IS NOT NULL
+    AND NOT EXISTS (SELECT 1 FROM profiles p WHERE p.id = first_discoverer_id);
+
+UPDATE species_images SET first_discoverer_id = NULL
+  WHERE first_discoverer_id IS NOT NULL
+    AND NOT EXISTS (SELECT 1 FROM profiles p WHERE p.id = first_discoverer_id);

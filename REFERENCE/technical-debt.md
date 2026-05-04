@@ -149,9 +149,32 @@ Items here are accepted risks or pragmatic choices made during development, not 
 ---
 
 ### TD-018: Account deletion does not anonymise `species_discoveries.first_discoverer_id` — RESOLVED 2026-05-04
-- **Status:** Resolved by `supabase/migrations/20260504000000_admin_delete_anonymises_first_discoverer.sql`.
-- **Resolution:** `admin_delete_user_data()` now nulls `first_discoverer_id` on both `species_discoveries` and `species_images` for the deleted user before removing the profile row. UI null-handling was already correct (`useFirstDiscoverer` returns null via `maybeSingle()`; `SpeciesDetail` guards on `firstDiscovererName` before rendering the "FIRST BY" credit), so no UI change was needed.
+
+- **Status:** Resolved for the first-discoverer-credit scope by `supabase/migrations/20260504000000_admin_delete_anonymises_first_discoverer.sql`. Account-level erasure of `auth.users` (which holds the email) remains a separate admin step per Phase 8 design — tracked as TD-019.
+- **Resolution:** `admin_delete_user_data()` now nulls `first_discoverer_id` on both `species_discoveries` and `species_images` for the deleted user before removing the profile row. The same migration backfills orphaned references left by earlier deletions performed under the previous RPC. UI null-handling was already correct (`useFirstDiscoverer` returns null via `maybeSingle()`; `SpeciesDetail` guards on `firstDiscovererName` before rendering the "FIRST BY" credit), so no UI change was needed.
 - **Phase introduced:** Phase 9 (identified during Privacy page review)
+
+---
+
+### TD-019: Account deletion does not erase `auth.users` row (full GDPR Article 17)
+
+- **Location:** `supabase/migrations/20260504000000_admin_delete_anonymises_first_discoverer.sql` — `admin_delete_user_data()`; admin self-delete flow
+- **Issue:** `admin_delete_user_data()` clears app-side data (profile, creatures, badges, activity, explorer_profile) and nulls first-discoverer credits, but does not touch `auth.users`. The auth row — which holds the email address, the actual PII per GDPR Article 4 — survives until a separate Supabase Admin API call (`auth.admin.deleteUser`). This means a "deleted" user's email remains queryable by anyone with service-role access until that follow-up runs.
+- **Why accepted:** The RPC was originally scoped to public-schema cleanup; cross-schema `auth.users` deletion can't run inside the same `SECURITY DEFINER` function without elevated privileges. The current admin flow performs the auth deletion separately via the Supabase JS Admin client, which works for the immediate need but isn't enforced by the migration.
+- **Risk:** Medium — a forgotten or failed Admin API call leaves email addresses stranded in `auth.users` after the user has been told their account is deleted. Must close before launch for full Article 17 compliance.
+- **Future fix:** Wrap `admin_delete_user_data()` + `auth.admin.deleteUser()` into a single transactional admin endpoint (Worker route or server-side function) so partial deletion is impossible. Alternatively, document the two-step protocol as a checklist in the admin runbook and add a periodic audit query that flags `auth.users` rows whose `id` no longer appears in `profiles`.
+- **Phase introduced:** Phase 8 (pre-existing); promoted to TD during PR #78 review
+
+---
+
+### TD-020: Phase 8 admin RPC cluster lacks explicit `SET search_path = public`
+
+- **Location:** `supabase/migrations/20260419000000_phase8_settings_admin.sql` — `is_admin`, `admin_list_users`, `admin_export_user_data`, `admin_delete_user_data`, `admin_get_stats`; `supabase/migrations/20260504000000_admin_delete_anonymises_first_discoverer.sql` — `admin_delete_user_data`
+- **Issue:** All Phase 6 and Phase 9 `SECURITY DEFINER` RPCs explicitly `SET search_path = public` to prevent search-path-injection attacks (where a hostile user creates objects in their own schema that shadow `public.*` references). The entire Phase 8 admin cluster predates that convention and lacks the setting. Defence-in-depth gap, not an active vulnerability under the current threat model (single trusted admin), but breaks consistency with the rest of the codebase.
+- **Why accepted:** Threat surface is bounded — only `is_admin()` admins can call these RPCs, and the project follows a single-trusted-contributor model (see `REFERENCE/decisions/2026-04-25-pr-review-threat-model.md`). One-off fixing it inside an unrelated PR (e.g. PR #78) creates inconsistency in the other direction; better to do the whole cluster in a single dedicated PR.
+- **Risk:** Low — defence-in-depth only; not exploitable under the current admin trust model.
+- **Future fix:** Single dedicated migration that re-issues `CREATE OR REPLACE FUNCTION` for each Phase 8 admin RPC with `SET search_path = public` added to the function definition. No behavioural change, just hardens the function metadata.
+- **Phase introduced:** Phase 8 (identified during PR #78 review)
 
 ---
 
