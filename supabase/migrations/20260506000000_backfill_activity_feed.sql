@@ -10,6 +10,13 @@
 -- and badge awards that occurred AFTER the user's most recent activity_feed
 -- entry of the same kind. Idempotent: re-running picks up only what is newer
 -- than what is there.
+--
+-- Privacy scope: ep.is_public is evaluated at migration run-time, not at
+-- discovery time. Historical visibility state is not recorded anywhere, so a
+-- user who discovered while private and has since toggled public will see
+-- those discoveries appear retroactively in the Gazette; a user who was
+-- public at discovery time but is now private will not be backfilled. This
+-- is the only pragmatic option given the missing audit trail.
 
 -- Discovery / first_discovery backfill from creatures
 INSERT INTO public.activity_feed (user_id, event_type, species_name, qr_hash, created_at)
