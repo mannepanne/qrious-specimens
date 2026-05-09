@@ -54,6 +54,7 @@ When adding a new item: pick the next free `TD-NNN`, drop it into **Active** or 
 | TD-028 | Display name was freely editable | Resolved | 2026-05-04 |
 | TD-029 | Wrangler GitHub Action pinned to Node 20 | Accepted | Revisit by 2026-08, or sooner if `cloudflare/wrangler-action` ships Node-24 build |
 | TD-030 | `usePostActivity` insert omitted `user_id` (Phase 6 regression) | Resolved | 2026-05-04 |
+| TD-031 | Field-notes prompt produces uniform `"Upon"` openings | Accepted | Revisit alongside `gazette-feed-redesign.md` work, or next prompt-engineering pass |
 
 ---
 
@@ -179,6 +180,18 @@ Items we've decided not to fix unless circumstances change. Each carries a **Rev
 - **Risk:** Low until ~August 2026, then High — the deploy workflow is the only path to production.
 - **Revisit when:** A Node-24-compatible `cloudflare/wrangler-action` ships, or by 2026-08 (whichever first). Stop-gap: `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` in the workflow env.
 - **Phase introduced:** Phase 9
+
+---
+
+### TD-031: Field-notes prompt produces uniform `"Upon"` openings
+
+- **Location:** `workers/generate-creature/prompt.ts` — `buildFieldNotesPrompt()`, the *"First paragraph: the moment of discovery — where and how the specimen was found, first impressions"* style instruction
+- **Issue:** Surfaced by the pre-flight test rendered at `/gazette-mock`: nearly every existing field-notes entry opens with `"Upon"` or a similar temporal-prepositional phrase (`"Upon first encountering…"`, `"Upon the morning of…"`). The prose itself is well-written, but the shape is uniform across the corpus. Reading more than two or three back-to-back exposes the pattern. The `gazette-feed-redesign.md` pull-quote layer hides this on the feed surface, but the species page and cabinet still show the field notes verbatim — the uniformity remains visible there.
+- **Why accepted:** Not a bug, just a prompt-quality issue. Pull-quotes in `gazette-feed-redesign.md` solve the feed-surface symptom; this TD covers the deeper fix (loosen the field-notes prompt itself) and benefits from the same prompt-engineering pass that tunes the pull-quote prompt.
+- **Risk:** Low — cosmetic / brand-feel only. No functional impact.
+- **Revisit when:** `gazette-feed-redesign.md` work reaches the prompt-engineering iteration phase (the pull-quote prompt is already getting 2–3 rounds of refinement; field-notes prompt should ride along). Earlier if a separate prompt-engineering pass happens for any reason.
+- **Future fix sketch:** Replace the rigid *"moment of discovery"* opener instruction with a wider menu — *"introduce the specimen via the moment of encounter, a striking first impression of its appearance, an oddity that drew the eye, or a sensory detail of where it was found"* — plus soft directional guidance to *"vary your opening; avoid leaning repeatedly on temporal phrasings like `Upon`, `When`, `Whilst`."* **Resist the temptation to make these prohibitions absolute** — banning `"Upon"` outright risks swapping one shape-uniformity for another (every entry now leads with a colour, or with a noun). Validate empirically instead: after the prompt change, run a small trial-and-score loop (~10 samples) and check no opener-shape exceeds ~30% of the corpus before committing. Then re-run a one-shot regeneration script (parallel to the pull-quote backfill in `gazette-feed-redesign.md`) over existing rows, and render the regenerated set at `/gazette-mock`'s pre-flight section to verify the uniformity is gone.
+- **Phase introduced:** Surfaced post-launch via the pre-flight test for `gazette-feed-redesign.md`
 
 ---
 
