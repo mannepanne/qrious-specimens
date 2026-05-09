@@ -20,7 +20,6 @@
  *
  * Optional:
  *   LIMIT=3 npx tsx scripts/trial-field-notes.ts    — first 3 samples only
- *   CONCURRENCY=4 npx tsx scripts/trial-field-notes.ts
  */
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'

@@ -94,6 +94,8 @@ The prompt (`buildGeminiPrompt`) specifies: Victorian naturalist lithograph styl
 
 The prompt (`buildClaudePrompt`) instructs Claude to write as a Victorian naturalist who has just received the illustration, naming specific observed features from the DNA.
 
+The opening sentence rotates one of six opener-directives by `dna.seed % 6` (anatomical / setting / sensory clue / anomaly / discovery act / question), making opener-shape another deterministic projection of the DNA alongside genus, body plan, and traits. Same QR → same opener. The rotation exists because a single-shot prompt can't see other corpus entries and otherwise collapses to one dominant shape — see [`technical-debt.md` TD-031](./technical-debt.md#resolved). The mechanism is locked in by `workers/generate-creature/openerShape.ts` (8-bucket heuristic classifier) + `openerShape.test.ts`, which asserts on a committed corpus at `scripts/output/trial-field-notes.json`. To regenerate that corpus when the prompt next changes, run `npx tsx scripts/trial-field-notes.ts` (requires `ANTHROPIC_API_KEY` in `.dev.vars`).
+
 ---
 
 ## Cloudflare Images storage
