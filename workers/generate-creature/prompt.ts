@@ -47,6 +47,29 @@ CRITICAL ANATOMY REQUIREMENT: The creature must have exactly ${dna.limbCount} li
 Style: Dense Victorian-era scientific engraving in sepia/brown ink on aged parchment. Thick confident outlines with multiple pen strokes. Dense cross-hatching and stipple dot shading to create volume and depth. The creature should look organic, fleshy, and alive — like a real biological specimen drawn by a master naturalist illustrator. Overlapping organic masses suggesting real 3D volume. No background — just the creature floating on the page like a plate from a natural history journal. IMPORTANT: Do NOT include any text, labels, annotations, captions, or lettering anywhere in the image. The image must contain only the creature illustration and nothing else.`
 }
 
+/**
+ * Six opener-directives, rotated deterministically by `dna.seed`. A single-shot
+ * prompt cannot see other entries in the corpus, so without an explicit shape
+ * directive the model collapses to whichever opener-shape it finds most
+ * natural — pure-prompt iteration cycles through different attractors but
+ * never spreads across the corpus. Rotation by seed makes opener-shape another
+ * deterministic projection of the DNA, alongside genus, body plan, and traits.
+ * Same QR → same notes, preserving the discovery contract.
+ */
+const OPENER_DIRECTIVES = [
+  'Begin with a specific anatomical detail — a feature, count, or arrangement that struck the eye first.',
+  'Begin with the setting in which the specimen was found — the place, the conditions, the surrounding matter — before the specimen itself enters the sentence.',
+  'Begin with a sensory clue that preceded the sighting — a glimmer, a sound, a movement, a change in the water or air.',
+  'Begin with an anomaly — something you mistook for one thing before it revealed itself as another.',
+  'Begin with the act of discovery — what you were doing, where you were, the moment something caught your attention.',
+  'Begin with a question or contemplation — wonder at the form before describing it.',
+] as const
+
+export function pickOpenerDirective(seed: number): string {
+  const index = Math.abs(Math.floor(seed)) % OPENER_DIRECTIVES.length
+  return OPENER_DIRECTIVES[index]
+}
+
 export function buildClaudePrompt(dna: CreatureDNA, hasImage: boolean): string {
   const features: string[] = []
   if (dna.hasShell) features.push('a protective carapace')
@@ -74,7 +97,8 @@ The specimen is "${dna.genus} ${dna.species}" (Order: ${dna.order}, Family: ${dn
 
 Style guidance:
 - Write in the voice of a Victorian naturalist — precise, wondering, elegant. Think Darwin's Beagle journals, Humboldt's personal narratives, the measured wonder of early Royal Society correspondence.
-- First paragraph: the moment of discovery — where and how the specimen was found, first impressions, the thrill of encountering something unknown.
+- First paragraph opening: ${pickOpenerDirective(dna.seed)} Make the opening sentence specific to THIS specimen — let the directive shape the angle, but let the actual content come from what you see. Do not begin with a generic stock-Victorian flourish ("Upon...", "The creature presents...", "What I had first taken for..."); follow the directive instead.
+- First paragraph body: after the opening, continue with first impressions — the immediate sense of the specimen, where it lay, what struck you about it.
 - Second paragraph: closer observation — anatomical details that fascinate, behaviour noted, speculation about the creature's place in the natural order.
 - Tone: intellectual curiosity and quiet awe. Never frightening, grotesque, or sensational. This is the joy of scientific discovery.
 - Do NOT reference any real people, real places, real institutions, or real species by name.

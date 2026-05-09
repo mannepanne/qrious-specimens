@@ -54,6 +54,7 @@ When adding a new item: pick the next free `TD-NNN`, drop it into **Active** or 
 | TD-028 | Display name was freely editable | Resolved | 2026-05-04 |
 | TD-029 | Wrangler GitHub Action pinned to Node 20 | Accepted | Revisit by 2026-08, or sooner if `cloudflare/wrangler-action` ships Node-24 build |
 | TD-030 | `usePostActivity` insert omitted `user_id` (Phase 6 regression) | Resolved | 2026-05-04 |
+| TD-031 | Field-notes openers collapsed to "Upon..." (12/18 of production corpus) | Resolved | 2026-05-09 |
 
 ---
 
@@ -206,6 +207,7 @@ Compressed archive — id, title, resolution date, link to where the detail live
 - **TD-026**: CORS allowlist duplicated across three Workers — resolved 2026-05-04 in PR #95 via `workers/shared/cors.ts` (`corsHeaders(origin, env, allowHeaders?)` + `parseAllowedOrigins(env)`). Locked in by `workers/shared/cors.test.ts`.
 - **TD-028**: Display name was freely editable, contradicting the privacy policy — resolved 2026-05-04 in PR #84. Locked both client write paths to `generateExplorerName()`; `useUpdateProfile` narrowed to `{ user_id, is_public }`; new `useRegenerateDisplayName` hook is the sole client path for renaming.
 - **TD-030**: `usePostActivity` insert omitted `user_id`, causing every Gazette write to fail the `NOT NULL` + `Insert own activity` RLS check from Phase 6 onward — resolved 2026-05-04 in PR #98. Restored `user_id` to `PostActivityParams` and threaded it through the `fireEffects()` call site in `src/hooks/usePostExcavationEffects.ts`. Backfill via `supabase/migrations/20260506000000_backfill_activity_feed.sql` replays missed discoveries and badge awards for currently-public profiles, with per-event-type `MAX(created_at)` cutoffs for idempotency.
+- **TD-031**: Field-notes openers collapsed to "Upon..." (12/18 = 67% of production corpus) — resolved 2026-05-09. Pure-prompt iteration could shift the dominant attractor but never spread variety across a single-shot corpus, so `buildClaudePrompt()` in `workers/generate-creature/prompt.ts` now picks one of six opener-directives deterministically by `dna.seed % 6` (anatomical / setting / sensory clue / anomaly / discovery act / question). Same QR → same notes. Locked in by `workers/generate-creature/openerShape.ts` (heuristic 8-bucket classifier) + `openerShape.test.ts`, which asserts on the committed trial corpus at `scripts/output/trial-field-notes.json` that no templated shape exceeds 35%, ≥4 shapes are used, and the most-common first word is under 35%. The original 67% case fails the per-shape cap with massive headroom.
 
 ---
 
