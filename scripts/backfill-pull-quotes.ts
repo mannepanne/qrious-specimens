@@ -8,7 +8,12 @@
  *   ANTHROPIC_API_KEY             Anthropic API key for Claude Haiku
  *
  * Run (avoids persistent shell export of SUPABASE_SERVICE_ROLE_KEY):
- *   env $(cat .env.backfill) bun run scripts/backfill-pull-quotes.ts
+ *   set -a; source .env.backfill; set +a
+ *   bun run scripts/backfill-pull-quotes.ts
+ *
+ * `set -a` auto-exports every variable defined until `set +a` turns it back off;
+ * `source` (unlike `env $(cat …)`) correctly skips `#` comment lines and
+ * preserves quoted values. The exports stay scoped to the current shell.
  *
  * Dry run (inspect rows without writing or calling Claude):
  *   DRY_RUN=1 bun run scripts/backfill-pull-quotes.ts
