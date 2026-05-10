@@ -13,7 +13,6 @@ interface Props {
 const EVENT_DOT: Record<FeedEntry['event_type'], string> = {
   discovery:       'bg-emerald-500',
   first_discovery: 'bg-purple-500',
-  rare_discovery:  'bg-amber-500',
   badge_earned:    'bg-blue-500',
 }
 
@@ -38,14 +37,6 @@ function EntryText({ entry }: { entry: FeedEntry }) {
         <>
           <span className="font-medium">{entry.display_name}</span>
           {' discovered '}
-          <span className="italic">{entry.species_name}</span>
-        </>
-      )
-    case 'rare_discovery':
-      return (
-        <>
-          <span className="font-medium">{entry.display_name}</span>
-          {' discovered a rare '}
           <span className="italic">{entry.species_name}</span>
         </>
       )

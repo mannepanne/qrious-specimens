@@ -19,6 +19,8 @@ function makeEntry(overrides: Partial<FeedEntry> = {}): FeedEntry {
     created_at: new Date(Date.now() - 60_000).toISOString(), // 1 minute ago
     qr_hash: 'abc123',
     species_image_url: null,
+    field_notes: null,
+    pull_quote: null,
     ...overrides,
   }
 }
@@ -40,11 +42,6 @@ describe('ActivityTimeline', () => {
     render(<ActivityTimeline entries={[makeEntry()]} isLoading={false} />)
     expect(screen.getByText('Dr. A. Darwin')).toBeInTheDocument()
     expect(screen.getByText(/venoma rex/i)).toBeInTheDocument()
-  })
-
-  it('renders rare_discovery entry text', () => {
-    render(<ActivityTimeline entries={[makeEntry({ event_type: 'rare_discovery' })]} isLoading={false} />)
-    expect(screen.getByText(/discovered a rare/i)).toBeInTheDocument()
   })
 
   it('renders first_discovery entry text', () => {
