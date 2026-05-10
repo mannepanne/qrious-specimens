@@ -274,6 +274,8 @@ describe('handleGenerateCreature', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, result: { id: MOCK_DNA.hash, variants: [] }, errors: [] }), { status: 200 }))
       // Claude field notes
       .mockResolvedValueOnce(new Response(JSON.stringify({ content: [{ type: 'text', text: 'A curious specimen was observed.' }] }), { status: 200 }))
+      // Claude pull-quote (text-only follow-up)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ content: [{ type: 'text', text: 'A radial geometry of quiet certainty.' }] }), { status: 200 }))
       // species_images INSERT
       .mockResolvedValueOnce(new Response('', { status: 201 }))
       // register_discovery RPC
@@ -289,6 +291,7 @@ describe('handleGenerateCreature', () => {
     expect(body.imageUrl512).toContain(`${MOCK_DNA.hash}/qrious512`)
     expect(body.imageUrl256).toContain(`${MOCK_DNA.hash}/qrious256`)
     expect(body.fieldNotes).toBe('A curious specimen was observed.')
+    expect(body.pullQuote).toBe('A radial geometry of quiet certainty.')
     expect(body.isFirstDiscoverer).toBe(true)
     expect(body.discoveryCount).toBe(1)
   })
@@ -365,6 +368,8 @@ describe('handleGenerateCreature', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify(duplicateResponse), { status: 409 }))
       // Claude field notes
       .mockResolvedValueOnce(new Response(JSON.stringify({ content: [{ type: 'text', text: 'Concurrent scan success.' }] }), { status: 200 }))
+      // Claude pull-quote (text-only follow-up)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ content: [{ type: 'text', text: 'A line distilled from the notes.' }] }), { status: 200 }))
       // species_images INSERT
       .mockResolvedValueOnce(new Response('', { status: 201 }))
       // register_discovery RPC
