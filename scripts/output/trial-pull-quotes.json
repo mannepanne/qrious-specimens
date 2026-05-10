@@ -1,0 +1,167 @@
+{
+  "generated_at": "2026-05-10T14:53:02.471Z",
+  "prompt_revision": "Gazette redesign — pull-quote v3 (seeded directives + tightened length and lead-priority)",
+  "sample_count": 16,
+  "samples": [
+    {
+      "qr_hash": "8f6121e15d904809",
+      "genus_species": "Calnema radians",
+      "seed": 4191890650,
+      "lead_directive_index": 4,
+      "field_notes": "The specimen was first observed clinging to the underside of a calcified stratum, its star-shaped body pulsing with a slow, deliberate rhythm that suggested a creature well-adapted to the crushing pressures of its abyssal domain. Upon extraction, it extended its spike-like appendages in what I can only describe as a gesture of cautious inquiry.\n\nCloser examination revealed a most extraordinary arrangement of three stalked eyes, each capable of independent rotation, surveying its new surroundings with evident intelligence. The striped surface pattern, reminiscent of certain deep-water organisms, appears to serve both as camouflage and as a means of communication — the bands shifting in hue when the creature detected movement nearby.",
+      "pull_quote": "A star-shaped geometry suggests the slow, deliberate creature of abyssal depths; stalked eyes, three of them, rotate in independent survey.",
+      "first_word": "A",
+      "opener_shape": "other"
+    },
+    {
+      "qr_hash": "39da16aa78b78158",
+      "genus_species": "Corderma gracilis",
+      "seed": 3682280525,
+      "lead_directive_index": 5,
+      "field_notes": "I discovered the specimen half-buried in the silted floor of a deep benthic hollow, its elongated form so still that I initially mistook it for a calcified root. Only when my collecting lamp passed over its flank did the creature betray itself — four narrow, slit-shaped eyes opening in slow succession along its dorsal ridge, each one catching the light with an unsettling deliberation.\n\nThe body exhibits a fractal symmetry of the second order, its surface peppered with a fine pattern of raised dots that appear to function as chemoreceptive organs. Three spike-like appendages anchor the organism firmly to the substrate, suggesting a wholly sessile existence. Most remarkable is the creature's utter placidity — it made no attempt to withdraw or defend itself, as though entirely confident in the obscurity of its station.",
+      "pull_quote": "My collecting lamp caught the light in four narrow eyes opening in slow succession along its dorsal ridge, each gleaming with unsettling deliberation from the benthic dark.",
+      "first_word": "My",
+      "opener_shape": "other"
+    },
+    {
+      "qr_hash": "a5ddd008a156ed4c",
+      "genus_species": "Brystoma plana",
+      "seed": 3259640059,
+      "lead_directive_index": 1,
+      "field_notes": "The specimen was encountered resting upon a sun-dappled coral ledge, its broad diamond-shaped body splayed flat against the substrate like a pressed botanical specimen come to life. Two remarkable stalked eyes rose from its crown, each terminating in a spray of branching fronds that swayed with the gentle current — whether these serve as sensory organs or some form of symbiotic garden, I could not immediately determine. The creature made no effort to flee, regarding my approach with what I can only describe as botanical patience.\n\nUpon closer inspection, the body reveals an extraordinary architecture: a segmented ventral keel tapering to a tightly coiled tail, flanked by seven flowing appendages that ripple with a kelp-like grace. The dorsal surface is densely stippled and ridged, suggesting a chitinous armour softened by age or adaptation into something almost organic, almost vegetal. A crown of fine spines encircles the head between those remarkable eyestalks. The whole organism blurs the boundary between fauna and flora so thoroughly that I found myself uncertain, for the first time in my career, which kingdom I was cataloguing.",
+      "pull_quote": "Seven appendages ripple with kelp-like grace along its flanks, while stalked eyes crowned with branching fronds sway in the current as the creature regards approach with botanical patience.",
+      "first_word": "Seven",
+      "opener_shape": "numeric-feature"
+    },
+    {
+      "qr_hash": "206f5edd2421833f",
+      "genus_species": "Arcopus formosa",
+      "seed": 2952478024,
+      "lead_directive_index": 4,
+      "field_notes": "Upon the sunlit margins of the shallow lagoon, whilst conducting my morning observations, I encountered a most remarkable organism affixed to the sandy substrate—a creature of such singular geometry that I confess to having stood motionless for several minutes, scarcely daring to breathe lest it withdraw from view. The specimen presents itself as a perfectly ovoid form, perhaps sixty centimetres in length, adorned with a most exquisite surface of concentric rings that spiral with mathematical precision from apex to base, suggesting some profound order in Nature's architecture.\n\nUpon closer examination, I discerned three robust, articulated appendages that emanate from the ventral surface, each terminating in what appears to be a sensitive organ of locomotion. Most astonishing is the solitary ocular stalk that crowns the creature, spiralling upward like some elegant surveyor's instrument, whilst delicate antennae of gossamer fineness wave gently with the currents. The organism appears to derive sustenance from the very rays of the sun, remaining steadfastly rooted to its position—a creature of profound stillness, yet possessed of graceful, sensitive tendrils that speak to an interior animation and awareness quite remarkable in its quiet dignity.",
+      "pull_quote": "Mathematical precision governs its form—concentric rings spiralling from apex to base, whilst three articulated appendages and a solitary ocular stalk suggest an architecture of purposeful stillness.",
+      "first_word": "Mathematical",
+      "opener_shape": "other"
+    },
+    {
+      "qr_hash": "593baf48ba475470",
+      "genus_species": "Fibnema crystallina",
+      "seed": 3671258415,
+      "lead_directive_index": 3,
+      "field_notes": "Upon the deepest sounding of our trawl net, drawn from those abyssal waters where no light has ever penetrated, I discovered a most extraordinary spherical organism resting amongst the sediment like a pale jewel. The creature, scarcely two centimetres in diameter, possesses a surface adorned with a delicate constellation of raised dots that catch the lamplight most beautifully, suggesting some bioluminescent capacity in its native darkness.\n\nCloser examination under the lens reveals a body of remarkable spiral symmetry, with four jointed appendages arranged in a helical pattern about its equator — each leg articulated with the precision of fine clockwork. Most striking are its three compound eyes, faceted like tiny garnets, which appear to track movement with an unsettling coordination. When approached too directly, the creature draws its limbs tight against its body and rotates slowly, presenting its dotted carapace as a seamless defensive sphere — a most ingenious adaptation to the crushing pressures of its trench dwelling.",
+      "pull_quote": "What at first appeared to be a pale jewel amongst the sediment revealed itself, upon closer study, as a sphere of spiral symmetry, articulated with the precision of clockwork and crowned with three faceted eyes.",
+      "first_word": "What",
+      "opener_shape": "mistaken-identity"
+    },
+    {
+      "qr_hash": "e0891713d026ad79",
+      "genus_species": "Morzona convexa",
+      "seed": 429932200,
+      "lead_directive_index": 4,
+      "field_notes": "We obtained this remarkable creature from the abyssal depths during our final dredging expedition, hauled up in the nets alongside quantities of fine sediment and fragments of ancient coral. At first glance, I confess I could scarcely credit the specimen's peculiar form—so unlike anything previously catalogued in our studies of deep-ocean fauna. Its elongated body, marked with regular striations that suggest both armour and articulation, bore seven flowing appendages that undulate with an almost botanical grace, whilst three distinct ocular organs regard one with an expression of serene intelligence.\n\nUpon closer examination, the symmetry of its construction reveals an elegant adaptation to the profound darkness and pressure of its habitat. The radial organisation of the appendages, which taper to delicate filaments, suggests they serve a sensory function in those lightless realms where vision must yield to more subtle perceptions. The creature displays a docile temperament even in captivity, moving with measured deliberation through the collection vessel, utterly indifferent to our instruments and observations. One cannot but wonder whether such tranquil composure speaks to an existence of quiet contentment in that remote kingdom beneath the waves.",
+      "pull_quote": "Radial symmetry governs its seven appendages, which taper to delicate filaments and undulate with an almost botanical grace through the lightless depths.",
+      "first_word": "Radial",
+      "opener_shape": "other"
+    },
+    {
+      "qr_hash": "4e6a6becc6efb32e",
+      "genus_species": "Venphora mirabilis",
+      "seed": 4292791795,
+      "lead_directive_index": 1,
+      "field_notes": "Upon my expedition to the sheltered tidal pools this morning, I encountered a most extraordinary creature—a spherical organism of some twenty centimetres in diameter, nestled amongst the rocks in shallow water. My first impression was of a perfect globe, its surface rendered entirely in a delicate latticed pattern, as though woven from finest thread, creating a mesh of remarkable geometric precision. Atop this remarkable body there unfolds a most striking crown of spiral fronds, each curving outward with botanical elegance, whilst from beneath the sphere extend six sinuous tentacle-like appendages that move with fluid grace. The discovery arrests one's attention entirely—here seems a creature suspended between the kingdoms of plant and animal.\n\nUpon closer examination, the specimen reveals details of exceptional interest. The protective carapace that forms the main sphere appears composed of some chitinous substance, latticed throughout in a pattern that suggests both strength and the most economical design. Six tentacles curve downward like the roots of some inverted plant, though they possess a muscularity foreign to any vegetation I have encountered. The crown of fronds atop the sphere seems to serve a sensory function, their spiral arrangement most admirably suited to capture light and movement alike. One must contemplate whether this creature belongs to some entirely novel order—a creature that perhaps draws sustenance from the sun whilst anchored to the rocks below.",
+      "pull_quote": "Six sinuous tentacles curve downward with fluid grace, whilst spiral fronds unfold atop like a crown suspended between the kingdoms of plant and animal.",
+      "first_word": "Six",
+      "opener_shape": "numeric-feature"
+    },
+    {
+      "qr_hash": "8b44ef3e0e498f0a",
+      "genus_species": "Venara argentea",
+      "seed": 3700255251,
+      "lead_directive_index": 3,
+      "field_notes": "Upon drawing our nets through the twilight waters this evening, we discovered amongst the silken strands a creature of such extraordinary symmetry and delicate construction that the entire company fell into a reverential silence. The specimen—which I have tentatively designated *Venara argentea*—measures some twenty-eight centimetres across and displays a form utterly novel to our understanding of pelagic fauna. Its most arresting feature is the broad, membranous expanse of its dorsal surface, divided into radiating segments with the precision of a master craftsman's compass work.\n\nUpon closer examination by lamplight, the creature reveals itself as a marvel of defensive adaptation. Eight jointed appendages, each terminating in delicate, feathered structures, extend downward with remarkable symmetry; the body itself is encased in what appears to be a segmented carapace of considerable rigidity. Most fascinating are the paired, elegant antennae that curve upward from the anterior region, and the three slit-like organs which I conjecture serve as organs of perception. The entire surface bears a curious mesh pattern, as though the creature were wrought of the finest lacework. One perceives in this form the workings of Nature's most subtle engineering—an organism perfectly adapted to drift and survive in the vast pelagic realm.",
+      "pull_quote": "What at first appeared to be lacework proved instead a carapace of segments, eight jointed appendages descending in perfect symmetry, each tipped with delicate feathering as though wrought by Nature's most meticulous hand.",
+      "first_word": "What",
+      "opener_shape": "mistaken-identity"
+    },
+    {
+      "qr_hash": "f197e1f583b60b3f",
+      "genus_species": "Velinae nodosa",
+      "seed": 1708961594,
+      "lead_directive_index": 2,
+      "field_notes": "Among the fronds of the kelp forest, clinging to a weathered stalk some twelve fathoms beneath the surface, I discovered this most singular creature. My naturalist's heart quickened at the sight—a perfect sphere of extraordinary construction, bearing upon its face three luminous organs arranged like the points of an invisible triangle. The specimen, which I have named Velinae nodosa, presented itself without alarm, sessile and contemplative upon its stalk, a patient sentinel of the depths.\n\nThe creature's architecture reveals a sophistication most remarkable. Its globular carapace bears a tessellated pattern of exquisite regularity, whilst six jointed appendages, each terminating in formidable curved claws, project downward in attitudes of both defence and repose. Most intriguing is the articulated posterior appendage, adorned with delicate membranous fans—perhaps for water circulation or the capture of sustenance. In this humble organism, one perceives the manifold ingenuity of Creation's design, suggesting that even the sessile dwellers of the sea-forest possess elegance and purpose beyond our present comprehension.",
+      "pull_quote": "Among kelp fronds twelve fathoms deep, a perfect sphere of tessellated carapace clings to its stalk, three luminous organs arranged like points of an invisible triangle.",
+      "first_word": "Among",
+      "opener_shape": "setting-first"
+    },
+    {
+      "qr_hash": "70a55ad5cc3d9c49",
+      "genus_species": "Cormera crystallina",
+      "seed": 311025152,
+      "lead_directive_index": 2,
+      "field_notes": "Upon turning over a particularly richly decorated stone in the shallows, I encountered what I can only describe as a marvel of nature's geometry—a creature of most peculiar construction, no larger than my palm, possessed of a radial symmetry that recalls the starfish, yet animated with a purposefulness entirely its own. Its body presents as a central orb of remarkable complexity, adorned with what appears to be a crystalline or granular patterning across its surface, from which extends a most elegant arrangement of appendages. The organism displayed no signs of alarm at my observation, instead remaining in a state of what I might venture to call serene composure.\n\nUpon closer examination with my magnifying lens, I have discerned four distinct ocular organs arranged symmetrically upon the central mass, each a perfect circle of evident sophistication. Most striking are three flowing, undulating appendages that move with singular grace, whilst delicate antennae of spiral configuration extend outward like the tendrils of some botanical specimen. The creature's apparent tranquility and benthic disposition suggest it may be a grazer or detritivore, occupying a niche wholly unknown to science. I have preserved a detailed rendering for the Society's consideration.",
+      "pull_quote": "Beneath a richly decorated stone in the shallows lay a creature of radial symmetry, palm-sized, possessed of four ocular organs and three undulating appendages that moved with singular grace.",
+      "first_word": "Beneath",
+      "opener_shape": "setting-first"
+    },
+    {
+      "qr_hash": "9c1925ee0d068c3a",
+      "genus_species": "Crystforma reticulata",
+      "seed": 222704641,
+      "lead_directive_index": 1,
+      "field_notes": "Upon descending into the thermal vents near the volcanic basin, my collecting net encountered this most extraordinary creature clinging to the mineral-encrusted rocks. The specimen, which I have designated *Crystforma reticulata*, arrested my attention immediately—a spherical body of perhaps twenty centimetres in diameter, possessed of such geometrical perfection that I at first mistook it for some curiosity of mineralogy rather than living tissue. Its protective carapace gleams with an almost crystalline lustre, suggesting adaptation to the extreme conditions of its abyssal domain.\n\nCloser examination reveals a creature of remarkable architectural complexity. The entire surface displays concentric rings of exquisite precision, whilst three formidable spike-like appendages project outward with purposeful symmetry. Most striking is the crown of delicate, fern-like sensory fronds that radiate from the apex—these undulate gently in the warm currents, seemingly organs of perception or perhaps chemoreceptive function. The creature's muscular feet, equipped with sharp digits, suggest it a formidable predator amongst the volcanic fauna, yet the absence of visible eyes indicates a sensory apparatus altogether foreign to conventional zoological understanding. This specimen opens entirely new avenues of inquiry into the hidden kingdoms of the deep.",
+      "pull_quote": "Fern-like sensory fronds undulate gently from the apex, organs of perception adapted to darkness where conventional sight finds no purchase.",
+      "first_word": "Fern-like",
+      "opener_shape": "other"
+    },
+    {
+      "qr_hash": "60e2355c97c392aa",
+      "genus_species": "Arcpetra formosa",
+      "seed": 4004821217,
+      "lead_directive_index": 5,
+      "field_notes": "Upon descending into the thermal vents near the volcanic ridge, our collecting apparatus drew forth this most extraordinary creature, affixed to the basalt substrate as though grown from the very rock itself. The specimen arrested our attention immediately—a form of such elegant composition that one might mistake it for a botanical specimen were it not for the articulated nature of its appendages. Its body, elongated and robust, displays a striking pattern of pale and darker striations that traverse its length like the rings of some exotic wood, while its posture suggests a creature perfectly adapted to its austere habitat.\n\nUpon closer examination with the magnifying lens, the bilateral symmetry becomes apparent—twelve jointed appendages, arranged in graceful pairs along either flank, each terminating in a needle-like point of remarkable acuity. The absence of any visible ocular organs suggests a creature dependent upon chemoreceptive sensation or perhaps vibrations within the superheated waters. The segmented architecture of both body and limbs indicates a complexity of musculature that must permit considerable articulation, and the sessile mode of life implies a creature of patient predation or passive sustenance—a marvel of adaptation to the abyss.",
+      "pull_quote": "A faint clicking arose from the thermal waters before the creature itself resolved—twelve jointed appendages arrayed in bilateral pairs, each terminating in points of remarkable acuity.",
+      "first_word": "A",
+      "opener_shape": "other"
+    },
+    {
+      "qr_hash": "f2c9bcdc162d65d0",
+      "genus_species": "Serderma striata",
+      "seed": 2117367187,
+      "lead_directive_index": 1,
+      "field_notes": "Upon drawing the collection nets through the luminous waters at dusk, I discovered amongst the plankton a creature of such extraordinary geometry that I at once knew it to be unknown to natural philosophy. The organism, which I have designated *Serderma striata*, presented itself in perfect miniature—scarcely larger than a pea—yet possessed a complexity of form that commanded the most minute attention. Its spherical body, armoured in overlapping scales of exquisite regularity, seemed to embody the very principles of mathematical harmony one observes in nautilus shells and crystalline minerals.\n\nThe specimen's most remarkable feature consists of four elegant stalks, each terminating in a spherical sensory apparatus, which emerge from the dorsal surface with an almost botanical grace. Between these ocular organs unfold six flowing appendages that undulate with apparent purpose through the water, whilst posteriorly extends a curious articulated tail, spiralled like the frond of an unfurling fern. The overall effect is one of such ethereal symmetry and purposeful organisation that I cannot help but regard it as a triumph of Nature's geometric intelligence—a creature perfectly adapted to its pelagic existence, and surely amongst the most refined expressions of animal design yet recorded.",
+      "pull_quote": "Six flowing appendages undulate with apparent purpose through the luminous water, whilst from the dorsal surface four elegant stalks extend with almost botanical grace.",
+      "first_word": "Six",
+      "opener_shape": "numeric-feature"
+    },
+    {
+      "qr_hash": "6723300a0a681a9a",
+      "genus_species": "Orbglyph magna",
+      "seed": 1553937231,
+      "lead_directive_index": 3,
+      "field_notes": "Upon retrieving specimens from the warm mineral springs near the volcanic ridge, I discovered amongst the crystalline deposits a most extraordinary creature, scarcely three centimetres in length. Its appearance arrested my attention immediately—a form of such perfect geometric arrangement that one might question whether Nature herself had employed compass and rule in its construction. The segmented body spirals with mathematical precision, each ring diminishing toward a delicate caudal filament, whilst the anterior bears a head of remarkable intelligence, crowned with two prominent ocular organs of lustrous dark aspect.\n\nCloser examination reveals a creature of admirable construction for its subterranean realm. Four jointed appendages, articulated with evident purpose, extend from the ventral surface, each terminating in fine grasping claws suited to navigating the mineral-encrusted substrate of its habitat. Most striking is the elaborate surface patterning—concentric rings adorning each segment like the growth rings of some ancient tree, suggesting this diminutive being possesses a carapace of considerable protective virtue. The creature exhibits remarkable docility, moving with deliberate grace through the heated waters, seemingly indifferent to observation, a temperament which speaks to a consciousness entirely foreign to the anxious creatures of the temperate world.",
+      "pull_quote": "What at first appeared to be mineral crystal resolved itself into a creature of perfect geometric order—segmented and spiraling, each ring diminishing toward a delicate filament, crowned with dark lustrous eyes of evident intelligence.",
+      "first_word": "What",
+      "opener_shape": "mistaken-identity"
+    },
+    {
+      "qr_hash": "138c448094a1b688",
+      "genus_species": "Nebtera antiqua",
+      "seed": 767948545,
+      "lead_directive_index": 1,
+      "field_notes": "Upon drawing up the deep trench apparatus at considerable depth, we discovered among the sediment a most extraordinary creature, which I have designated *Nebtera antiqua*. The specimen, measuring some twenty centimetres in diameter, presented itself as a perfect sphere of remarkable construction, its surface adorned with an intricate mesh-work of geometric precision that caught the lamplight most beautifully. Six formidable spike-like appendages radiate from its body with admirable symmetry, whilst from its uppermost region extend the most delicate and sensitive antennae, which move with an almost contemplative grace.\n\nUpon closer examination, the creature reveals anatomical wonders of considerable interest. The articulated tail-appendage, which extends downward in graceful segmentation, suggests an organism of refined locomotive capability suited to the abyssal environment. The absence of visible organs of sight indicates an existence in perpetual darkness, yet the animal's docile demeanour and the evident sensory sophistication of its antennae suggest it possesses alternative means of perceiving its world. One cannot help but marvel at the elegant economy of Nature's design in crafting such a being for the profound solitudes of the deep.",
+      "pull_quote": "Delicate antennae extend from the uppermost region, moving with an almost contemplative grace through the abyssal darkness.",
+      "first_word": "Delicate",
+      "opener_shape": "other"
+    },
+    {
+      "qr_hash": "95cc86beebf3ee4a",
+      "genus_species": "Hexantha obscura",
+      "seed": 2791947739,
+      "lead_directive_index": 1,
+      "field_notes": "At a depth where sunlight surrenders entirely to darkness, our dredge hauled forth a specimen of such extraordinary geometry that the entire company fell silent in wonder. The creature, which I have named *Hexantha obscura*, presents a form of perfect radial symmetry—six appendages arrayed about a central stalk like the spokes of some mechanical device rendered organic. Its surface bears a curious tessellated pattern, as though fashioned from countless minute scales, whilst a prominent carapace of considerable thickness shields the vital apparatus beneath. Upon first examination, I confess myself utterly transfixed by its singular eye, luminous and commanding, fixed upon a slender stalk that rises from the organism's core.\n\nThe creature measures some twelve centimetres in its fullest extension, a size most suited to the crushing pressures of its abyssal home. The three primary appendages flow with an almost botanical grace, their margins undulating with delicate articulation, whilst the lower pair of limbs terminate in recurved digits that suggest some capacity for grasping or anchoring. The protective carapace displays a remarkable architectural precision, its divisions suggesting an internal organisation of considerable complexity. One perceives in this humble creature an entirely novel family within the great tapestry of creation—a being whose existence expands our understanding of life's boundless diversity.",
+      "pull_quote": "Appendages arrayed in radial grace, undulating at their margins with botanical delicacy, whilst a luminous eye commands from its slender stalk above.",
+      "first_word": "Appendages",
+      "opener_shape": "other"
+    }
+  ]
+}

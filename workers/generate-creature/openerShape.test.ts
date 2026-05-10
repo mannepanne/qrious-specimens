@@ -16,6 +16,9 @@ describe('classifyOpenerShape', () => {
   it('catches mistaken-identity templates', () => {
     expect(classifyOpenerShape('What I had first taken for a fragment of coral...')).toBe('mistaken-identity')
     expect(classifyOpenerShape('What I took at first for a stone...')).toBe('mistaken-identity')
+    expect(classifyOpenerShape('What at first appeared to be a pale jewel amongst the sediment...')).toBe('mistaken-identity')
+    expect(classifyOpenerShape('What at first looked like lacework proved instead a carapace...')).toBe('mistaken-identity')
+    expect(classifyOpenerShape('What at first seemed mineral resolved into a creature...')).toBe('mistaken-identity')
   })
 
   it('catches rhetorical-question templates', () => {
