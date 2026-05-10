@@ -1,7 +1,7 @@
 // ABOUT: Tests for feedDate helpers (dateline copy, UTC-day grouping, field-notes excerpt)
 
 import { describe, it, expect } from 'vitest'
-import { dateline, groupByDay, excerptFromFieldNotes } from './feedDate'
+import { dateline, groupByDay, excerptFromFieldNotes, timeOfDay } from './feedDate'
 
 describe('dateline', () => {
   const now = new Date('2026-05-10T12:00:00Z')
@@ -97,6 +97,20 @@ describe('groupByDay', () => {
     expect(buckets[0].entries.map(e => e.id)).toEqual(['a', 'b'])
     expect(buckets[1].dateKey).toBe('2026-03-29')
     expect(buckets[1].entries.map(e => e.id)).toEqual(['c'])
+  })
+})
+
+describe('timeOfDay', () => {
+  it.each([
+    ['2026-05-10T02:00:00Z', 'before dawn'],
+    ['2026-05-10T07:30:00Z', 'at first light'],
+    ['2026-05-10T10:00:00Z', 'in the morning'],
+    ['2026-05-10T13:00:00Z', 'at midday'],
+    ['2026-05-10T16:00:00Z', 'in the afternoon'],
+    ['2026-05-10T19:00:00Z', 'at twilight'],
+    ['2026-05-10T22:30:00Z', 'after dark'],
+  ])('%s → %s', (iso, expected) => {
+    expect(timeOfDay(new Date(iso))).toBe(expected)
   })
 })
 

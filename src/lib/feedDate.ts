@@ -77,6 +77,22 @@ export function groupByDay<T extends { created_at: string }>(
   return buckets
 }
 
+/**
+ * Render an evocative time-of-day phrase for a dispatch's signature line.
+ * UTC-based for determinism — same phrase shown to every viewer regardless
+ * of their local timezone.
+ */
+export function timeOfDay(date: Date): string {
+  const h = date.getUTCHours()
+  if (h < 5)  return 'before dawn'
+  if (h < 9)  return 'at first light'
+  if (h < 12) return 'in the morning'
+  if (h < 15) return 'at midday'
+  if (h < 18) return 'in the afternoon'
+  if (h < 21) return 'at twilight'
+  return 'after dark'
+}
+
 const EXCERPT_CAP = 200
 
 /**

@@ -31,6 +31,7 @@ export interface FeedEntry {
   species_image_url: string | null
   field_notes: string | null
   pull_quote: string | null
+  badge_tier: 'bronze' | 'silver' | 'gold' | null
 }
 
 export interface ShowcaseExplorer {

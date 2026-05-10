@@ -1,12 +1,15 @@
--- Recreate get_community_feed to expose field_notes and pull_quote on every entry.
+-- Recreate get_community_feed to expose field_notes, pull_quote, and badge_tier on every entry.
 -- The Field Dispatches Gazette renders an italic pull-quote line per dispatch and
 -- falls back to a render-time excerpt of field_notes when pull_quote IS NULL
 -- (covers backfill window + any soft-fail of the pull-quote Claude call).
+-- BadgeDispatch additionally renders a tier-tinted ring around the icon, so
+-- we surface badge_tier from badge_definitions.
 --
 -- CREATE OR REPLACE cannot change a function's return signature, so we DROP first.
--- The function shape changes: same row order, same existing columns, two new columns
--- appended at the end (field_notes, pull_quote). Existing callers that select by
--- name remain compatible; the worker types regen via `supabase gen types`.
+-- The function shape changes: same row order, same existing columns, three new
+-- columns appended at the end (field_notes, pull_quote, badge_tier). Existing
+-- callers that select by name remain compatible; the worker types regen via
+-- `supabase gen types`.
 
 DROP FUNCTION IF EXISTS public.get_community_feed(integer);
 
@@ -24,7 +27,8 @@ RETURNS TABLE (
   qr_hash           text,
   species_image_url text,
   field_notes       text,
-  pull_quote        text
+  pull_quote        text,
+  badge_tier        text
 )
 LANGUAGE sql STABLE SECURITY DEFINER
 SET search_path = public
@@ -42,7 +46,8 @@ AS $$
     af.qr_hash,
     si.image_url_256  AS species_image_url,
     si.field_notes,
-    si.pull_quote
+    si.pull_quote,
+    bd.tier           AS badge_tier
   FROM public.activity_feed af
   JOIN  public.explorer_profiles ep ON ep.user_id = af.user_id AND ep.is_public = true
   LEFT JOIN public.badge_definitions bd ON bd.slug = af.badge_slug
