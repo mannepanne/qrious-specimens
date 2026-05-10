@@ -55,6 +55,10 @@ When adding a new item: pick the next free `TD-NNN`, drop it into **Active** or 
 | TD-029 | Wrangler GitHub Action pinned to Node 20 | Accepted | Revisit by 2026-08, or sooner if `cloudflare/wrangler-action` ships Node-24 build |
 | TD-030 | `usePostActivity` insert omitted `user_id` (Phase 6 regression) | Resolved | 2026-05-04 |
 | TD-031 | Field-notes openers collapsed to "Upon..." (12/18 of production corpus) | Resolved | 2026-05-09 |
+| TD-032 | `FeaturedDispatch` drops the "First sighting" eyebrow on `first_discovery` events | Accepted | Revisit when first-sighting frequency drops (every species feels new in early app) |
+| TD-033 | `feedDate.ts` time-of-day phrase derived from UTC hour, not viewer timezone | Accepted | Revisit when non-UTC viewer feedback surfaces, or when audience widens beyond UK |
+| TD-034 | `species_images.pull_quote` has no DB-level length cap | Accepted | Revisit if Anthropic API regression or operator-prompt-manipulation becomes plausible |
+| TD-035 | `backfill-pull-quotes.ts` interpolates qr_hashes into PostgREST `in.()` without `encodeURIComponent` | Accepted | Revisit if the inputs to `selectRowsNeedingBackfill()` ever include untrusted strings |
 
 ---
 
@@ -157,6 +161,53 @@ Items we've decided not to fix unless circumstances change. Each carries a **Rev
 - **Revisit when:** Worker surface reaches ~5 routes, or next REFERENCE/ sweep.
 - **Future fix sketch:** Single `REFERENCE/workers.md` table covering: route, source file, auth model, bindings used, rate limiting, key invariants. Update `REFERENCE/CLAUDE.md` index.
 - **Phase introduced:** Phase 8
+
+---
+
+### TD-032: `FeaturedDispatch` drops the "First sighting" eyebrow on `first_discovery` events
+
+- **Location:** `src/components/ActivityTimeline/FeaturedDispatch.tsx`
+- **Issue:** `CompactDispatch` shows an amber "First sighting" eyebrow when `event_type === 'first_discovery'`, but `FeaturedDispatch` does not — the featured card loses information density on its strongest event class. The dispatch-of-the-day rule prefers `first_discovery` events, so the loss is concentrated where it matters most.
+- **Why accepted:** During the early app every species is a first-for-someone — featuring a "First sighting" tag on most featured cards would dilute its meaning. Adding it now would also push a second eyebrow line above the species heading, competing with the dateline and the pull-quote for visual hierarchy.
+- **Risk:** Low — copy/UX nuance only, no functional impact.
+- **Revisit when:** First-sighting frequency drops below ~30% of featured cards (i.e. species discovery has caught up with the active explorer base), or when product testing shows users miss the distinction.
+- **Future fix sketch:** Add a small italic eyebrow above the `<h2>` in `FeaturedDispatch`, matching `CompactDispatch`'s amber treatment but in a quieter weight.
+- **Phase introduced:** Post-launch (Field Dispatches redesign)
+
+---
+
+### TD-033: `feedDate.ts` time-of-day phrase derived from UTC hour
+
+- **Location:** `src/lib/feedDate.ts` — `timeOfDay()` reads `getUTCHours()`
+- **Issue:** Featured-dispatch signatures read "at first light" / "before noon" / "in the afternoon" / "as evening drew on" / "after dark" based on the dispatch's UTC hour. A discovery posted at 22:00 BST appears as "after dark" to UK viewers (correct) but also to viewers in any other timezone whose local time at 22:00 BST is something quite different (e.g. 17:00 EDT — "in the afternoon").
+- **Why accepted:** Audience is currently UK-centric and the phrasing is decorative, not informational. Locale-aware time arithmetic adds Intl-API surface for negligible benefit at current scale.
+- **Risk:** Low — flavour text only; no functional impact.
+- **Revisit when:** Non-UTC viewer feedback surfaces, or when the audience meaningfully widens beyond UK timezones.
+- **Future fix sketch:** Derive the phrase from `Intl.DateTimeFormat(undefined, { hour: 'numeric' })` against the viewer's timezone, with a UTC fallback for SSR/testing.
+- **Phase introduced:** Post-launch (Field Dispatches redesign)
+
+---
+
+### TD-034: `species_images.pull_quote` has no DB-level length cap
+
+- **Location:** `supabase/migrations/20260510000000_species_images_pull_quote.sql` — column declared as plain `text`
+- **Issue:** The pull-quote column is unbounded. The worker bounds output via `max_tokens: 80` and the prompt instructs ≤200 chars, so steady-state values are ~150 chars. A future Anthropic API regression that returns longer responses, or a manipulated operator-prompt, would persist arbitrary text.
+- **Why accepted:** Worker-side bound is the canonical limit; defense-in-depth at the DB layer is genuine but overkill for the current threat model. The worker's `max_tokens: 80` would have to break for this to matter.
+- **Risk:** Low — practical exposure is nil today.
+- **Revisit when:** An incident (Anthropic regression, prompt-manipulation report) makes a defense-in-depth bound feel earned, or before opening the discovery worker to untrusted operators.
+- **Future fix sketch:** Migration adds `ALTER TABLE species_images ADD CONSTRAINT pull_quote_length CHECK (pull_quote IS NULL OR length(pull_quote) < 500);`. Backfill rejection is impossible (existing rows are well under the cap), but worth running a `SELECT MAX(length(pull_quote))` first to confirm headroom.
+- **Phase introduced:** Post-launch (Field Dispatches redesign)
+
+---
+
+### TD-035: `backfill-pull-quotes.ts` interpolates qr_hashes into PostgREST `in.()` without `encodeURIComponent`
+
+- **Location:** `scripts/backfill-pull-quotes.ts` — `fetchSeedMap()`
+- **Issue:** The `&qr_hash=in.("hash1","hash2")` filter is built by concatenating `qr_hash` values directly into the URL. Values come from a prior trusted DB SELECT (`species_images.qr_hash`), and `qr_hash` is itself a 16-char hex string by construction, so injection is structurally impossible today.
+- **Why accepted:** Inputs are trusted and tightly shaped; defensive escaping would add boilerplate without changing observable behaviour.
+- **Risk:** Low — unexploitable today; becomes real only if `selectRowsNeedingBackfill()` starts ingesting untrusted input.
+- **Revisit when:** The script grows a code path that takes operator-provided qr_hashes (e.g. CLI arg for re-running specific rows), at which point `encodeURIComponent` plus shape validation should land in the same change.
+- **Phase introduced:** Post-launch (Field Dispatches redesign)
 
 ---
 

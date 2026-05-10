@@ -34,7 +34,7 @@ describe('ActivityTimeline', () => {
 
   it('renders the empty-state message when no entries', () => {
     render(<ActivityTimeline entries={[]} isLoading={false} />)
-    expect(screen.getByText(/no activity recorded yet/i)).toBeInTheDocument()
+    expect(screen.getByText(/gazette stands empty/i)).toBeInTheDocument()
   })
 
   it('emits the section landmark with the activity-timeline label', () => {

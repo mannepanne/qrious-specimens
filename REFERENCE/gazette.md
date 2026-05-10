@@ -133,7 +133,7 @@ Easter egg: ~1-in-2000 chance of generating `"A. Anning"` — a nod to Mary Anni
 
 | Component | Role |
 |---|---|
-| `ActivityTimeline` | Top-level. Groups entries by UTC day via `groupByDay()`, picks one featured dispatch per day, alternates its image side across the whole feed (counter walks chronologically), renders `<section aria-label="Activity timeline">`. |
+| `ActivityTimeline` | Top-level. Groups entries by UTC day via `groupByDay()`, picks one featured dispatch per day, derives each featured card's mirrored side from a stable per-entry-id parity (`charCodeAt(last) % 2`) so 30s polling-driven inserts at the top do not flip already-rendered cards, renders `<section aria-label="Activity timeline">`. |
 | `DatelineHeader` | Italic `<h3>` with hairline rules. Wraps `dateline(date, now)` from `feedDate.ts` — emits "Today, on the 10th of May", "Yesterday, on the 9th", or "On the 1st of May" depending on UTC-day comparison. |
 | `FeaturedDispatch` | Per-day "Dispatch of the Day" — eyebrow, species `<h2>`, italic pull-quote, signature with time-of-day phrase. Mirrored layout via `sm:flex-row-reverse` when `mirrored=true`. |
 | `CompactDispatch` | Thumb + italic species name + quote excerpt + signature. Amber "First sighting" eyebrow when `event_type === 'first_discovery'`. Full card is a button when `qr_hash` and `onViewSpecies` are provided. |
@@ -156,6 +156,8 @@ Easter egg: ~1-in-2000 chance of generating `"A. Anning"` — a nod to Mary Anni
 - `timeOfDay(date)` — "at first light" / "before noon" / "in the afternoon" / "as evening drew on" / "after dark"
 
 All UTC, locale-free, deterministic.
+
+**`/gazette-mock` route** (`src/pages/GazetteFeedMockPage.tsx`, registered in `src/App.tsx`): a static, fixture-driven preview of every dispatch shape against synthetic data. It does not call the RPC and is not linked from the navigation. Kept in production builds intentionally — a one-URL way to compare the live feed against the calibration baseline when iterating on dispatch components, mirroring layouts, or fleuron spacing. Do not delete as dead code.
 
 ---
 
