@@ -121,6 +121,8 @@ How-it-works documentation for implemented features:
 
 The `bun run deploy` / `wrangler deploy` commands exist for emergency manual deploys only, not normal flow. The only local wrangler commands in normal use are secrets management (`wrangler secret put ...`).
 
+**Migrations land before the code that depends on them.** When a PR includes new files in `supabase/migrations/`, apply each migration to Supabase production via the SQL Editor *before* merging the PR. Worker + frontend deploy automatically on merge; if the migration hasn't been applied, the live RPC signature won't match what the deployed code expects and the relevant page soft-degrades or 500s. Verify after applying with a quick `SELECT * FROM <rpc_name>(...)` to confirm the new shape. The migration file is the source of truth — the Supabase CLI's `schema_migrations` table is not synced against prod.
+
 ## TypeScript configuration
 
 - Target: ESNext

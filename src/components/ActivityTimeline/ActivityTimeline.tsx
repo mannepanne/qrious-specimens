@@ -46,7 +46,7 @@ export default function ActivityTimeline({ entries, isLoading, onViewSpecies }: 
   if (entries.length === 0) {
     return (
       <p className="font-serif text-sm italic text-muted-foreground text-center py-6">
-        No activity recorded yet. Be the first to make your mark in the Gazette.
+        The Gazette stands empty, awaiting its first dispatch from the field.
       </p>
     )
   }
