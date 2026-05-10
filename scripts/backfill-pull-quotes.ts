@@ -122,10 +122,24 @@ async function main(): Promise<void> {
   const seedMap = await fetchSeedMap(rows.map((r) => r.qr_hash))
   console.log(`[backfill-pull-quotes] resolved seeds for ${seedMap.size}/${rows.length} row(s)`)
 
+  // Fail loud rather than falling back to seed=0: an unresolved seed silently
+  // collapses the lead-directive rotation onto directive 0 for the affected
+  // rows, skewing the opener-shape distribution the corpus regression test
+  // calibrated against. The script is idempotent — operator fixes the missing
+  // creatures rows and re-runs.
+  const unresolved = rows.filter((r) => !seedMap.has(r.qr_hash)).map((r) => r.qr_hash)
+  if (unresolved.length > 0) {
+    console.error(
+      `[backfill-pull-quotes] ${unresolved.length} qr_hash(es) have no creatures.dna seed — ` +
+        `aborting to preserve variety calibration. Unresolved: ${unresolved.join(', ')}`,
+    )
+    process.exit(1)
+  }
+
   if (DRY_RUN) {
     rows.forEach((r) => {
       const seed = seedMap.get(r.qr_hash)
-      console.log(`  - ${r.qr_hash} (seed=${seed ?? 'unknown'}) :: ${r.field_notes.slice(0, 60)}…`)
+      console.log(`  - ${r.qr_hash} (seed=${seed}) :: ${r.field_notes.slice(0, 60)}…`)
     })
     return
   }
@@ -133,7 +147,7 @@ async function main(): Promise<void> {
   let ok = 0
   let fail = 0
   for (const row of rows) {
-    const seed = seedMap.get(row.qr_hash) ?? 0
+    const seed = seedMap.get(row.qr_hash)!
     process.stdout.write(`  [..] ${row.qr_hash} `)
     try {
       const prompt = buildPullQuotePrompt(row.field_notes, seed)

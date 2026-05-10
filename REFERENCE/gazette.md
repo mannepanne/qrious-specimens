@@ -110,7 +110,7 @@ The frontend writes to `activity_feed` after a successful excavation, but only i
 - `first_discovery` — when `isFirstDiscoverer` flag is true from the Worker response
 - `badge_earned` — written by `check_and_award_badges` RPC, not by client code
 
-The earlier `rare_discovery` event type was dropped in migration `20260510000002_drop_rare_discovery_event_type.sql` (existing rows were rewritten to `discovery` first, then the CHECK constraint was redefined without it). The catalogue carries rarity treatment instead — splitting the responsibility between the Gazette (recency, narrative) and the catalogue (taxonomy, rarity).
+The `rare_discovery` event type is not used. Migration `20260510000002_drop_rare_discovery_event_type.sql` rewrote any historical rows to `discovery` and redefined the CHECK constraint without it. Rarity treatment lives in the catalogue, not the Gazette — splitting Gazette (recency, narrative) from catalogue (taxonomy, rarity).
 
 ---
 
@@ -182,7 +182,7 @@ When a user clicks a discovery entry in the `ActivityTimeline`, the app:
 3. `CataloguePage` receives `selectedSpeciesHash` prop and a `useEffect` searches `allEntries` for a matching entry
 4. If found, opens `SpeciesDetail` and calls `onSpeciesViewed()` to clear `selectedCatalogueHash`
 
-**Known limitation (TD-013):** if the species is on an unloaded catalogue page, the auto-open silently fails. A fallback single-species RPC lookup is the planned fix.
+URL routing makes the auto-open robust — the catalogue page resolves the requested `qr_hash` via the route param rather than depending on whichever pages are currently loaded.
 
 ---
 
@@ -212,4 +212,4 @@ Added in Phase 7. Separate from `useCommunity.ts` to keep badge/rank logic cohes
 
 ## Known technical debt
 
-- **TD-012** — `rare_discovery` event type defined but never posted
+See [`technical-debt.md`](./technical-debt.md) for current items affecting this layer.

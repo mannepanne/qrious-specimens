@@ -73,17 +73,34 @@ describe('ActivityTimeline', () => {
     expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(2)
   })
 
-  it('alternates featured-dispatch image side across the feed', () => {
+  it('mirrors featured-dispatch image side per-entry, stable across re-ordering', () => {
+    // Mirroring is derived from a stable per-entry-id parity (last-char
+    // charCodeAt) so polling-driven reorders do not flip already-rendered
+    // featured cards. Picked IDs: 'feat-a' → 'a' (97, odd) → mirrored;
+    // 'feat-b' → 'b' (98, even) → not mirrored.
     const entries = [
-      makeEntry({ id: 'a', species_name: 'Day-one feature', created_at: '2026-05-10T12:00:00Z' }),
-      makeEntry({ id: 'b', species_name: 'Day-two feature', created_at: '2026-05-09T12:00:00Z' }),
+      makeEntry({ id: 'feat-a', species_name: 'Mirrored feature',     created_at: '2026-05-10T12:00:00Z' }),
+      makeEntry({ id: 'feat-b', species_name: 'Non-mirrored feature', created_at: '2026-05-09T12:00:00Z' }),
     ]
-    const { container } = render(<ActivityTimeline entries={entries} isLoading={false} />)
-    const articles = container.querySelectorAll('article')
-    expect(articles).toHaveLength(2)
-    // First featured: not mirrored. Second featured: mirrored (sm:flex-row-reverse).
-    expect(articles[0].className).not.toMatch(/sm:flex-row-reverse/)
-    expect(articles[1].className).toMatch(/sm:flex-row-reverse/)
+    const { container, rerender } = render(<ActivityTimeline entries={entries} isLoading={false} />)
+    const articles = Array.from(container.querySelectorAll('article'))
+    const a = articles.find((el) => el.textContent?.includes('Mirrored feature'))!
+    const b = articles.find((el) => el.textContent?.includes('Non-mirrored feature'))!
+    expect(a.className).toMatch(/sm:flex-row-reverse/)
+    expect(b.className).not.toMatch(/sm:flex-row-reverse/)
+
+    // Stability: inserting a new entry at the top must not flip either
+    // existing card's mirrored side (the bug the per-entry-id parity fixes).
+    const withInsertion = [
+      makeEntry({ id: 'feat-c', species_name: 'Newcomer', created_at: '2026-05-11T12:00:00Z' }),
+      ...entries,
+    ]
+    rerender(<ActivityTimeline entries={withInsertion} isLoading={false} />)
+    const after = Array.from(container.querySelectorAll('article'))
+    const aAfter = after.find((el) => el.textContent?.includes('Mirrored feature'))!
+    const bAfter = after.find((el) => el.textContent?.includes('Non-mirrored feature'))!
+    expect(aAfter.className).toMatch(/sm:flex-row-reverse/)
+    expect(bAfter.className).not.toMatch(/sm:flex-row-reverse/)
   })
 
   it('compact dispatches do not become featured even if first in their group', () => {

@@ -52,7 +52,6 @@ export default function ActivityTimeline({ entries, isLoading, onViewSpecies }: 
   }
 
   const groups = groupByDay(entries)
-  let featuredCount = 0 // walks chronologically across the whole feed for alternation
 
   return (
     <section aria-label="Activity timeline">
@@ -70,8 +69,10 @@ export default function ActivityTimeline({ entries, isLoading, onViewSpecies }: 
               const showSeparator = i > 0 && !isFeatured && prev?.id !== featuredId
 
               if (isFeatured) {
-                const mirrored = featuredCount % 2 === 1
-                featuredCount += 1
+                // Stable per-entry parity: a positional counter would flip every
+                // featured card's mirrored side when polling inserts a new entry
+                // at the top, breaking the order-stable alternation invariant.
+                const mirrored = entry.id.charCodeAt(entry.id.length - 1) % 2 === 1
                 return (
                   <div key={entry.id}>
                     {i > 0 && <Fleuron />}
