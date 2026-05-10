@@ -274,6 +274,8 @@ describe('handleGenerateCreature', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, result: { id: MOCK_DNA.hash, variants: [] }, errors: [] }), { status: 200 }))
       // Claude field notes
       .mockResolvedValueOnce(new Response(JSON.stringify({ content: [{ type: 'text', text: 'A curious specimen was observed.' }] }), { status: 200 }))
+      // Claude pull-quote (text-only follow-up)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ content: [{ type: 'text', text: 'A radial geometry of quiet certainty.' }] }), { status: 200 }))
       // species_images INSERT
       .mockResolvedValueOnce(new Response('', { status: 201 }))
       // register_discovery RPC
@@ -289,6 +291,7 @@ describe('handleGenerateCreature', () => {
     expect(body.imageUrl512).toContain(`${MOCK_DNA.hash}/qrious512`)
     expect(body.imageUrl256).toContain(`${MOCK_DNA.hash}/qrious256`)
     expect(body.fieldNotes).toBe('A curious specimen was observed.')
+    expect(body.pullQuote).toBe('A radial geometry of quiet certainty.')
     expect(body.isFirstDiscoverer).toBe(true)
     expect(body.discoveryCount).toBe(1)
   })
@@ -342,6 +345,50 @@ describe('handleGenerateCreature', () => {
     expect(body.fieldNotes).toBe('') // empty but not an error
   })
 
+  it('persists pull_quote = null and still returns 200 when the pull-quote follow-up call fails', async () => {
+    // Soft-fail contract: field notes succeed, pull-quote API errors. Discovery
+    // must complete normally with pullQuote = null in the response and the
+    // species_images row inserted with pull_quote = null. The render-time
+    // excerpt fallback (excerptFromFieldNotes) covers the missing quote in the
+    // Gazette feed.
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const fakeImageBase64 = btoa('fake image bytes')
+    const geminiResponse = {
+      candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: fakeImageBase64 } }] } }],
+    }
+
+    let insertedPullQuote: unknown = 'sentinel'
+    mockFetch
+      // species_images GET → no cache
+      .mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }))
+      // Gemini → success
+      .mockResolvedValueOnce(new Response(JSON.stringify(geminiResponse), { status: 200 }))
+      // CF Images upload → success
+      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, result: { id: MOCK_DNA.hash, variants: [] }, errors: [] }), { status: 200 }))
+      // Claude field notes → success
+      .mockResolvedValueOnce(new Response(JSON.stringify({ content: [{ type: 'text', text: 'A creature of grave music.' }] }), { status: 200 }))
+      // Claude pull-quote → 500 (the soft-fail path under test)
+      .mockResolvedValueOnce(new Response('Server overload', { status: 500 }))
+      // species_images INSERT → capture body to assert pull_quote = null was persisted
+      .mockImplementationOnce(async (_url: string, init?: RequestInit) => {
+        const body = JSON.parse((init?.body as string) ?? '{}')
+        insertedPullQuote = body.pull_quote
+        return new Response('', { status: 201 })
+      })
+      // register_discovery RPC
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first: true, total_count: 1, scan_count: 1 }]), { status: 200 }))
+
+    const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
+    const res = await handleGenerateCreature(req, makeEnv())
+
+    expect(res.status).toBe(200)
+    const body = await res.json() as Record<string, unknown>
+    expect(body.fieldNotes).toBe('A creature of grave music.')
+    expect(body.pullQuote).toBeNull()
+    expect(insertedPullQuote).toBeNull()
+    consoleSpy.mockRestore()
+  })
+
   it('treats CF Images duplicate-ID (HTTP 409 + error code 5409) as success and returns predictable URLs', async () => {
     // Simulates concurrent scan of the same qr_hash: the losing race gets a
     // duplicate-ID error from CF Images. Must fall through to success so the
@@ -365,6 +412,8 @@ describe('handleGenerateCreature', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify(duplicateResponse), { status: 409 }))
       // Claude field notes
       .mockResolvedValueOnce(new Response(JSON.stringify({ content: [{ type: 'text', text: 'Concurrent scan success.' }] }), { status: 200 }))
+      // Claude pull-quote (text-only follow-up)
+      .mockResolvedValueOnce(new Response(JSON.stringify({ content: [{ type: 'text', text: 'A line distilled from the notes.' }] }), { status: 200 }))
       // species_images INSERT
       .mockResolvedValueOnce(new Response('', { status: 201 }))
       // register_discovery RPC

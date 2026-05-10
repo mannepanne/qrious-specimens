@@ -4,9 +4,9 @@
 /// <reference types="@cloudflare/workers-types" />
 
 import type { CreatureDNA } from '@/types/creature'
-import { buildGeminiPrompt, buildClaudePrompt } from './prompt'
+import { buildGeminiPrompt, buildClaudePrompt, buildPullQuotePrompt } from './prompt'
 import { generateIllustration } from './gemini'
-import { generateFieldNotes } from './claude'
+import { generateFieldNotes, generatePullQuote } from './claude'
 import { uploadToCloudflareImages } from '../cloudflare-images/index'
 import { verifyJWT, JwksUnavailableError, __resetJwksCache } from '../shared/jwt'
 import { enforceRateLimit } from '../shared/rateLimit'
@@ -21,6 +21,7 @@ interface SpeciesImageRow {
   image_url_512: string | null
   image_url_256: string | null
   field_notes: string | null
+  pull_quote: string | null
   discovery_count: number | null
   first_discoverer_id: string | null
 }
@@ -52,7 +53,7 @@ async function getSpeciesImage(
   serviceKey: string,
   qrHash: string,
 ): Promise<SpeciesImageRow | null> {
-  const url = `${supabaseUrl}/rest/v1/species_images?qr_hash=eq.${encodeURIComponent(qrHash)}&select=image_url,image_url_512,image_url_256,field_notes,discovery_count,first_discoverer_id&limit=1`
+  const url = `${supabaseUrl}/rest/v1/species_images?qr_hash=eq.${encodeURIComponent(qrHash)}&select=image_url,image_url_512,image_url_256,field_notes,pull_quote,discovery_count,first_discoverer_id&limit=1`
   const res = await fetch(url, { headers: supabaseHeaders(serviceKey) })
   if (!res.ok) return null
   const rows = (await res.json()) as SpeciesImageRow[]
@@ -68,6 +69,7 @@ async function insertSpeciesImage(
     image_url_512: string
     image_url_256: string
     field_notes: string
+    pull_quote: string | null
     prompt_used: string
     first_discoverer_id: string
     discovery_count: number
@@ -211,6 +213,7 @@ export async function handleGenerateCreature(request: Request, env: Env): Promis
         imageUrl512: existing.image_url_512 ?? existing.image_url,
         imageUrl256: existing.image_url_256 ?? existing.image_url,
         fieldNotes: existing.field_notes ?? '',
+        pullQuote: existing.pull_quote,
         isFirstDiscoverer: discoveryResult.is_first_discoverer,
         discoveryCount: discoveryResult.discovery_count,
         cached: true,
@@ -259,6 +262,18 @@ export async function handleGenerateCreature(request: Request, env: Env): Promis
     console.error('Field notes generation failed:', (err as Error).message)
   }
 
+  // Step 6b: Distil pull-quote from field notes (text-only, sequential, soft-fail).
+  // Discovery never blocks on this step — null pull_quote falls back to a
+  // render-time excerpt (excerptFromFieldNotes) on the Gazette feed.
+  let pullQuote: string | null = null
+  if (fieldNotes) {
+    try {
+      pullQuote = await generatePullQuote(buildPullQuotePrompt(fieldNotes, dna.seed), env.ANTHROPIC_API_KEY)
+    } catch (err) {
+      console.error('Pull-quote generation failed:', (err as Error).message)
+    }
+  }
+
   // Step 7: Write to species_images table
   try {
     await insertSpeciesImage(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
@@ -267,6 +282,7 @@ export async function handleGenerateCreature(request: Request, env: Env): Promis
       image_url_512: imageUrls.url512,
       image_url_256: imageUrls.url256,
       field_notes: fieldNotes,
+      pull_quote: pullQuote,
       prompt_used: geminiPrompt,
       first_discoverer_id: userId,
       discovery_count: 1,
@@ -290,6 +306,7 @@ export async function handleGenerateCreature(request: Request, env: Env): Promis
       imageUrl512: imageUrls.url512,
       imageUrl256: imageUrls.url256,
       fieldNotes,
+      pullQuote,
       isFirstDiscoverer: discoveryResult.is_first_discoverer,
       discoveryCount: discoveryResult.discovery_count,
       cached: false,

@@ -70,6 +70,63 @@ export function pickOpenerDirective(seed: number): string {
   return OPENER_DIRECTIVES[index]
 }
 
+/**
+ * Six pull-quote lead-directives, rotated deterministically by `dna.seed`. Same
+ * mechanism as the field-notes opener rotation (above): a single-shot prompt
+ * cannot see the rest of the corpus, so without an explicit shape directive
+ * the model converges on whichever opener-shape it finds most natural — soft
+ * "vary your openers" prompts cycle the dominant attractor but don't spread
+ * across the corpus. Empirically (trial-pull-quotes.ts trials 1–3, 2026-05-10)
+ * the unseeded prompt parked at 38–63% numeric-feature leads ("Three eyes…",
+ * "Four appendages…"). Rotation by seed makes lead-shape another deterministic
+ * projection of the DNA — same QR → same pull-quote.
+ */
+const PULL_QUOTE_LEADS = [
+  'Lead with the most striking colour, surface, or texture in the notes — sheen, dotting, mesh, lustre, or how light moves across the creature.',
+  'Lead with motion, gesture, or behaviour — undulation, recoil, the way appendages curl or extend, the pace at which the creature moves.',
+  'Lead with the setting where the specimen was found — the place, the depth, the surrounding matter or conditions — before the creature itself enters the line.',
+  'Lead with a mistaken-identity reading — "I had taken it for…", "What at first appeared to be…" — letting the form correct your first impression.',
+  'Lead with a small turn of phrase or aphorism about the form — symmetry, geometry, proportion, what the shape suggests about the creature\'s habits or kingdom.',
+  'Lead with a sensory clue that preceded recognition — a sound, a faint light, a movement, a clicking, a glimmer in dark water.',
+] as const
+
+export function pickPullQuoteLead(seed: number): string {
+  const index = Math.abs(Math.floor(seed)) % PULL_QUOTE_LEADS.length
+  return PULL_QUOTE_LEADS[index]
+}
+
+/**
+ * Pull-quote prompt — text-only follow-up to field-notes generation.
+ *
+ * Produces one evocative, self-contained line for the Gazette feed. The seed
+ * argument is the same `dna.seed` used to rotate field-notes openers; passing
+ * it here gives pull-quotes the same corpus-wide variety guarantee.
+ *
+ * The hard constraints kept absolute: self-contained line (no "the specimen"),
+ * no rarity vocabulary (forward-compat with rarity-and-census.md), output the
+ * line itself with no quotes/preamble.
+ */
+export function buildPullQuotePrompt(fieldNotes: string, seed: number): string {
+  return `You are a Victorian naturalist preparing a single pull-quote for a journal feed. Below are field notes you have just written about a newly discovered specimen. Distil from them ONE evocative line — strict ceiling of 200 characters and 35 words, ideally between 120 and 180 characters — that will be read on its own, separated from the surrounding entry.
+
+Field notes:
+"""
+${fieldNotes}
+"""
+
+Lead-directive for THIS pull-quote: ${pickPullQuoteLead(seed)} Open the line under that directive — let the directive shape the angle, drawing the words from the notes themselves. The lead-directive is the constraint that matters most; everything else in this prompt sits underneath it.
+
+Other guidance:
+- Match the Victorian naturalist voice already in the field notes — precise, wondering, elegant. No modern idiom, no breathless ad-copy, no exclamation points.
+- Do not begin with a bare number-word ("Three…", "Four…", "Seven…", "Twelve…"). If a count is essential to the line, let the count fall into it a beat after the lead — "Stalked eyes, three of them, rotating in independent survey" rather than "Three stalked eyes…".
+- Do not begin with temporal phrasings ("Upon…", "When…", "Whilst…") or demonstratives ("The specimen…", "This creature…", "The creature…").
+- The line must be self-contained: do not say "the specimen", "this creature", "the animal", or otherwise reference context that is not present in the line itself.
+- Do NOT use rarity vocabulary in any form — no "rare", "common", "extraordinary", "uncommon", "the rarest", "first of its kind", percentile language, or comparative-frequency language. The catalogue's rarity treatment is handled separately and must not collide with the pull-quote.
+- One sentence is fine; two short sentences are fine; never more than two.
+
+Output ONLY the pull-quote line itself, with no quotation marks, no preamble, no trailing commentary, no markdown, no labels. Begin directly with the first word of the line.`
+}
+
 export function buildClaudePrompt(dna: CreatureDNA, hasImage: boolean): string {
   const features: string[] = []
   if (dna.hasShell) features.push('a protective carapace')

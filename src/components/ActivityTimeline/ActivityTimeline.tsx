@@ -1,7 +1,13 @@
-// ABOUT: Chronological feed of public discoveries and badge awards in the Gazette
-// ABOUT: Colour-coded dots per event type; clicking a discovery entry opens its species in the Catalogue
+// ABOUT: Field Dispatches feed — groups feed entries by UTC day, picks one featured "Dispatch of the Day" per group
+// ABOUT: Composes DatelineHeader / FeaturedDispatch / CompactDispatch / BadgeDispatch / Fleuron; preserves onViewSpecies API
 
 import type { FeedEntry } from '@/hooks/useCommunity'
+import { groupByDay } from '@/lib/feedDate'
+import { Fleuron } from './Fleuron'
+import { DatelineHeader } from './DatelineHeader'
+import { FeaturedDispatch } from './FeaturedDispatch'
+import { CompactDispatch } from './CompactDispatch'
+import { BadgeDispatch } from './BadgeDispatch'
 
 interface Props {
   entries: FeedEntry[]
@@ -9,115 +15,21 @@ interface Props {
   onViewSpecies?: (qrHash: string) => void
 }
 
-/** Dot colour classes for each event type. */
-const EVENT_DOT: Record<FeedEntry['event_type'], string> = {
-  discovery:       'bg-emerald-500',
-  first_discovery: 'bg-purple-500',
-  rare_discovery:  'bg-amber-500',
-  badge_earned:    'bg-blue-500',
-}
-
-/** Human-readable time-ago string (coarse, no i18n library needed). */
-function timeAgo(isoDate: string): string {
-  const diffMs = Date.now() - new Date(isoDate).getTime()
-  const minutes = Math.floor(diffMs / 60_000)
-  if (minutes < 1)  return 'just now'
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24)   return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 30)    return `${days}d ago`
-  const months = Math.floor(days / 30)
-  return `${months}mo ago`
-}
-
-function EntryText({ entry }: { entry: FeedEntry }) {
-  switch (entry.event_type) {
-    case 'discovery':
-      return (
-        <>
-          <span className="font-medium">{entry.display_name}</span>
-          {' discovered '}
-          <span className="italic">{entry.species_name}</span>
-        </>
-      )
-    case 'rare_discovery':
-      return (
-        <>
-          <span className="font-medium">{entry.display_name}</span>
-          {' discovered a rare '}
-          <span className="italic">{entry.species_name}</span>
-        </>
-      )
-    case 'first_discovery':
-      return (
-        <>
-          <span className="font-medium">{entry.display_name}</span>
-          {' was first to discover '}
-          <span className="italic">{entry.species_name}</span>
-        </>
-      )
-    case 'badge_earned':
-      return (
-        <>
-          <span className="font-medium">{entry.display_name}</span>
-          {' earned '}
-          <span>{entry.badge_icon} {entry.badge_name}</span>
-        </>
-      )
-  }
-}
-
-function TimelineEntry({ entry, isLast, onViewSpecies }: { entry: FeedEntry; isLast: boolean; onViewSpecies?: (qrHash: string) => void }) {
-  const isDiscovery = entry.event_type !== 'badge_earned'
-  const isClickable = isDiscovery && !!entry.qr_hash && !!onViewSpecies
-
-  const content = (
-    <div className="flex items-start gap-3">
-      {/* Colour-coded dot + connector line (suppressed on last entry) */}
-      <div className="mt-1.5 shrink-0 flex flex-col items-center gap-0.5" aria-hidden="true">
-        <span className={['w-2 h-2 rounded-full', EVENT_DOT[entry.event_type]].join(' ')} />
-        {!isLast && <span className="w-px h-4 bg-border" />}
-      </div>
-
-      {/* Thumbnail (discoveries only) */}
-      {entry.species_image_url && (
-        <img
-          src={entry.species_image_url}
-          alt=""
-          aria-hidden="true"
-          width={40}
-          height={40}
-          loading="lazy"
-          className="shrink-0 w-10 h-10 rounded object-contain bg-accent/20"
-        />
-      )}
-
-      {/* Text + timestamp */}
-      <div className="flex-1 min-w-0">
-        <p className="font-mono text-xs leading-snug">
-          <EntryText entry={entry} />
-        </p>
-        <p className="font-mono text-[10px] text-muted-foreground mt-0.5">
-          {timeAgo(entry.created_at)}
-        </p>
-      </div>
-    </div>
-  )
-
-  if (isClickable) {
-    return (
-      <button
-        onClick={() => onViewSpecies!(entry.qr_hash!)}
-        className="w-full text-left hover:bg-accent/40 rounded px-2 py-1.5 transition-colors"
-        aria-label={`View ${entry.species_name ?? 'species'} in catalogue`}
-      >
-        {content}
-      </button>
-    )
-  }
-
-  return <div className="px-2 py-1.5">{content}</div>
+/**
+ * Dispatch-of-the-day rule: per UTC-day group, pick one entry to feature.
+ * Most recent first_discovery wins; fall back to most recent ordinary discovery.
+ * Badge entries never qualify. Returns null when nothing in the group is eligible.
+ *
+ * The input is assumed to be in chronological order (DESC by created_at), as
+ * returned by `get_community_feed`. "Most recent" therefore means the first
+ * entry of the matching event_type in the group.
+ */
+function pickFeaturedId(entries: FeedEntry[]): string | null {
+  const firstDiscovery = entries.find(e => e.event_type === 'first_discovery')
+  if (firstDiscovery) return firstDiscovery.id
+  const discovery = entries.find(e => e.event_type === 'discovery')
+  if (discovery) return discovery.id
+  return null
 }
 
 export default function ActivityTimeline({ entries, isLoading, onViewSpecies }: Props) {
@@ -125,7 +37,7 @@ export default function ActivityTimeline({ entries, isLoading, onViewSpecies }: 
     return (
       <div className="space-y-3">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="h-10 rounded animate-pulse bg-accent/20" />
+          <div key={i} className="h-20 rounded animate-pulse bg-accent/20" />
         ))}
       </div>
     )
@@ -139,13 +51,58 @@ export default function ActivityTimeline({ entries, isLoading, onViewSpecies }: 
     )
   }
 
+  const groups = groupByDay(entries)
+
   return (
-    <ol aria-label="Activity timeline" className="space-y-0.5">
-      {entries.map((entry, i) => (
-        <li key={entry.id}>
-          <TimelineEntry entry={entry} isLast={i === entries.length - 1} onViewSpecies={onViewSpecies} />
-        </li>
-      ))}
-    </ol>
+    <section aria-label="Activity timeline">
+      {groups.map((group, gi) => {
+        const featuredId = pickFeaturedId(group.entries)
+        const groupDate = new Date(group.entries[0].created_at)
+
+        return (
+          <div key={group.dateKey}>
+            <DatelineHeader date={groupDate} />
+
+            {group.entries.map((entry, i) => {
+              const isFeatured = entry.id === featuredId
+              const prev = group.entries[i - 1]
+              const showSeparator = i > 0 && !isFeatured && prev?.id !== featuredId
+
+              if (isFeatured) {
+                // Stable per-entry parity: a positional counter would flip every
+                // featured card's mirrored side when polling inserts a new entry
+                // at the top, breaking the order-stable alternation invariant.
+                const mirrored = entry.id.charCodeAt(entry.id.length - 1) % 2 === 1
+                return (
+                  <div key={entry.id}>
+                    {i > 0 && <Fleuron />}
+                    <FeaturedDispatch entry={entry} mirrored={mirrored} onViewSpecies={onViewSpecies} />
+                    {i < group.entries.length - 1 && <Fleuron />}
+                  </div>
+                )
+              }
+
+              if (entry.event_type === 'badge_earned') {
+                return (
+                  <div key={entry.id}>
+                    {showSeparator && <div className="border-t border-border/60" />}
+                    <BadgeDispatch entry={entry} />
+                  </div>
+                )
+              }
+
+              return (
+                <div key={entry.id}>
+                  {showSeparator && <div className="border-t border-border/60" />}
+                  <CompactDispatch entry={entry} onViewSpecies={onViewSpecies} />
+                </div>
+              )
+            })}
+
+            {gi < groups.length - 1 && <div className="h-3" />}
+          </div>
+        )
+      })}
+    </section>
   )
 }

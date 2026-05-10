@@ -37,9 +37,11 @@ All RPCs are `SECURITY DEFINER` with `SET search_path = public`. GRANTs:
 
 ### `get_community_feed(p_limit integer DEFAULT 20)`
 
-Returns the `p_limit` most recent activity entries from public profiles, joined to display names, badge definitions, and species thumbnails (`species_images.image_url_256`).
+Returns the `p_limit` most recent activity entries from public profiles, joined to display names, badge definitions, badge tier (for ring-tinting on `BadgeDispatch`), species thumbnails (`species_images.image_url_256`), field notes (for the render-time excerpt fallback), and pull-quote.
 
-Returns: `id, event_type, species_name, badge_slug, badge_name, badge_icon, rarity, display_name, created_at, qr_hash, species_image_url`
+Returns: `id, event_type, species_name, badge_slug, badge_name, badge_icon, badge_tier, rarity, display_name, created_at, qr_hash, species_image_url, field_notes, pull_quote`
+
+Migration: `20260510000001_get_community_feed_field_notes_pull_quote.sql` recreated the function (DROP + CREATE because the RETURNS TABLE shape changed). The Field Dispatches redesign of the Gazette feed reads `pull_quote` first and falls back to `excerptFromFieldNotes(field_notes)` (`src/lib/feedDate.ts`) when null. See ADR [`2026-05-10-pull-quote-generation.md`](./decisions/2026-05-10-pull-quote-generation.md).
 
 ### `get_explorer_showcase()`
 
@@ -106,8 +108,9 @@ The frontend writes to `activity_feed` after a successful excavation, but only i
 **Current event types posted:**
 - `discovery` — any new species found
 - `first_discovery` — when `isFirstDiscoverer` flag is true from the Worker response
+- `badge_earned` — written by `check_and_award_badges` RPC, not by client code
 
-**`rare_discovery` is defined but not yet posted** — see TD-012. The rarity check requires a post-insert DB read of `species_discoveries.discovery_count`. Deferred to Phase 7.
+The `rare_discovery` event type is not used. Migration `20260510000002_drop_rare_discovery_event_type.sql` rewrote any historical rows to `discovery` and redefined the CHECK constraint without it. Rarity treatment lives in the catalogue, not the Gazette — splitting Gazette (recency, narrative) from catalogue (taxonomy, rarity).
 
 ---
 
@@ -124,6 +127,52 @@ Easter egg: ~1-in-2000 chance of generating `"A. Anning"` — a nod to Mary Anni
 
 ---
 
+## Field Dispatches — `ActivityTimeline` component breakdown
+
+`src/components/ActivityTimeline/` composes the Gazette feed as a Victorian field journal. One component per dispatch type, plus shared header / divider primitives:
+
+| Component | Role |
+|---|---|
+| `ActivityTimeline` | Top-level. Groups entries by UTC day via `groupByDay()`, picks one featured dispatch per day, alternates its image side across the whole feed (counter walks chronologically), renders `<section aria-label="Activity timeline">`. |
+| `DatelineHeader` | Italic `<h3>` with hairline rules. Wraps `dateline(date, now)` from `feedDate.ts` — emits "Today, on the 10th of May", "Yesterday, on the 9th", or "On the 1st of May" depending on UTC-day comparison. |
+| `FeaturedDispatch` | Per-day "Dispatch of the Day" — eyebrow, species `<h2>`, italic pull-quote, signature with time-of-day phrase. Mirrored layout via `sm:flex-row-reverse` when `mirrored=true`. |
+| `CompactDispatch` | Thumb + italic species name + quote excerpt + signature. Amber "First sighting" eyebrow when `event_type === 'first_discovery'`. Full card is a button when `qr_hash` and `onViewSpecies` are provided. |
+| `BadgeDispatch` | Emoji icon in a tier-tinted ring (bronze/silver/gold), smallcaps prose. Never clickable — badges have no species detail page. |
+| `Fleuron` | Decorative divider between dispatches within a day. Hairline rules either side of a glyph (default `✽`). |
+
+**Featured-pick rule** (`pickFeaturedId` inside `ActivityTimeline.tsx`):
+1. Most-recent `first_discovery` in the day → featured
+2. Otherwise most-recent ordinary `discovery` → featured
+3. Days with only `badge_earned` entries get no featured card; all entries render as `BadgeDispatch`
+
+**Render-time pull-quote fallback** (`excerptFromFieldNotes()` in `src/lib/feedDate.ts`): collapses whitespace, prefers the first sentence (`/^[^.!?]*[.!?]/`), word-boundary truncation at 200 chars otherwise. Used by both `FeaturedDispatch` and `CompactDispatch` when `pull_quote IS NULL`.
+
+**Click contract preserved:** `onViewSpecies(qrHash)` callback flows through `ActivityTimeline` → dispatch → button. Badge dispatches don't carry the prop. `GazettePage` handles the click by setting `state.origin = 'gazette'` so the back button on `SpeciesDetail` returns to the right tab.
+
+**Date helpers** (`src/lib/feedDate.ts`):
+- `dateline(date, now)` — UTC-based "Today, on the Nth of Month" / "Yesterday, on the Nth" / "On the Nth of Month"
+- `groupByDay(entries)` — UTC-day buckets, preserves entry order within each
+- `excerptFromFieldNotes(notes)` — render-time pull-quote fallback
+- `timeOfDay(date)` — "at first light" / "before noon" / "in the afternoon" / "as evening drew on" / "after dark"
+
+All UTC, locale-free, deterministic.
+
+---
+
+## Pull-quote generation and backfill
+
+The `pull_quote` column on `species_images` is populated by a sequential text-only Claude Haiku call after the multimodal field-notes call (Step 6b in `workers/generate-creature/index.ts`). Failure is soft — discovery completes, `pull_quote = null` is persisted, and the render-time excerpt covers the gap.
+
+- Prompt builder: `buildPullQuotePrompt(fieldNotes, dna.seed)` — 6-way directive rotation seeded by `dna.seed`
+- API client: `generatePullQuote(prompt, apiKey)` in `workers/generate-creature/claude.ts`
+- Variety regression test: `workers/generate-creature/pullQuote.test.ts` — guards opener-shape distribution against `scripts/output/trial-pull-quotes.json`
+- Trial harness: `scripts/trial-pull-quotes.ts` — regenerate the calibration corpus when iterating prompts
+- Backfill: `scripts/backfill-pull-quotes.ts` — idempotent, fills rows with `pull_quote IS NULL AND field_notes IS NOT NULL`. Resolves `dna.seed` per row from `creatures` so the directive rotation produces statistically similar variety to live traffic.
+
+ADR: [`2026-05-10-pull-quote-generation.md`](./decisions/2026-05-10-pull-quote-generation.md).
+
+---
+
 ## Cross-tab navigation (Gazette → Catalogue)
 
 When a user clicks a discovery entry in the `ActivityTimeline`, the app:
@@ -133,7 +182,7 @@ When a user clicks a discovery entry in the `ActivityTimeline`, the app:
 3. `CataloguePage` receives `selectedSpeciesHash` prop and a `useEffect` searches `allEntries` for a matching entry
 4. If found, opens `SpeciesDetail` and calls `onSpeciesViewed()` to clear `selectedCatalogueHash`
 
-**Known limitation (TD-013):** if the species is on an unloaded catalogue page, the auto-open silently fails. A fallback single-species RPC lookup is the planned fix.
+URL routing makes the auto-open robust — the catalogue page resolves the requested `qr_hash` via the route param rather than depending on whichever pages are currently loaded.
 
 ---
 
@@ -163,4 +212,4 @@ Added in Phase 7. Separate from `useCommunity.ts` to keep badge/rank logic cohes
 
 ## Known technical debt
 
-- **TD-012** — `rare_discovery` event type defined but never posted
+See [`technical-debt.md`](./technical-debt.md) for current items affecting this layer.

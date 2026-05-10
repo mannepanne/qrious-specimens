@@ -19,7 +19,7 @@ export interface ExplorerProfile {
 
 export interface FeedEntry {
   id: string
-  event_type: 'discovery' | 'rare_discovery' | 'first_discovery' | 'badge_earned'
+  event_type: 'discovery' | 'first_discovery' | 'badge_earned'
   species_name: string | null
   badge_slug: string | null
   badge_name: string | null
@@ -29,6 +29,9 @@ export interface FeedEntry {
   created_at: string
   qr_hash: string | null
   species_image_url: string | null
+  field_notes: string | null
+  pull_quote: string | null
+  badge_tier: 'bronze' | 'silver' | 'gold' | null
 }
 
 export interface ShowcaseExplorer {
@@ -64,7 +67,7 @@ export interface BadgeResult {
 
 export interface PostActivityParams {
   user_id: string
-  event_type: 'discovery' | 'rare_discovery' | 'first_discovery' | 'badge_earned'
+  event_type: 'discovery' | 'first_discovery' | 'badge_earned'
   species_name?: string
   badge_slug?: string
   rarity?: string

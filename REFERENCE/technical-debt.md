@@ -35,7 +35,7 @@ When adding a new item: pick the next free `TD-NNN`, drop it into **Active** or 
 | TD-009 | Worker error responses include internal `detail` | Accepted | Revisit before exposing `detail` to UI toasts |
 | TD-010 | `localhost:5173` in production CORS allowlist | Resolved | 2026-05-04 |
 | TD-011 | Catalogue pagination window-function drift | Accepted | Revisit if catalogue churn becomes user-visible |
-| TD-012 | `rare_discovery` event type defined but never posted | Accepted | Revisit when post-excavation flow is next touched |
+| TD-012 | `rare_discovery` event type defined but never posted | Resolved | 2026-05-10 — type removed |
 | TD-013 | Cross-tab species auto-open beyond loaded pages | Resolved | Resolved structurally by URL routing |
 | TD-014 | `activity_feed` had no DELETE RLS policy | Resolved | 2026-05-04 |
 | TD-015 | `finishExcavation` badge/rank logic untested | Resolved | Phase 7 |
@@ -136,18 +136,6 @@ Items we've decided not to fix unless circumstances change. Each carries a **Rev
 
 ---
 
-### TD-012: `rare_discovery` event type defined but never posted
-
-- **Location:** `src/App.tsx` — `finishExcavation()`; `src/hooks/useCommunity.ts` — `FeedEntry`; `supabase/migrations/20260412000000_phase6_gazette.sql` — `activity_feed` CHECK constraint
-- **Issue:** The `rare_discovery` event type exists in the DB CHECK constraint, TS types, and `ActivityTimeline` rendering (amber dot) — but nothing posts it. The frontend posts `discovery` or `first_discovery` and never checks species rarity. Amber dots will never appear.
-- **Why accepted:** Rarity-at-excavation needs a DB lookup that adds latency. Out of scope for Phase 6's basic feed.
-- **Risk:** Low — no data loss or broken UI. Feed is just slightly less colourful.
-- **Revisit when:** Post-excavation flow is next touched (e.g. badge toast tweaks).
-- **Future fix sketch:** After `addCreature.mutateAsync` resolves, fetch `species_discoveries.discovery_count` for the new `qr_hash`. If ≤ 3, post `rare_discovery`.
-- **Phase introduced:** Phase 6
-
----
-
 ### TD-016: Contact form captcha is client-side only
 
 - **Location:** `src/components/VictorianCaptcha/VictorianCaptcha.tsx`
@@ -193,6 +181,7 @@ Compressed archive — id, title, resolution date, link to where the detail live
 - **TD-006**: `register_discovery` RPC accepted arbitrary `p_user_id` — resolved 2026-04-25 by `supabase/migrations/20260425000003_register_discovery_revoke_public_execute.sql` (revoked from PUBLIC/authenticated/anon, granted to service_role only).
 - **TD-007**: JWT `alg` header not validated — resolved 2026-04-20 in PR #47. `verifyJWT()` now whitelists HS256/ES256/RS256 with structurally distinct key sources per branch. See [ADR](./decisions/2026-04-20-jwks-jwt-verification.md).
 - **TD-010**: `http://localhost:5173` in production CORS allowlist — resolved 2026-05-04 in PR #95 via `ALLOWED_ORIGINS` env var consumed by `workers/shared/cors.ts`.
+- **TD-012**: `rare_discovery` event type defined but never posted — resolved 2026-05-10 by removing the type entirely (`supabase/migrations/20260510000002_drop_rare_discovery_event_type.sql` rewrote existing rows to `discovery` and redefined the CHECK constraint without it). Splitting Gazette and catalogue responsibilities lets the catalogue carry rarity treatment while the Gazette focuses on recency and narrative; the `pull_quote` on each dispatch carries the visual interest the amber dot was meant to provide. See ADR [`2026-05-10-pull-quote-generation.md`](./decisions/2026-05-10-pull-quote-generation.md).
 - **TD-013**: Cross-tab species auto-open beyond loaded pages — resolved structurally when species navigation moved to URL routing (`/species/:qrHash`); RPC backed by `supabase/migrations/20260412000001_get_species_by_hash.sql`.
 - **TD-014**: `activity_feed` had no DELETE RLS policy — resolved 2026-05-04 in PR #93 by `supabase/migrations/20260504000002_activity_feed_delete_own_rls.sql` (`"Delete own activity"` policy).
 - **TD-015**: `finishExcavation` badge/rank logic untested — resolved in Phase 7. Logic extracted to `src/hooks/usePostExcavationEffects.ts` with 14 tests.

@@ -158,6 +158,10 @@ export function classifyOpenerShape(sentence: string): OpenerShape {
   if (w0 === 'i' && (w1 === 'mistook' || w1 === 'took' || (w1 === 'had' && w2 === 'taken'))) {
     return 'mistaken-identity'
   }
+  // Mistaken-identity (impersonal variant): "What at first appeared…", "What at first looked…", "What at first seemed…"
+  if (w0 === 'what' && w1 === 'at' && w2 === 'first') {
+    return 'mistaken-identity'
+  }
 
   // Rhetorical-question template: "By what curious accident...", "How does...", "What manner of..."
   if (w0 === 'by' && w1 === 'what') return 'rhetorical-question'
