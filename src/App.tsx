@@ -30,6 +30,7 @@ import { generateCreatureDNA } from '@/lib/creatureEngine'
 import { AuthPage } from '@/pages/AuthPage'
 import { CataloguePage } from '@/pages/CataloguePage'
 import { GazettePage } from '@/pages/GazettePage'
+import { GazetteFeedMockPage } from '@/pages/GazetteFeedMockPage'
 import { CabinetPage } from '@/pages/CabinetPage'
 import { SpecimenPage } from '@/pages/SpecimenPage'
 import { SpeciesPage } from '@/pages/SpeciesPage'
@@ -347,6 +348,7 @@ export function AppRoutes() {
           <Route path="/catalogue/:order"    element={<CataloguePage />} />
           <Route path="/species/:qrHash"     element={<SpeciesPage />} />
           <Route path="/gazette"             element={<GazettePage />} />
+          <Route path="/gazette-mock"        element={<GazetteFeedMockPage />} />
           <Route path="/cabinet"             element={<CabinetPage />} />
           <Route path="/specimen/:id"        element={<SpecimenPage />} />
           <Route path="/enter"               element={<AuthPage />} />
