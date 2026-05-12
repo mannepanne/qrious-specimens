@@ -108,7 +108,7 @@ describe('useExplorerShowcase', () => {
     const rows = [
       {
         user_id: 'u1', display_name: 'Prof. B. Huxley',
-        specimen_count: 12, rare_count: 2, first_discovery_count: 1,
+        specimen_count: 12, extraordinary_count: 2, first_discovery_count: 1,
         badges: null, joined_at: '2026-01-01T00:00:00Z',
       },
     ]
@@ -122,7 +122,7 @@ describe('useExplorerShowcase', () => {
     const badge = { slug: 'first_steps', name: 'First Steps', icon: '🌱', tier: 'bronze' }
     mockRpc.mockResolvedValueOnce({
       data: [{ user_id: 'u2', display_name: 'Lt. C. Sedgwick', specimen_count: 1,
-               rare_count: 0, first_discovery_count: 0, badges: [badge], joined_at: '2026-01-01T00:00:00Z' }],
+               extraordinary_count: 0, first_discovery_count: 0, badges: [badge], joined_at: '2026-01-01T00:00:00Z' }],
       error: null,
     })
     const { result } = renderHook(() => useExplorerShowcase(), { wrapper: createWrapper() })

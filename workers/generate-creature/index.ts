@@ -4,9 +4,14 @@
 /// <reference types="@cloudflare/workers-types" />
 
 import type { CreatureDNA } from '@/types/creature'
-import { buildGeminiPrompt, buildClaudePrompt, buildPullQuotePrompt } from './prompt'
+import {
+  buildGeminiPrompt,
+  buildClaudePrompt,
+  buildPullQuotePrompt,
+  buildTierChangeBodyPrompt,
+} from './prompt'
 import { generateIllustration } from './gemini'
-import { generateFieldNotes, generatePullQuote } from './claude'
+import { generateFieldNotes, generatePullQuote, generateTierChangeBody } from './claude'
 import { uploadToCloudflareImages } from '../cloudflare-images/index'
 import { verifyJWT, JwksUnavailableError, __resetJwksCache } from '../shared/jwt'
 import { enforceRateLimit } from '../shared/rateLimit'
@@ -26,16 +31,28 @@ interface SpeciesImageRow {
   first_discoverer_id: string | null
 }
 
-/** Shape of one row returned by the `register_discovery` Postgres function. */
+/**
+ * Shape of one row returned by the `register_discovery` Postgres function
+ * (post-rarity-and-census). The tier-change columns let the worker issue a
+ * follow-up Anthropic call and UPDATE the freshly inserted activity_feed row
+ * keyed by `tier_change_event_id`, with no race window.
+ */
 interface RegisterDiscoveryRow {
-  is_first: boolean
-  total_count: number
-  scan_count: number
+  is_first_discoverer: boolean
+  tier_changed: boolean
+  old_tier: 'extraordinary' | 'notable' | 'common' | null
+  new_tier: 'extraordinary' | 'notable' | 'common'
+  new_discovery_count: number
+  tier_change_event_id: string | null
 }
 
 interface RegisterDiscoveryResult {
   is_first_discoverer: boolean
   discovery_count: number
+  tier_changed: boolean
+  old_tier: 'extraordinary' | 'notable' | 'common' | null
+  new_tier: 'extraordinary' | 'notable' | 'common' | null
+  tier_change_event_id: string | null
 }
 
 // ── Supabase REST helpers ───────────────────────────────────────────────────
@@ -96,24 +113,87 @@ async function callRegisterDiscovery(
   qrHash: string,
   userId: string,
 ): Promise<RegisterDiscoveryResult> {
+  const fallback: RegisterDiscoveryResult = {
+    is_first_discoverer: false,
+    discovery_count: 1,
+    tier_changed: false,
+    old_tier: null,
+    new_tier: null,
+    tier_change_event_id: null,
+  }
   const res = await fetch(`${supabaseUrl}/rest/v1/rpc/register_discovery`, {
     method: 'POST',
     headers: supabaseHeaders(serviceKey),
     body: JSON.stringify({ p_qr_hash: qrHash, p_user_id: userId }),
   })
-  if (!res.ok) {
-    // RPC failure is non-fatal — discovery data is best-effort
-    return { is_first_discoverer: false, discovery_count: 1 }
-  }
-  // PostgREST returns RETURNS TABLE results as an array of rows. Earlier code
-  // treated this as a single object with `is_first_discoverer`/`discovery_count`
-  // keys — those keys never existed, so every caller silently received the
-  // fallback `{ is_first_discoverer: false }`. Correct shape: array of rows
-  // with `is_first` / `total_count` / `scan_count` columns.
+  // RPC failure is non-fatal — discovery data is best-effort. The fallback
+  // skips the tier-change pipeline (tier_changed = false).
+  if (!res.ok) return fallback
   const rows = (await res.json()) as RegisterDiscoveryRow[] | null
   const row = rows?.[0]
-  if (!row) return { is_first_discoverer: false, discovery_count: 1 }
-  return { is_first_discoverer: row.is_first, discovery_count: row.total_count }
+  if (!row) return fallback
+  return {
+    is_first_discoverer: row.is_first_discoverer,
+    discovery_count: row.new_discovery_count,
+    tier_changed: row.tier_changed,
+    old_tier: row.old_tier,
+    new_tier: row.new_tier,
+    tier_change_event_id: row.tier_change_event_id,
+  }
+}
+
+/**
+ * Issue the Anthropic call for tier_change_body and PATCH the just-inserted
+ * activity_feed row. Soft-fail: any error leaves the row's `tier_change_body`
+ * NULL, and `TierChangeDispatch` falls back to a hand-written template.
+ * Called from both the cache-hit and uncache paths after `register_discovery`.
+ */
+async function maybeWriteTierChangeBody(
+  env: Env,
+  discovery: RegisterDiscoveryResult,
+  dna: CreatureDNA,
+): Promise<void> {
+  if (
+    !discovery.tier_changed ||
+    !discovery.tier_change_event_id ||
+    !discovery.old_tier ||
+    !discovery.new_tier
+  ) {
+    return
+  }
+
+  const binomial = `${dna.genus} ${dna.species}`
+  let body: string
+  try {
+    body = await generateTierChangeBody(
+      buildTierChangeBodyPrompt({
+        binomial,
+        oldTier: discovery.old_tier,
+        newTier: discovery.new_tier,
+        newDiscoveryCount: discovery.discovery_count,
+      }),
+      env.ANTHROPIC_API_KEY,
+    )
+  } catch (err) {
+    console.error('Tier-change body generation failed:', (err as Error).message)
+    return
+  }
+
+  try {
+    const res = await fetch(
+      `${env.SUPABASE_URL}/rest/v1/activity_feed?id=eq.${encodeURIComponent(discovery.tier_change_event_id)}`,
+      {
+        method: 'PATCH',
+        headers: { ...supabaseHeaders(env.SUPABASE_SERVICE_ROLE_KEY), Prefer: 'return=minimal' },
+        body: JSON.stringify({ tier_change_body: body }),
+      },
+    )
+    if (!res.ok) {
+      console.error(`Tier-change body PATCH failed: ${res.status} ${(await res.text()).slice(0, 200)}`)
+    }
+  } catch (err) {
+    console.error('Tier-change body PATCH threw:', (err as Error).message)
+  }
 }
 
 // ── Main handler ────────────────────────────────────────────────────────────
@@ -207,6 +287,11 @@ export async function handleGenerateCreature(request: Request, env: Env): Promis
       qrHash,
       userId,
     )
+    // Tier-change body generation runs on the cache-hit path too — the
+    // species_images row may be cached, but the discovery itself can still
+    // cross a tier boundary (e.g. fourth distinct explorer of an existing
+    // Extraordinary species).
+    await maybeWriteTierChangeBody(env, discoveryResult, dna)
     return json(
       {
         imageUrl: existing.image_url,
@@ -299,6 +384,11 @@ export async function handleGenerateCreature(request: Request, env: Env): Promis
     qrHash,
     userId,
   )
+
+  // Step 9: If the RPC reported a tier crossing, fill in the new activity_feed
+  // row's tier_change_body via Anthropic. Soft-fail — null bodies render via
+  // TierChangeDispatch's hand-written fallback.
+  await maybeWriteTierChangeBody(env, discoveryResult, dna)
 
   return json(
     {

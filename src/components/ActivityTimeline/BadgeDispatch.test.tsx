@@ -21,6 +21,7 @@ function makeEntry(overrides: Partial<FeedEntry> = {}): FeedEntry {
     field_notes: null,
     pull_quote: null,
     badge_tier: 'silver',
+    tier_change_body: null,
     ...overrides,
   }
 }

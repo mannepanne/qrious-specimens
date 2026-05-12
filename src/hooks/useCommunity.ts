@@ -19,7 +19,7 @@ export interface ExplorerProfile {
 
 export interface FeedEntry {
   id: string
-  event_type: 'discovery' | 'first_discovery' | 'badge_earned'
+  event_type: 'discovery' | 'first_discovery' | 'badge_earned' | 'tier_change'
   species_name: string | null
   badge_slug: string | null
   badge_name: string | null
@@ -32,13 +32,14 @@ export interface FeedEntry {
   field_notes: string | null
   pull_quote: string | null
   badge_tier: 'bronze' | 'silver' | 'gold' | null
+  tier_change_body: string | null
 }
 
 export interface ShowcaseExplorer {
   user_id: string
   display_name: string
   specimen_count: number
-  rare_count: number
+  extraordinary_count: number
   first_discovery_count: number
   badges: Array<{ slug: string; name: string; icon: string; tier: string }>
   joined_at: string
@@ -218,7 +219,7 @@ export function useExplorerShowcase() {
         user_id: string
         display_name: string
         specimen_count: number
-        rare_count: number
+        extraordinary_count: number
         first_discovery_count: number
         badges: ShowcaseExplorer['badges'] | null
         joined_at: string

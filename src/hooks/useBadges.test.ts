@@ -133,7 +133,7 @@ describe('useExplorerRank', () => {
       next_rank: 'silver',
       next_threshold: 35,
       progress: 0.36,
-      breakdown: { badges: 2, specimens: 5, species: 3, rare: 0, firsts: 0, days_active: 7 },
+      breakdown: { badges: 2, specimens: 5, species: 3, extraordinary: 0, firsts: 0, days_active: 7 },
     }
     mockRpc.mockResolvedValue({ data: rank, error: null })
 

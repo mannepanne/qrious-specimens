@@ -21,6 +21,7 @@ function makeEntry(overrides: Partial<FeedEntry> = {}): FeedEntry {
     field_notes: null,
     pull_quote: 'A pleasing iridescence to the carapace, much in the manner of a midsummer beetle.',
     badge_tier: null,
+    tier_change_body: null,
     ...overrides,
   }
 }

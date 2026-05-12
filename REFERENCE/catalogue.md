@@ -52,7 +52,7 @@ The `dna->>'hash'` field is the same 16-char hex hash stored as `species_images.
 | `p_body_shape_filter` | text | NULL | Exact match on body_shape |
 | `p_limb_style_filter` | text | NULL | Exact match on limb_style |
 | `p_pattern_type_filter` | text | NULL | Exact match on pattern_type |
-| `p_rarity_filter` | text | NULL | `'rare'` (≤3), `'uncommon'` (4–15), `'common'` (≥16) discoverers |
+| `p_rarity_filter` | text | NULL | `'extraordinary'` (≤3), `'notable'` (4–15), `'common'` (≥16) discoverers. Migration `20260511000002_rarity_vocabulary_rename.sql` retuned the CASE values; see [`creature-engine.md`](./creature-engine.md#rarity) and ADR [`2026-05-12-tier-change-events.md`](./decisions/2026-05-12-tier-change-events.md). |
 | `p_limit` | integer | 24 | Page size |
 | `p_offset` | integer | 0 | Pagination offset |
 
@@ -83,7 +83,7 @@ Results are returned `ORDER BY first_discovered_at DESC` — most recent discove
 const { data, hasNextPage, fetchNextPage, isFetchingNextPage } = useCatalogue({
   search: 'Nebulo',
   order: 'Arachnoida',
-  rarity: 'rare',
+  rarity: 'extraordinary',
 })
 // data.pages is CatalogueEntry[][]
 ```

@@ -21,6 +21,7 @@ function makeEntry(overrides: Partial<FeedEntry> = {}): FeedEntry {
     field_notes: null,
     pull_quote: 'Its crest pulses in slow, deliberate rhythm — as though dreaming the world into being.',
     badge_tier: null,
+    tier_change_body: null,
     ...overrides,
   }
 }

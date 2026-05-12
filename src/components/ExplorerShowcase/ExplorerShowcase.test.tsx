@@ -11,7 +11,7 @@ function makeExplorer(overrides: Partial<ShowcaseExplorer> = {}): ShowcaseExplor
     user_id: 'u1',
     display_name: 'Dr. A. Darwin',
     specimen_count: 7,
-    rare_count: 1,
+    extraordinary_count: 1,
     first_discovery_count: 0,
     badges: [],
     joined_at: '2026-01-01T00:00:00Z',

@@ -18,7 +18,7 @@ function makeRank(overrides: Partial<ExplorerRank> = {}): ExplorerRank {
     next_rank: 'silver',
     next_threshold: 35,
     progress: 0.36,
-    breakdown: { badges: 2, specimens: 5, species: 3, rare: 0, firsts: 0, days_active: 7 },
+    breakdown: { badges: 2, specimens: 5, species: 3, extraordinary: 0, firsts: 0, days_active: 7 },
     ...overrides,
   }
 }
@@ -65,17 +65,17 @@ describe('ExplorerRankCard', () => {
     expect(screen.getByText('SPECIMENS')).toBeInTheDocument()
     expect(screen.getByText('SPECIES')).toBeInTheDocument()
     expect(screen.getByText('BADGES')).toBeInTheDocument()
-    expect(screen.getByText('RARE FINDS')).toBeInTheDocument()
+    expect(screen.getByText('EXTRAORDINARY')).toBeInTheDocument()
     expect(screen.getByText('FIRSTS')).toBeInTheDocument()
     expect(screen.getByText('DAYS ACTIVE')).toBeInTheDocument()
   })
 
   it('renders stat values', () => {
-    render(<ExplorerRankCard rank={makeRank({ breakdown: { badges: 2, specimens: 5, species: 3, rare: 1, firsts: 0, days_active: 7 } })} />)
+    render(<ExplorerRankCard rank={makeRank({ breakdown: { badges: 2, specimens: 5, species: 3, extraordinary: 1, firsts: 0, days_active: 7 } })} />)
     expect(screen.getByText('5')).toBeInTheDocument() // specimens
     expect(screen.getByText('3')).toBeInTheDocument() // species
     expect(screen.getByText('2')).toBeInTheDocument() // badges
-    expect(screen.getByText('1')).toBeInTheDocument() // rare
+    expect(screen.getByText('1')).toBeInTheDocument() // extraordinary
     expect(screen.getByText('7')).toBeInTheDocument() // days_active
   })
 

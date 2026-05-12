@@ -94,7 +94,7 @@ describe('SpecimenTeaser', () => {
 
   it('shows rarity label as plain coloured text (not a bordered pill)', () => {
     render(<SpecimenTeaser creature={makeCreature()} discoveryCount={2} />)
-    const rarity = screen.getByText('RARE')
+    const rarity = screen.getByText('EXTRAORDINARY')
     // Style is set inline; assert no border declared on the element
     expect(rarity).toBeInTheDocument()
     expect(rarity.style.border).toBe('')
