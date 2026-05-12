@@ -23,19 +23,19 @@ const FAKE_ORDERS = [
 ]
 
 const FAKE_SPECIES = [
-  { name: 'Corderma gracilis', family: 'Arcturidae', rarity: 'RARE' },
-  { name: 'Calerma nadano', family: 'Plexidae', rarity: 'UNCOMMON' },
+  { name: 'Corderma gracilis', family: 'Arcturidae', rarity: 'EXTRAORDINARY' },
+  { name: 'Calerma nadano', family: 'Plexidae', rarity: 'NOTABLE' },
   { name: 'Bryoma plana', family: 'Filicidae', rarity: 'COMMON' },
-  { name: 'Arcpus formosa', family: 'Gyrellidae', rarity: 'RARE' },
-  { name: 'Plimea cyraflin', family: 'Vorticidae', rarity: 'UNCOMMON' },
-  { name: 'Hormera emrea', family: 'Nebulidae', rarity: 'RARE' },
+  { name: 'Arcpus formosa', family: 'Gyrellidae', rarity: 'EXTRAORDINARY' },
+  { name: 'Plimea cyraflin', family: 'Vorticidae', rarity: 'NOTABLE' },
+  { name: 'Hormera emrea', family: 'Nebulidae', rarity: 'EXTRAORDINARY' },
   { name: 'Xopfera metablis', family: 'Radiolidae', rarity: 'COMMON' },
-  { name: 'Diura organa', family: 'Thalassidae', rarity: 'UNCOMMON' },
+  { name: 'Diura organa', family: 'Thalassidae', rarity: 'NOTABLE' },
 ]
 
 const RARITY_COLOUR: Record<string, string> = {
-  RARE: 'text-amber-700',
-  UNCOMMON: 'text-violet-700',
+  EXTRAORDINARY: 'text-amber-700',
+  NOTABLE: 'text-violet-700',
   COMMON: 'text-muted-foreground',
 }
 

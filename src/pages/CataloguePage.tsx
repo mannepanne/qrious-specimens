@@ -14,7 +14,7 @@ import QueryErrorBanner from '@/components/QueryErrorBanner/QueryErrorBanner'
 import { useIntersectionObserver } from '@/hooks/useIntersectionObserver'
 import type { Rarity } from '@/lib/rarity'
 
-const RARITY_OPTIONS: Rarity[] = ['rare', 'uncommon', 'common']
+const RARITY_OPTIONS: Rarity[] = ['extraordinary', 'notable', 'common']
 const HABITAT_OPTIONS = ['alpine', 'cave', 'coastal', 'deep sea', 'desert', 'forest', 'freshwater', 'urban'] as const
 const SYMMETRY_OPTIONS = ['bilateral', 'fractal', 'radial', 'spiral'] as const
 const BODY_SHAPE_OPTIONS = ['bell', 'diamond', 'elongated', 'ovoid', 'spherical', 'star'] as const

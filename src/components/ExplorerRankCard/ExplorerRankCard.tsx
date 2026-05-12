@@ -95,7 +95,7 @@ export default function ExplorerRankCard({ rank, isLoading }: Props) {
           { label: 'SPECIMENS',  value: rank.breakdown.specimens  },
           { label: 'SPECIES',    value: rank.breakdown.species    },
           { label: 'BADGES',     value: rank.breakdown.badges     },
-          { label: 'RARE FINDS', value: rank.breakdown.rare       },
+          { label: 'EXTRAORDINARY', value: rank.breakdown.extraordinary },
           { label: 'FIRSTS',     value: rank.breakdown.firsts     },
           { label: 'DAYS ACTIVE',value: rank.breakdown.days_active},
         ].map(({ label, value }) => (

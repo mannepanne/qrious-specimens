@@ -98,7 +98,7 @@ describe('useCatalogue', () => {
     mockRpc.mockResolvedValue({ data: [], error: null })
 
     const { result } = renderHook(
-      () => useCatalogue({ habitat: 'coastal', symmetry: 'bilateral', rarity: 'rare' }),
+      () => useCatalogue({ habitat: 'coastal', symmetry: 'bilateral', rarity: 'extraordinary' }),
       { wrapper: makeWrapper() },
     )
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -106,7 +106,7 @@ describe('useCatalogue', () => {
     expect(mockRpc).toHaveBeenCalledWith('get_catalogue', expect.objectContaining({
       p_habitat_filter: 'coastal',
       p_symmetry_filter: 'bilateral',
-      p_rarity_filter: 'rare',
+      p_rarity_filter: 'extraordinary',
     }))
   })
 

@@ -22,6 +22,7 @@ function makeEntry(overrides: Partial<FeedEntry> = {}): FeedEntry {
     field_notes: null,
     pull_quote: 'A radial geometry of quiet certainty.',
     badge_tier: null,
+    tier_change_body: null,
     ...overrides,
   }
 }
@@ -135,6 +136,39 @@ describe('ActivityTimeline', () => {
       />,
     )
     expect(screen.queryByRole('button')).toBeNull()
+  })
+
+  it('routes tier_change entries through TierChangeDispatch (Society notice eyebrow)', () => {
+    const entries = [
+      makeEntry({ id: 'd', event_type: 'discovery', species_name: 'Mundane sp.', created_at: '2026-05-10T18:00:00Z' }),
+      makeEntry({
+        id: 't',
+        event_type: 'tier_change',
+        species_name: 'Concha occidentalis',
+        rarity: 'notable',
+        tier_change_body: 'Concha occidentalis has settled into the Notable tier.',
+        created_at: '2026-05-10T08:00:00Z',
+      }),
+    ]
+    render(<ActivityTimeline entries={entries} isLoading={false} />)
+    expect(screen.getByText(/society notice · notable/i)).toBeInTheDocument()
+  })
+
+  it('never promotes tier_change to dispatch-of-the-day, even when it is the only entry', () => {
+    const entries = [
+      makeEntry({
+        id: 't',
+        event_type: 'tier_change',
+        species_name: 'Concha occidentalis',
+        rarity: 'extraordinary',
+        tier_change_body: 'Concha occidentalis has been elevated to the Extraordinary tier.',
+        created_at: '2026-05-10T08:00:00Z',
+      }),
+    ]
+    render(<ActivityTimeline entries={entries} isLoading={false} />)
+    // No featured heading (h2) should render; the tier_change goes through TierChangeDispatch.
+    expect(screen.queryByRole('heading', { level: 2 })).toBeNull()
+    expect(screen.getByText(/society notice · extraordinary/i)).toBeInTheDocument()
   })
 
   it('falls back to a field-notes excerpt when pull_quote is null', () => {

@@ -58,14 +58,14 @@ describe('SpeciesCard', () => {
     expect(screen.getByTestId('creature-sketch')).toBeInTheDocument()
   })
 
-  it('displays RARE badge for discovery_count ≤ 3', () => {
+  it('displays EXTRAORDINARY badge for discovery_count ≤ 3', () => {
     render(<SpeciesCard entry={makeEntry({ discovery_count: 2 })} />)
-    expect(screen.getByText('RARE')).toBeInTheDocument()
+    expect(screen.getByText('EXTRAORDINARY')).toBeInTheDocument()
   })
 
-  it('displays UNCOMMON badge for discovery_count 4–15', () => {
+  it('displays NOTABLE badge for discovery_count 4–15', () => {
     render(<SpeciesCard entry={makeEntry({ discovery_count: 8 })} />)
-    expect(screen.getByText('UNCOMMON')).toBeInTheDocument()
+    expect(screen.getByText('NOTABLE')).toBeInTheDocument()
   })
 
   it('displays COMMON badge for discovery_count ≥ 16', () => {
@@ -75,7 +75,7 @@ describe('SpeciesCard', () => {
 
   it('renders rarity as plain coloured text (matches cabinet card style)', () => {
     render(<SpeciesCard entry={makeEntry({ discovery_count: 2 })} />)
-    const rarity = screen.getByText('RARE')
+    const rarity = screen.getByText('EXTRAORDINARY')
     // No bordered pill — only the text colour is inline-styled
     expect(rarity.style.border).toBe('')
   })

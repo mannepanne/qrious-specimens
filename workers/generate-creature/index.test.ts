@@ -231,7 +231,7 @@ describe('handleGenerateCreature', () => {
       // Supabase species_images GET → returns cached row
       .mockResolvedValueOnce(new Response(JSON.stringify([cachedRow]), { status: 200 }))
       // register_discovery RPC
-      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first: false, total_count: 6, scan_count: 6 }]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first_discoverer: false, tier_changed: false, old_tier: null, new_tier: 'notable', new_discovery_count: 6, tier_change_event_id: null }]), { status: 200 }))
 
     const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
     const res = await handleGenerateCreature(req, makeEnv())
@@ -279,7 +279,7 @@ describe('handleGenerateCreature', () => {
       // species_images INSERT
       .mockResolvedValueOnce(new Response('', { status: 201 }))
       // register_discovery RPC
-      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first: true, total_count: 1, scan_count: 1 }]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first_discoverer: true, tier_changed: false, old_tier: null, new_tier: 'extraordinary', new_discovery_count: 1, tier_change_event_id: null }]), { status: 200 }))
 
     const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
     const res = await handleGenerateCreature(req, makeEnv())
@@ -334,7 +334,7 @@ describe('handleGenerateCreature', () => {
       // species_images INSERT
       .mockResolvedValueOnce(new Response('', { status: 201 }))
       // register_discovery RPC
-      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first: true, total_count: 1, scan_count: 1 }]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first_discoverer: true, tier_changed: false, old_tier: null, new_tier: 'extraordinary', new_discovery_count: 1, tier_change_event_id: null }]), { status: 200 }))
 
     const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
     const res = await handleGenerateCreature(req, makeEnv())
@@ -376,7 +376,7 @@ describe('handleGenerateCreature', () => {
         return new Response('', { status: 201 })
       })
       // register_discovery RPC
-      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first: true, total_count: 1, scan_count: 1 }]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first_discoverer: true, tier_changed: false, old_tier: null, new_tier: 'extraordinary', new_discovery_count: 1, tier_change_event_id: null }]), { status: 200 }))
 
     const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
     const res = await handleGenerateCreature(req, makeEnv())
@@ -387,6 +387,199 @@ describe('handleGenerateCreature', () => {
     expect(body.pullQuote).toBeNull()
     expect(insertedPullQuote).toBeNull()
     consoleSpy.mockRestore()
+  })
+
+  it('issues an Anthropic tier-change call and PATCHes activity_feed when register_discovery reports tier_changed=true', async () => {
+    // Cache-hit path is the simplest to exercise: the worker reads the cached
+    // species_images row, calls register_discovery (mocked to report a crossing
+    // from extraordinary → notable, count = 4), then must (a) call Anthropic
+    // with the tier-change prompt and (b) PATCH the activity_feed row keyed by
+    // tier_change_event_id with the returned body. Soft-fail contract means
+    // both must run with no error to count as success.
+    const eventId = '00000000-0000-0000-0000-000000000aaa'
+    const cachedRow = {
+      image_url: 'https://imagedelivery.net/test/abc/qriousoriginal',
+      image_url_512: null,
+      image_url_256: null,
+      field_notes: 'n',
+      pull_quote: null,
+      discovery_count: 3,
+      first_discoverer_id: 'other-user',
+    }
+
+    let anthropicBody: { messages?: Array<{ content?: string }> } | null = null
+    let patchUrl = ''
+    let patchBody: { tier_change_body?: string } | null = null
+
+    mockFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes('/rest/v1/species_images?qr_hash=eq.')) {
+        return new Response(JSON.stringify([cachedRow]), { status: 200 })
+      }
+      if (url.includes('/rest/v1/rpc/register_discovery')) {
+        return new Response(
+          JSON.stringify([
+            {
+              is_first_discoverer: false,
+              tier_changed: true,
+              old_tier: 'extraordinary',
+              new_tier: 'notable',
+              new_discovery_count: 4,
+              tier_change_event_id: eventId,
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+      if (url === 'https://api.anthropic.com/v1/messages') {
+        anthropicBody = JSON.parse((init?.body as string) ?? '{}')
+        return new Response(
+          JSON.stringify({
+            content: [
+              { type: 'text', text: 'Testus mockii has settled into the Notable tier this morning.' },
+            ],
+          }),
+          { status: 200 },
+        )
+      }
+      if (url.includes('/rest/v1/activity_feed?id=eq.')) {
+        patchUrl = url
+        patchBody = JSON.parse((init?.body as string) ?? '{}')
+        return new Response(null, { status: 204 })
+      }
+      return new Response('Unexpected fetch in test', { status: 500 })
+    })
+
+    const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
+    const res = await handleGenerateCreature(req, makeEnv())
+
+    expect(res.status).toBe(200)
+    // The Anthropic prompt should contain the binomial (so the dispatch can
+    // italic-underline it) and reference the new tier in the Society's idiom.
+    expect(anthropicBody).not.toBeNull()
+    const promptText = (anthropicBody!.messages?.[0]?.content ?? '') as string
+    expect(promptText).toContain('Testus mockii')
+    expect(promptText).toContain('Notable')
+    // PATCH must target the just-inserted activity_feed row by id, and carry
+    // the Claude response in tier_change_body.
+    expect(patchUrl).toContain(`id=eq.${eventId}`)
+    expect(patchBody?.tier_change_body).toBe(
+      'Testus mockii has settled into the Notable tier this morning.',
+    )
+  })
+
+  it('soft-fails when the tier-change Anthropic call errors — discovery still returns 200, no PATCH issued', async () => {
+    // Contract: tier_change_body is best-effort. Failure must log to console
+    // and leave the row with NULL body (TierChangeDispatch falls back to a
+    // hand-written template). Discovery is never blocked.
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const eventId = '00000000-0000-0000-0000-000000000bbb'
+    const cachedRow = {
+      image_url: 'https://imagedelivery.net/test/abc/qriousoriginal',
+      image_url_512: null,
+      image_url_256: null,
+      field_notes: 'n',
+      pull_quote: null,
+      discovery_count: 15,
+      first_discoverer_id: 'other-user',
+    }
+
+    let anthropicCalled = false
+    let patchCalled = false
+
+    mockFetch.mockImplementation(async (url: string) => {
+      if (url.includes('/rest/v1/species_images?qr_hash=eq.')) {
+        return new Response(JSON.stringify([cachedRow]), { status: 200 })
+      }
+      if (url.includes('/rest/v1/rpc/register_discovery')) {
+        return new Response(
+          JSON.stringify([
+            {
+              is_first_discoverer: false,
+              tier_changed: true,
+              old_tier: 'notable',
+              new_tier: 'common',
+              new_discovery_count: 16,
+              tier_change_event_id: eventId,
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+      if (url === 'https://api.anthropic.com/v1/messages') {
+        anthropicCalled = true
+        return new Response('Server overload', { status: 500 })
+      }
+      if (url.includes('/rest/v1/activity_feed?id=eq.')) {
+        patchCalled = true
+        return new Response(null, { status: 204 })
+      }
+      return new Response('Unexpected fetch in test', { status: 500 })
+    })
+
+    const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
+    const res = await handleGenerateCreature(req, makeEnv())
+
+    expect(res.status).toBe(200)
+    expect(anthropicCalled).toBe(true)
+    // The PATCH must NOT fire when the Anthropic call failed — the row stays
+    // with NULL body and the dispatch renders the hand-written fallback.
+    expect(patchCalled).toBe(false)
+    consoleSpy.mockRestore()
+  })
+
+  it('skips the tier-change pipeline entirely when register_discovery reports tier_changed=false', async () => {
+    // The common case: ordinary scan, no crossing. The Anthropic call and
+    // PATCH must not be issued so the worker isn't paying for an LLM round-trip
+    // on every discovery.
+    const cachedRow = {
+      image_url: 'https://imagedelivery.net/test/abc/qriousoriginal',
+      image_url_512: null,
+      image_url_256: null,
+      field_notes: 'n',
+      pull_quote: null,
+      discovery_count: 5,
+      first_discoverer_id: 'other-user',
+    }
+
+    let anthropicCalled = false
+    let patchCalled = false
+
+    mockFetch.mockImplementation(async (url: string) => {
+      if (url.includes('/rest/v1/species_images?qr_hash=eq.')) {
+        return new Response(JSON.stringify([cachedRow]), { status: 200 })
+      }
+      if (url.includes('/rest/v1/rpc/register_discovery')) {
+        return new Response(
+          JSON.stringify([
+            {
+              is_first_discoverer: false,
+              tier_changed: false,
+              old_tier: 'notable',
+              new_tier: 'notable',
+              new_discovery_count: 6,
+              tier_change_event_id: null,
+            },
+          ]),
+          { status: 200 },
+        )
+      }
+      if (url === 'https://api.anthropic.com/v1/messages') {
+        anthropicCalled = true
+        return new Response(JSON.stringify({ content: [{ type: 'text', text: 'unreached' }] }), { status: 200 })
+      }
+      if (url.includes('/rest/v1/activity_feed?id=eq.')) {
+        patchCalled = true
+        return new Response(null, { status: 204 })
+      }
+      return new Response('Unexpected fetch in test', { status: 500 })
+    })
+
+    const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
+    const res = await handleGenerateCreature(req, makeEnv())
+
+    expect(res.status).toBe(200)
+    expect(anthropicCalled).toBe(false)
+    expect(patchCalled).toBe(false)
   })
 
   it('treats CF Images duplicate-ID (HTTP 409 + error code 5409) as success and returns predictable URLs', async () => {
@@ -417,7 +610,7 @@ describe('handleGenerateCreature', () => {
       // species_images INSERT
       .mockResolvedValueOnce(new Response('', { status: 201 }))
       // register_discovery RPC
-      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first: false, total_count: 2, scan_count: 2 }]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first_discoverer: false, tier_changed: false, old_tier: 'extraordinary', new_tier: 'extraordinary', new_discovery_count: 2, tier_change_event_id: null }]), { status: 200 }))
 
     const req = makeRequest({ token: validToken, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
     const res = await handleGenerateCreature(req, makeEnv())
@@ -471,7 +664,7 @@ describe('handleGenerateCreature', () => {
         first_discoverer_id: 'u',
       }]), { status: 200 }))
       // register_discovery RPC
-      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first: false, total_count: 2, scan_count: 2 }]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first_discoverer: false, tier_changed: false, old_tier: 'extraordinary', new_tier: 'extraordinary', new_discovery_count: 2, tier_change_event_id: null }]), { status: 200 }))
 
     // Worker can run without SUPABASE_JWT_SECRET once projects are on asymmetric keys
     const env = makeEnv({ SUPABASE_JWT_SECRET: undefined })
@@ -529,7 +722,7 @@ describe('handleGenerateCreature', () => {
         image_url_512: null, image_url_256: null, field_notes: 'n',
         discovery_count: 1, first_discoverer_id: 'u',
       }]), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first: false, total_count: 2, scan_count: 2 }]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first_discoverer: false, tier_changed: false, old_tier: 'extraordinary', new_tier: 'extraordinary', new_discovery_count: 2, tier_change_event_id: null }]), { status: 200 }))
 
     const req = makeRequest({ token, body: { qrHash: MOCK_DNA.hash, dna: MOCK_DNA } })
     const res = await handleGenerateCreature(req, makeEnv({ SUPABASE_JWT_SECRET: undefined }))
@@ -568,7 +761,7 @@ describe('handleGenerateCreature', () => {
         image_url_512: null, image_url_256: null, field_notes: 'n',
         discovery_count: 1, first_discoverer_id: 'u',
       }]), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first: false, total_count: 2, scan_count: 2 }]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first_discoverer: false, tier_changed: false, old_tier: 'extraordinary', new_tier: 'extraordinary', new_discovery_count: 2, tier_change_event_id: null }]), { status: 200 }))
 
     // With a 30s negative TTL (vs 10min primary), we can't literally wait here.
     // The contract under test is: the cache entry is sized so a near-term
@@ -709,7 +902,7 @@ describe('handleGenerateCreature', () => {
     }
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify([cachedRow]), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first: false, total_count: 1, scan_count: 1 }]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first_discoverer: false, tier_changed: false, old_tier: null, new_tier: 'extraordinary', new_discovery_count: 1, tier_change_event_id: null }]), { status: 200 }))
 
     const env = makeEnv({
       GENERATE_CREATURE_RATE_LIMITER: { limit: userLimit },
@@ -732,7 +925,7 @@ describe('handleGenerateCreature', () => {
     // Mock cache hit to short-circuit
     mockFetch
       .mockResolvedValueOnce(new Response(JSON.stringify([{ image_url: 'https://example.com/img.png', image_url_512: null, image_url_256: null, field_notes: 'notes', discovery_count: 1, first_discoverer_id: 'u1' }]), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first: false, total_count: 1, scan_count: 1 }]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ is_first_discoverer: false, tier_changed: false, old_tier: null, new_tier: 'extraordinary', new_discovery_count: 1, tier_change_event_id: null }]), { status: 200 }))
 
     const res = await handleGenerateCreature(req, makeEnv())
     expect(res.headers.get('Access-Control-Allow-Origin')).toBe('https://qrious.hultberg.org')

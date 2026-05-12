@@ -127,6 +127,59 @@ Other guidance:
 Output ONLY the pull-quote line itself, with no quotation marks, no preamble, no trailing commentary, no markdown, no labels. Begin directly with the first word of the line.`
 }
 
+/**
+ * Tier-change Gazette post prompt — text-only, single-shot. Fired by the worker
+ * after `register_discovery` reports `tier_changed = true`, so the input
+ * (binomial, old tier, new tier, new count) is always defined.
+ *
+ * Forward-direction tier crossings are the only ones currently emitted by
+ * `register_discovery` (discovery_count is increment-only). The prompt is
+ * written to handle both, plus a future regression case (common → notable
+ * etc.) when account-deletion-driven tier regression lands as TD.
+ *
+ * The component renders the binomial as an inline italic underlined span by
+ * searching the body for `species_name` verbatim — so the model is instructed
+ * to spell the binomial exactly as given.
+ */
+export function buildTierChangeBodyPrompt(input: {
+  binomial: string
+  oldTier: 'extraordinary' | 'notable' | 'common'
+  newTier: 'extraordinary' | 'notable' | 'common'
+  newDiscoveryCount: number
+}): string {
+  const { binomial, oldTier, newTier, newDiscoveryCount } = input
+  const tierLabel = { extraordinary: 'Extraordinary', notable: 'Notable', common: 'Common' } as const
+
+  // Pick the Society's idiom by direction. Forward-direction (count went up)
+  // is the only case currently emitted; reverse-direction is included for the
+  // future regression code path.
+  const tierOrder = { extraordinary: 0, notable: 1, common: 2 } as const
+  const direction = tierOrder[newTier] > tierOrder[oldTier] ? 'descended' : 'ascended'
+  const verb =
+    direction === 'descended'
+      ? newTier === 'common'
+        ? 'lapsed into the Common'
+        : 'settled into the Notable'
+      : `elevated to the ${tierLabel[newTier]}`
+
+  return `You are the Society's anonymous chronicler in QRious Specimens — a Victorian naturalist gazette of newly discovered fantastical creatures. A specimen has just moved from the ${tierLabel[oldTier]} tier to the ${tierLabel[newTier]} tier in the Society's census.
+
+Specimen: ${binomial}
+Discovery count (after this scan): ${newDiscoveryCount}
+
+Write ONE short Gazette notice — exactly one sentence, two at most — announcing the change in the Society's voice. The notice will appear inline in the Field Dispatches feed under a "Society notice · ${tierLabel[newTier]}" eyebrow.
+
+Hard constraints:
+- The notice MUST contain the binomial exactly as written above: ${binomial}. Do not abbreviate (no "C. occidentalis"), do not pluralise, do not modify capitalisation. The frontend extracts the binomial from the body by string-matching this exact form.
+- Use the Society's idiom for this transition: the specimen "has ${verb} tier". You may vary the surrounding clause, but the verb-phrase "${verb} tier" should appear in the line so the prose reads in-voice.
+- Never speculate about WHY the tier changed (no "as the catalogue fills", "as more explorers discover", "with growing interest"). Treat the change as an observation, not a causal claim.
+- The Society may reference the discovery count or the recent act of retrieval in the second clause if it suits the rhythm. Both are optional — the line works fine with just the binomial and the new tier.
+- Victorian naturalist voice: measured, precise, quietly wondering. No modern idiom. No exclamation points. No breathless ad-copy.
+- Strict ceiling: 240 characters, 40 words. Ideally between 100 and 180 characters.
+
+Output ONLY the notice itself, with no quotation marks, no preamble, no markdown, no labels. Begin directly with the first word.`
+}
+
 export function buildClaudePrompt(dna: CreatureDNA, hasImage: boolean): string {
   const features: string[] = []
   if (dna.hasShell) features.push('a protective carapace')

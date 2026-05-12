@@ -101,15 +101,17 @@ const sentinelRef = useIntersectionObserver(() => {
 
 ## Rarity
 
-`useDiscoveryCounts(qrHashes)` fetches from `species_discoveries` — a count of unique users who have scanned each QR hash globally. `getRarityFromCount(count)` maps this to a tier:
+`useDiscoveryCounts(qrHashes)` fetches from `species_discoveries` — a count of unique users who have scanned each QR hash globally. `getRarityFromCount(count)` (defined in `src/lib/rarity.ts`, the single source of truth for thresholds) maps this to a tier:
 
-- `undefined` / `null` → RARE (not yet in the discoveries table)
-- 1 → RARE
-- 2–5 → UNCOMMON
-- 6–20 → COMMON
-- 21+ → ABUNDANT
+| Display | Internal | Count range |
+|---|---|---|
+| Extraordinary | `extraordinary` | `undefined` / `null` / 0–3 |
+| Notable | `notable` | 4–15 |
+| Common | `common` | 16+ |
 
-Rarity is intentionally "discovered" — a new user's entire cabinet shows RARE because they are the first (or among the first) to find each specimen. The label becomes meaningful as the community grows.
+**Tier is derived live.** Every surface that shows a rarity badge (cabinet card, catalogue card, species detail, explorer-rank breakdown, showcase profile) calls `getRarityFromCount()` from the current `species_discoveries.discovery_count` at render time. There is no `rarity_at_discovery` snapshot column. A specimen you found when it was Extraordinary may show as Notable today; that is intentional — the cabinet is a window onto the current world, not a museum of past states. Threshold retuning is a one-line change in `src/lib/rarity.ts` with no migration.
+
+**Tier changes surface in the Gazette as their own event type.** When `register_discovery` sees that the discovery just took a species across a boundary (3→4 or 15→16), the RPC inserts a `tier_change` row into `activity_feed` and returns `tier_change_event_id`. The discovery worker then PATCHes that row with worker-generated Society prose (see [`gazette.md`](./gazette.md) and ADR [`2026-05-12-tier-change-events.md`](./decisions/2026-05-12-tier-change-events.md)). Field-note prose itself is timeless — it describes the creature, not the catalogue's opinion of it, so it stays accurate as the world grows.
 
 The first discoverer of a species is flagged via `is_first_discoverer` on the `creatures` row. This is set server-side by the `register_discovery` RPC and persisted (migration `20260425000002_register_discovery_persists_first_discoverer.sql`), so the badge survives reload. The flag is set when the caller is the first user to scan that `qr_hash`; subsequent scanners are stored with `false`.
 

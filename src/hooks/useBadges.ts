@@ -19,7 +19,7 @@ export interface ExplorerRank {
     badges: number
     specimens: number
     species: number
-    rare: number
+    extraordinary: number
     firsts: number
     days_active: number
   }

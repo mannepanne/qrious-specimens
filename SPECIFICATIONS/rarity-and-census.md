@@ -121,6 +121,8 @@ These surfaces all read `discovery_count` today and assign a tier from it. The m
 | Catalogue filter | `src/components/CatalogueFilter.tsx` + `get_catalogue.sql` | Rename `p_rarity_filter` accepted values to `extraordinary | notable | common`; CASE keeps the count ranges |
 | Explorer rank breakdown | `src/components/ExplorerRank.tsx` | Rename "Rare" → "Extraordinary" in the breakdown copy |
 | Showcase profile stats | `useCommunity.ts:41` (`rare_count`) | Rename to `extraordinary_count`; keep the same `discovery_count <= 3` derivation |
+| Showcase RPC return shape | `get_explorer_showcase` (`supabase/migrations/20260412000000_phase6_gazette.sql:216,228,247`) | Rename returned column `rare_count` → `extraordinary_count`; CASE range unchanged |
+| Explorer-rank scoring | `calculate_explorer_rank` (`supabase/migrations/20260425000004_fix_calculate_explorer_rank_page_events_column.sql:30,68,116`) | Rename `v_rare_count` → `v_extraordinary_count`; same `discovery_count <= 3` derivation, same `* 0.8` weight |
 | Badge gating | `check_and_award_badges` (`supabase/migrations/20260419000001_phase9_coastal_perseverance_badge.sql:35,53-54`) | `rare_find` and `connoisseur` badges keep their count-threshold logic; comment updated to use the new vocabulary |
 
 There is **no separate** `species.rarity_label` column to keep in sync. There is **no** `rarity_at_discovery` to backfill. The audit is purely a label rename plus a threshold-constant centralisation.
@@ -149,9 +151,12 @@ RETURNS TABLE (
   tier_changed boolean,
   old_tier text,
   new_tier text,
-  new_discovery_count integer
+  new_discovery_count integer,
+  tier_change_event_id uuid
 ) ...
 ```
+
+`tier_change_event_id` is the primary key of the freshly inserted `activity_feed` row when `tier_changed = true`, or `NULL` otherwise. It is what the worker uses to target the follow-up `UPDATE activity_feed SET tier_change_body = ...` — a single deterministic round-trip with no race window.
 
 The function uses three constants for the thresholds — defined inline in the function body, mirrored in `src/lib/rarity.ts`. A short comment in both places notes the cross-file invariant.
 

@@ -1,5 +1,5 @@
 // ABOUT: Field Dispatches feed — groups feed entries by UTC day, picks one featured "Dispatch of the Day" per group
-// ABOUT: Composes DatelineHeader / FeaturedDispatch / CompactDispatch / BadgeDispatch / Fleuron; preserves onViewSpecies API
+// ABOUT: Composes DatelineHeader / FeaturedDispatch / CompactDispatch / BadgeDispatch / TierChangeDispatch / Fleuron; preserves onViewSpecies API
 
 import type { FeedEntry } from '@/hooks/useCommunity'
 import { groupByDay } from '@/lib/feedDate'
@@ -8,6 +8,7 @@ import { DatelineHeader } from './DatelineHeader'
 import { FeaturedDispatch } from './FeaturedDispatch'
 import { CompactDispatch } from './CompactDispatch'
 import { BadgeDispatch } from './BadgeDispatch'
+import { TierChangeDispatch } from './TierChangeDispatch'
 
 interface Props {
   entries: FeedEntry[]
@@ -87,6 +88,15 @@ export default function ActivityTimeline({ entries, isLoading, onViewSpecies }: 
                   <div key={entry.id}>
                     {showSeparator && <div className="border-t border-border/60" />}
                     <BadgeDispatch entry={entry} />
+                  </div>
+                )
+              }
+
+              if (entry.event_type === 'tier_change') {
+                return (
+                  <div key={entry.id}>
+                    {showSeparator && <div className="border-t border-border/60" />}
+                    <TierChangeDispatch entry={entry} onViewSpecies={onViewSpecies} />
                   </div>
                 )
               }

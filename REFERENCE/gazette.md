@@ -39,15 +39,17 @@ All RPCs are `SECURITY DEFINER` with `SET search_path = public`. GRANTs:
 
 Returns the `p_limit` most recent activity entries from public profiles, joined to display names, badge definitions, badge tier (for ring-tinting on `BadgeDispatch`), species thumbnails (`species_images.image_url_256`), field notes (for the render-time excerpt fallback), and pull-quote.
 
-Returns: `id, event_type, species_name, badge_slug, badge_name, badge_icon, badge_tier, rarity, display_name, created_at, qr_hash, species_image_url, field_notes, pull_quote`
+Returns: `id, event_type, species_name, badge_slug, badge_name, badge_icon, badge_tier, rarity, display_name, created_at, qr_hash, species_image_url, field_notes, pull_quote, tier_change_body`
 
-Migration: `20260510000001_get_community_feed_field_notes_pull_quote.sql` recreated the function (DROP + CREATE because the RETURNS TABLE shape changed). The Field Dispatches redesign of the Gazette feed reads `pull_quote` first and falls back to `excerptFromFieldNotes(field_notes)` (`src/lib/feedDate.ts`) when null. See ADR [`2026-05-10-pull-quote-generation.md`](./decisions/2026-05-10-pull-quote-generation.md).
+Migration: `20260510000001_get_community_feed_field_notes_pull_quote.sql` recreated the function (DROP + CREATE because the RETURNS TABLE shape changed). The Field Dispatches redesign of the Gazette feed reads `pull_quote` first and falls back to `excerptFromFieldNotes(field_notes)` (`src/lib/feedDate.ts`) when null. See ADR [`2026-05-10-pull-quote-generation.md`](./decisions/2026-05-10-pull-quote-generation.md). Migration `20260511000003_get_community_feed_tier_change_body.sql` then extended the payload with `tier_change_body` so `TierChangeDispatch` renders the worker-generated prose directly; the new-tier label is read from the existing `rarity` column.
 
 ### `get_explorer_showcase()`
 
 Returns all public explorer profiles ranked by `specimen_count DESC`. Per-explorer stats are computed via a lateral join against `creatures` + `species_discoveries`. Badge JSONB is aggregated inline.
 
-Returns: `user_id, display_name, specimen_count, rare_count, first_discovery_count, badges (jsonb), joined_at`
+Returns: `user_id, display_name, specimen_count, extraordinary_count, first_discovery_count, badges (jsonb), joined_at`
+
+The `extraordinary_count` column was renamed from `rare_count` in migration `20260511000002_rarity_vocabulary_rename.sql` (rarity-and-census vocabulary rename). The threshold (`discovery_count <= 3`) is unchanged.
 
 ### `get_community_stats()`
 
@@ -59,7 +61,7 @@ Note: `total_species` counts `species_images WHERE image_url IS NOT NULL` — a 
 
 ### `check_and_award_badges(p_user_id uuid)`
 
-Computes specimen count, rare count, first-discovery count, and distinct active days for the given user. Awards all newly earned badges via `INSERT ... ON CONFLICT DO NOTHING`. Returns all the user's badges with an `r_is_new` flag indicating which were just awarded.
+Computes specimen count, extraordinary count, first-discovery count, and distinct active days for the given user. Awards all newly earned badges via `INSERT ... ON CONFLICT DO NOTHING`. Returns all the user's badges with an `r_is_new` flag indicating which were just awarded.
 
 Uses `FOREACH` loop with `r_`-prefixed return columns to avoid column-name ambiguity.
 
@@ -73,7 +75,7 @@ Returns a single JSON object: `{ rank, rank_icon, score, next_rank, next_thresho
 
 - `rank` — `'unranked' | 'bronze' | 'silver' | 'gold' | 'platinum'`
 - `progress` — float 0–1 representing progress toward `next_threshold`
-- `breakdown` — `{ badges, specimens, species, rare, firsts, days_active }`
+- `breakdown` — `{ badges, specimens, species, extraordinary, firsts, days_active }` (the `extraordinary` key was renamed from `rare` in migration `20260511000002_rarity_vocabulary_rename.sql`)
 
 Rank thresholds: Bronze = 8, Silver = 35, Gold = 100, Platinum = 250.
 Rank display names and icons live in `RANK_DISPLAY` in `src/hooks/useBadges.ts`.
@@ -109,8 +111,9 @@ The frontend writes to `activity_feed` after a successful excavation, but only i
 - `discovery` — any new species found
 - `first_discovery` — when `isFirstDiscoverer` flag is true from the Worker response
 - `badge_earned` — written by `check_and_award_badges` RPC, not by client code
+- `tier_change` — written by `register_discovery` when a discovery crosses a rarity-tier threshold (count goes 3→4 or 15→16). The same RPC returns `tier_change_event_id`; the Worker then PATCHes `activity_feed.tier_change_body` with a one-shot Claude Haiku Society notice (binomial + new tier in the Society's idiom). Soft-fail: if Claude errors, `tier_change_body` stays `NULL` and `TierChangeDispatch` renders a hand-written fallback. See [`rarity-and-census.md`](../SPECIFICATIONS/rarity-and-census.md) and ADR [`2026-05-12-tier-change-events.md`](./decisions/2026-05-12-tier-change-events.md).
 
-The `rare_discovery` event type is not used. Migration `20260510000002_drop_rare_discovery_event_type.sql` rewrote any historical rows to `discovery` and redefined the CHECK constraint without it. Rarity treatment lives in the catalogue, not the Gazette — splitting Gazette (recency, narrative) from catalogue (taxonomy, rarity).
+The `rare_discovery` event type is not used. Migration `20260510000002_drop_rare_discovery_event_type.sql` rewrote any historical rows to `discovery` and redefined the CHECK constraint without it. Rarity treatment lives in the catalogue and as live-derived tier_change events in the Gazette — the cabinet itself shows tier live from `discovery_count` and never snapshots it.
 
 ---
 
@@ -138,12 +141,13 @@ Easter egg: ~1-in-2000 chance of generating `"A. Anning"` — a nod to Mary Anni
 | `FeaturedDispatch` | Per-day "Dispatch of the Day" — eyebrow, species `<h2>`, italic pull-quote, signature with time-of-day phrase. Mirrored layout via `sm:flex-row-reverse` when `mirrored=true`. |
 | `CompactDispatch` | Thumb + italic species name + quote excerpt + signature. Amber "First sighting" eyebrow when `event_type === 'first_discovery'`. Full card is a button when `qr_hash` and `onViewSpecies` are provided. |
 | `BadgeDispatch` | Emoji icon in a tier-tinted ring (bronze/silver/gold), smallcaps prose. Never clickable — badges have no species detail page. |
+| `TierChangeDispatch` | "Society notice · {Tier}" eyebrow with italic Society copy ending in a fleuron. Renders `tier_change_body` from the row when present; otherwise a hand-written template by direction. Binomial is rendered as a styled inline link to the species detail page. Never promoted to the featured slot. |
 | `Fleuron` | Decorative divider between dispatches within a day. Hairline rules either side of a glyph (default `✽`). |
 
 **Featured-pick rule** (`pickFeaturedId` inside `ActivityTimeline.tsx`):
 1. Most-recent `first_discovery` in the day → featured
 2. Otherwise most-recent ordinary `discovery` → featured
-3. Days with only `badge_earned` entries get no featured card; all entries render as `BadgeDispatch`
+3. Days with only `badge_earned` and/or `tier_change` entries get no featured card; those events always render inline (BadgeDispatch / TierChangeDispatch)
 
 **Render-time pull-quote fallback** (`excerptFromFieldNotes()` in `src/lib/feedDate.ts`): collapses whitespace, prefers the first sentence (`/^[^.!?]*[.!?]/`), word-boundary truncation at 200 chars otherwise. Used by both `FeaturedDispatch` and `CompactDispatch` when `pull_quote IS NULL`.
 

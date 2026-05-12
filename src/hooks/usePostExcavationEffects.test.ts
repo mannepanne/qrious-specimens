@@ -66,7 +66,7 @@ function makeRankData(rank: ExplorerRank['rank']): ExplorerRank {
     next_rank: 'silver',
     next_threshold: 35,
     progress: 0.3,
-    breakdown: { badges: 0, specimens: 5, species: 3, rare: 0, firsts: 0, days_active: 2 },
+    breakdown: { badges: 0, specimens: 5, species: 3, extraordinary: 0, firsts: 0, days_active: 2 },
   }
 }
 

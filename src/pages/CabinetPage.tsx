@@ -32,10 +32,10 @@ export function CabinetPage() {
   const qrHashes = allCreatures.map((c) => c.qr_hash)
   const { data: discoveryCounts } = useDiscoveryCounts(qrHashes)
 
-  const rareCounts = {
-    common:   allCreatures.filter((c) => getRarityFromCount(discoveryCounts?.[c.qr_hash]) === 'common').length,
-    uncommon: allCreatures.filter((c) => getRarityFromCount(discoveryCounts?.[c.qr_hash]) === 'uncommon').length,
-    rare:     allCreatures.filter((c) => getRarityFromCount(discoveryCounts?.[c.qr_hash]) === 'rare').length,
+  const rarityCounts = {
+    common:        allCreatures.filter((c) => getRarityFromCount(discoveryCounts?.[c.qr_hash]) === 'common').length,
+    notable:       allCreatures.filter((c) => getRarityFromCount(discoveryCounts?.[c.qr_hash]) === 'notable').length,
+    extraordinary: allCreatures.filter((c) => getRarityFromCount(discoveryCounts?.[c.qr_hash]) === 'extraordinary').length,
   }
 
   // Rotating Victorian expedition quotes — one per session, chosen on mount
@@ -114,9 +114,9 @@ export function CabinetPage() {
           {/* Rarity stats bar */}
           {allCreatures.length > 0 && (
             <div className="flex gap-4 font-mono text-[10px] tracking-wider text-muted-foreground">
-              {rareCounts.common   > 0 && <span>COMMON {rareCounts.common}</span>}
-              {rareCounts.uncommon > 0 && <span>UNCOMMON {rareCounts.uncommon}</span>}
-              {rareCounts.rare     > 0 && <span className="text-foreground">RARE {rareCounts.rare}</span>}
+              {rarityCounts.common        > 0 && <span>COMMON {rarityCounts.common}</span>}
+              {rarityCounts.notable       > 0 && <span>NOTABLE {rarityCounts.notable}</span>}
+              {rarityCounts.extraordinary > 0 && <span className="text-foreground">EXTRAORDINARY {rarityCounts.extraordinary}</span>}
             </div>
           )}
 
