@@ -16,11 +16,11 @@ export function FeaturedDispatch({ entry, mirrored, onViewSpecies }: Props) {
   const date = new Date(entry.created_at)
 
   const imageBlock = entry.species_image_url && (
-    <div className="sm:w-[45%] shrink-0 bg-accent/20 sm:border-x-0 border-y sm:border-y-0 border-border">
+    <div className="sm:w-[45%] shrink-0 bg-accent/20 sm:border-x-0 border-y sm:border-y-0 border-border aspect-square sm:aspect-auto">
       <img
         src={entry.species_image_url}
         alt={`Illustration of ${entry.species_name ?? 'specimen'}`}
-        className="w-full h-48 sm:h-full object-contain"
+        className="w-full h-full object-cover sm:object-contain"
         loading="lazy"
       />
     </div>
