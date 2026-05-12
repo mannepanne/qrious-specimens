@@ -85,6 +85,14 @@ export function CataloguePage() {
     ? allEntries.filter(e => e.family === familyFilter)
     : allEntries
 
+  // total_count is a window function over the server-filtered set, returned
+  // on every row. We read it from the first row of page 1; null/zero means
+  // the catalogue hasn't loaded yet. We deliberately do NOT trust it when a
+  // family filter is active — that filter is client-side, so total_count
+  // overstates the matching set.
+  const serverTotal = catalogue.data?.pages[0]?.[0]?.total_count ?? null
+  const showTotalCount = !familyFilter && serverTotal !== null && serverTotal > displayEntries.length
+
   // Infinite scroll sentinel
   const sentinelRef = useIntersectionObserver(
     () => {
@@ -333,7 +341,10 @@ export function CataloguePage() {
               <p className="font-mono text-[10px] tracking-[2px] text-muted-foreground">
                 {catalogue.isLoading ? 'LOADING…' : (
                   <>
-                    {displayEntries.length} SPECIMEN{displayEntries.length !== 1 ? 'S' : ''}
+                    {showTotalCount
+                      ? <>{displayEntries.length} OF {serverTotal} SPECIMEN{serverTotal !== 1 ? 'S' : ''}</>
+                      : <>{displayEntries.length} SPECIMEN{displayEntries.length !== 1 ? 'S' : ''}</>
+                    }
                     {hasActiveFilters && ' MATCHING'}
                   </>
                 )}
