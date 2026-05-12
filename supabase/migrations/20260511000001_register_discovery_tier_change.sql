@@ -20,6 +20,14 @@
 -- New shape: (is_first_discoverer, tier_changed, old_tier, new_tier,
 -- new_discovery_count, tier_change_event_id).
 --
+-- Caller identity: the function takes p_user_id as a parameter and trusts it.
+-- The forge-as-another-user risk is contained at the grant layer: EXECUTE is
+-- revoked from authenticated and anon, so only service_role (the worker) can
+-- invoke this RPC. The worker JWT-verifies the caller and passes the verified
+-- userId as p_user_id. Matches the lockdown from migration
+-- 20260425000003_register_discovery_revoke_public_execute.sql — CREATE OR
+-- REPLACE wipes prior GRANTs so we re-apply the full lockdown at the bottom.
+--
 -- See SPECIFICATIONS/rarity-and-census.md for the full design.
 
 DROP FUNCTION IF EXISTS public.register_discovery(text, uuid);
@@ -127,7 +135,12 @@ BEGIN
 END;
 $function$;
 
+-- Lock down EXECUTE to service_role only — mirrors the posture from
+-- 20260425000003_register_discovery_revoke_public_execute.sql. CREATE OR REPLACE
+-- wipes prior GRANTs, so we re-apply the full lockdown here.
 REVOKE EXECUTE ON FUNCTION public.register_discovery(text, uuid) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.register_discovery(text, uuid) TO authenticated, service_role;
+REVOKE EXECUTE ON FUNCTION public.register_discovery(text, uuid) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.register_discovery(text, uuid) FROM anon;
+GRANT  EXECUTE ON FUNCTION public.register_discovery(text, uuid) TO service_role;
 
 NOTIFY pgrst, 'reload schema';
