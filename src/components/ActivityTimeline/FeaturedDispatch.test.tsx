@@ -28,7 +28,7 @@ function makeEntry(overrides: Partial<FeedEntry> = {}): FeedEntry {
 
 describe('FeaturedDispatch', () => {
   it('renders the dispatch-of-the-day eyebrow, species name, pull-quote, and explorer signature', () => {
-    render(<FeaturedDispatch entry={makeEntry()} mirrored={false} />)
+    render(<FeaturedDispatch entry={makeEntry({ event_type: 'discovery' })} mirrored={false} />)
     expect(screen.getByText(/dispatch of the day/i)).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 2, name: /aurelia somnifera/i })).toBeInTheDocument()
     expect(screen.getByText(/its crest pulses/i)).toBeInTheDocument()

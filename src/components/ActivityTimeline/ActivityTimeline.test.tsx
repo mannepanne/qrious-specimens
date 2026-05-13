@@ -49,7 +49,7 @@ describe('ActivityTimeline', () => {
       makeEntry({ id: 'f', event_type: 'first_discovery', species_name: 'Earlier first sight', created_at: '2026-05-10T08:00:00Z' }),
     ]
     render(<ActivityTimeline entries={entries} isLoading={false} />)
-    expect(screen.getByText(/dispatch of the day/i)).toBeInTheDocument()
+    expect(screen.getByText(/new to science/i)).toBeInTheDocument()
     // Featured dispatch renders an <h2>; compact ones do not.
     const featured = screen.getByRole('heading', { level: 2 })
     expect(featured).toHaveTextContent('Earlier first sight')
