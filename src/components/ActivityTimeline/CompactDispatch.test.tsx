@@ -44,6 +44,23 @@ describe('CompactDispatch', () => {
     expect(screen.queryByText(/first sighting/i)).toBeNull()
   })
 
+  it('credits the discoverer with "first documented by" on first_discovery', () => {
+    render(<CompactDispatch entry={makeEntry({ event_type: 'first_discovery' })} />)
+    expect(screen.getByText(/first documented by/i)).toBeInTheDocument()
+  })
+
+  it('applies the amber edge marker when first_discovery', () => {
+    const { container } = render(<CompactDispatch entry={makeEntry({ event_type: 'first_discovery' })} />)
+    const article = container.querySelector('article')!
+    expect(article.className).toMatch(/border-amber/)
+  })
+
+  it('uses no edge marker on ordinary discoveries', () => {
+    const { container } = render(<CompactDispatch entry={makeEntry({ event_type: 'discovery' })} />)
+    const article = container.querySelector('article')!
+    expect(article.className).not.toMatch(/border-amber/)
+  })
+
   it('falls back to a field-notes excerpt when pull_quote is null', () => {
     render(
       <CompactDispatch

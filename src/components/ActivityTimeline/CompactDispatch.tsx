@@ -16,7 +16,7 @@ export function CompactDispatch({ entry, onViewSpecies }: Props) {
   const date = new Date(entry.created_at)
 
   const article = (
-    <article className="flex gap-4 py-3.5">
+    <article className={['flex gap-4 py-3.5', isFirst ? 'pl-2 border-l-2 border-amber-700/40' : ''].join(' ')}>
       {entry.species_image_url && (
         <img
           src={entry.species_image_url}
@@ -29,7 +29,7 @@ export function CompactDispatch({ entry, onViewSpecies }: Props) {
 
       <div className="flex-1 min-w-0">
         {isFirst && (
-          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-amber-700/80 mb-0.5 flex items-center gap-1">
+          <p className="font-mono text-[11px] uppercase tracking-[0.16em] font-semibold text-amber-700 dark:text-amber-500 mb-0.5 flex items-center gap-1">
             <span aria-hidden="true">⭐</span>
             <span>First sighting</span>
           </p>
@@ -46,7 +46,10 @@ export function CompactDispatch({ entry, onViewSpecies }: Props) {
         )}
 
         <p className="font-mono text-[10px] text-muted-foreground mt-1.5">
-          — {entry.display_name} · {timeOfDay(date)}
+          {isFirst ? '— first documented by ' : '— '}
+          <span className={isFirst ? 'font-semibold text-foreground/80' : ''}>{entry.display_name}</span>
+          {' · '}
+          {timeOfDay(date)}
         </p>
       </div>
     </article>
