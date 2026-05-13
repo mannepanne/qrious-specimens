@@ -39,7 +39,7 @@ export function FeaturedDispatch({ entry, mirrored, onViewSpecies }: Props) {
         {isFirst ? (
           <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-amber-700 dark:text-amber-500 flex items-center gap-1.5">
             <span aria-hidden="true">⭐</span>
-            <span>New to science · Dispatch of the day</span>
+            <span>New to science</span>
           </span>
         ) : (
           <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
