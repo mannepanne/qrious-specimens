@@ -72,12 +72,13 @@ Development is organised into 9 sequential phases.
 How-it-works documentation for implemented features:
 - [environment-setup.md](./REFERENCE/environment-setup.md) — All API keys, secrets, and service configuration
 - [testing-strategy.md](./REFERENCE/testing-strategy.md) — Testing philosophy (Vitest, TDD, coverage targets)
-- [technical-debt.md](./REFERENCE/technical-debt.md) — Known issues and accepted shortcuts
 - [troubleshooting.md](./REFERENCE/troubleshooting.md) — Common issues and solutions
 - [creature-engine.md](./REFERENCE/creature-engine.md) — DNA pipeline, scan flow, cabinet patterns (Phase 3)
 - [catalogue.md](./REFERENCE/catalogue.md) — Catalogue RPC, filters, hooks, auth-gating (Phase 5)
 - [gazette.md](./REFERENCE/gazette.md) — Community feed, explorer profiles, badge RPC, cross-tab navigation (Phase 6)
 - [decisions/](./REFERENCE/decisions/) — Architecture Decision Records
+
+**Technical debt** is tracked as GitHub Issues with the `technical-debt` label.
 
 ## Code conventions
 

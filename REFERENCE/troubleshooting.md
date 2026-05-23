@@ -5,7 +5,6 @@
 **Related Documents:**
 - [CLAUDE.md](../CLAUDE.md) - Project navigation index
 - [environment-setup.md](./environment-setup.md) - Environment and secrets configuration
-- [technical-debt.md](./technical-debt.md) - Known limitations and issues
 
 ---
 

@@ -218,4 +218,4 @@ Added in Phase 7. Separate from `useCommunity.ts` to keep badge/rank logic cohes
 
 ## Known technical debt
 
-See [`technical-debt.md`](./technical-debt.md) for current items affecting this layer.
+Track deferred items as GitHub Issues with the `technical-debt` label.
