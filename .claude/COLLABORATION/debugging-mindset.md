@@ -19,6 +19,6 @@ A scientific approach: understand what's actually happening before fixing anythi
 
 ## Practical reality check
 
-Sometimes you need to move fast and the "proper" approach isn't practical. That's fine — just flag it so we can come back and clean things up later. If accruing technical debt or taking a shortcut, write it down in [technical-debt.md](../../REFERENCE/technical-debt.md) so we don't forget.
+Sometimes you need to move fast and the "proper" approach isn't practical. That's fine — just flag it so we can come back and clean things up later. If accruing technical debt or taking a shortcut, create a GitHub issue with the `technical-debt` label so we don't forget.
 
 The goal is sustainable progress, not perfect process.

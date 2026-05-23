@@ -245,7 +245,7 @@ The goal is tracking our work and enabling collaboration, not perfect git aesthe
 
 ## Problem solving and debugging
 
-Scientific approach: read errors first, find root causes, one change at a time. If the first fix doesn't work, stop and reassess — don't pile on more fixes. Flag shortcuts so we can clean them up later; log technical debt in REFERENCE/technical-debt.md.
+Scientific approach: read errors first, find root causes, one change at a time. If the first fix doesn't work, stop and reassess — don't pile on more fixes. Flag shortcuts so we can clean them up later; create a GitHub issue with the `technical-debt` label so it doesn't get lost.
 
 Full debugging mindset: [debugging-mindset.md](./COLLABORATION/debugging-mindset.md)
 
