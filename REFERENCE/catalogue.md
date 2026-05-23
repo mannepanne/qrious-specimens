@@ -125,5 +125,5 @@ When no AI image (`image_url_512`/`image_url_256`) is available for a species, `
 
 ## Known edge cases
 
-- **Pagination drift:** `total_count` is a window function re-evaluated per page fetch. If a new species is discovered between page 1 and page 2 fetches, the counts can disagree slightly. See `technical-debt.md` TD-011.
+- **Pagination drift:** `total_count` is a window function re-evaluated per page fetch. If a new species is discovered between page 1 and page 2 fetches, the counts can disagree slightly. Accepted limitation; revisit if churn becomes user-visible.
 - **Taxonomy sidebar lag:** `useCatalogueTaxonomy` has a 5-minute stale time. Sidebar counts won't reflect new discoveries immediately.

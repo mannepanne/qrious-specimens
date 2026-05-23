@@ -125,6 +125,6 @@ Out of scope for the smoke suite. Performance and concurrency get separate atten
 - [Supabase testing guide (uses pgTAP)](https://supabase.com/docs/guides/database/testing)
 - TD-018 (resolved): `supabase/migrations/20260504000000_admin_delete_anonymises_first_discoverer.sql`
 - TD-020 (resolved): `supabase/migrations/20260504000001_phase8_admin_search_path_hardening.sql`
-- TD-021 (open — tracking implementation of this ADR): `REFERENCE/technical-debt.md`
+- TD-021 (open — tracking implementation of this ADR): GitHub issue #117
 - Threat model context: [2026-04-25-pr-review-threat-model.md](./2026-04-25-pr-review-threat-model.md)
 - Phase 9 spec: `SPECIFICATIONS/09-polish-launch.md`
