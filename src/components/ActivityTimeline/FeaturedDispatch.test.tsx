@@ -28,7 +28,7 @@ function makeEntry(overrides: Partial<FeedEntry> = {}): FeedEntry {
 
 describe('FeaturedDispatch', () => {
   it('renders the dispatch-of-the-day eyebrow, species name, pull-quote, and explorer signature', () => {
-    render(<FeaturedDispatch entry={makeEntry()} mirrored={false} />)
+    render(<FeaturedDispatch entry={makeEntry({ event_type: 'discovery' })} mirrored={false} />)
     expect(screen.getByText(/dispatch of the day/i)).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 2, name: /aurelia somnifera/i })).toBeInTheDocument()
     expect(screen.getByText(/its crest pulses/i)).toBeInTheDocument()
@@ -85,5 +85,49 @@ describe('FeaturedDispatch', () => {
   it('is not a button when onViewSpecies is omitted', () => {
     render(<FeaturedDispatch entry={makeEntry()} mirrored={false} />)
     expect(screen.queryByRole('button')).toBeNull()
+  })
+
+  describe('first-sighting treatment', () => {
+    it('shows the "New to science" eyebrow when event_type is first_discovery', () => {
+      render(<FeaturedDispatch entry={makeEntry({ event_type: 'first_discovery' })} mirrored={false} />)
+      expect(screen.getByText(/new to science/i)).toBeInTheDocument()
+      expect(screen.queryByText(/^dispatch of the day$/i)).toBeNull()
+    })
+
+    it('shows the "First sighting in the world" caption when first_discovery', () => {
+      render(<FeaturedDispatch entry={makeEntry({ event_type: 'first_discovery' })} mirrored={false} />)
+      expect(screen.getByText(/first sighting in the world/i)).toBeInTheDocument()
+    })
+
+    it('credits the discoverer with "first documented by" when first_discovery', () => {
+      render(<FeaturedDispatch entry={makeEntry({ event_type: 'first_discovery' })} mirrored={false} />)
+      expect(screen.getByText(/first documented by/i)).toBeInTheDocument()
+      expect(screen.queryByText(/^—\s*recorded by/i)).toBeNull()
+    })
+
+    it('falls back to plain "Dispatch of the day" and "recorded by" on ordinary discoveries', () => {
+      render(<FeaturedDispatch entry={makeEntry({ event_type: 'discovery' })} mirrored={false} />)
+      expect(screen.getByText(/^dispatch of the day$/i)).toBeInTheDocument()
+      expect(screen.queryByText(/new to science/i)).toBeNull()
+      expect(screen.queryByText(/first sighting in the world/i)).toBeNull()
+      expect(screen.getByText(/recorded by/i)).toBeInTheDocument()
+      expect(screen.queryByText(/first documented by/i)).toBeNull()
+    })
+
+    it('applies the amber accent frame when first_discovery', () => {
+      const { container } = render(
+        <FeaturedDispatch entry={makeEntry({ event_type: 'first_discovery' })} mirrored={false} />,
+      )
+      const article = container.querySelector('article')!
+      expect(article.className).toMatch(/border-amber/)
+    })
+
+    it('uses the default border when not first_discovery', () => {
+      const { container } = render(
+        <FeaturedDispatch entry={makeEntry({ event_type: 'discovery' })} mirrored={false} />,
+      )
+      const article = container.querySelector('article')!
+      expect(article.className).not.toMatch(/border-amber/)
+    })
   })
 })
