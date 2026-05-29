@@ -76,6 +76,7 @@ How-it-works documentation for implemented features:
 - [creature-engine.md](./REFERENCE/creature-engine.md) — DNA pipeline, scan flow, cabinet patterns (Phase 3)
 - [catalogue.md](./REFERENCE/catalogue.md) — Catalogue RPC, filters, hooks, auth-gating (Phase 5)
 - [gazette.md](./REFERENCE/gazette.md) — Community feed, explorer profiles, badge RPC, cross-tab navigation (Phase 6)
+- [security-headers.md](./REFERENCE/security-headers.md) — CSP + hardening headers, `run_worker_first`, edge-owned HSTS
 - [decisions/](./REFERENCE/decisions/) — Architecture Decision Records
 
 **Technical debt** is tracked as GitHub Issues with the `technical-debt` label.
