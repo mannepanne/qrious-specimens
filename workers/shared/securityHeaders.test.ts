@@ -82,6 +82,14 @@ describe('withSecurityHeaders', () => {
     expect(await wrapped.text()).toBe('payload')
   })
 
+  it('handles a null-body response (e.g. a 304 from the assets binding)', () => {
+    // run_worker_first routes conditional requests through the wrapper, so the
+    // null-body 304/204 case must not throw when reconstructing the response.
+    const wrapped = withSecurityHeaders(new Response(null, { status: 304 }))
+    expect(wrapped.status).toBe(304)
+    expect(wrapped.headers.get('X-Frame-Options')).toBe('DENY')
+  })
+
   it('preserves pre-existing headers such as Content-Type and CORS', () => {
     const original = new Response('{}', {
       headers: {

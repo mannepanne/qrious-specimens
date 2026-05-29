@@ -25,17 +25,21 @@ The Worker headers live in one place — `withSecurityHeaders()` in `workers/sha
 
 By default, Cloudflare Workers static assets are served **directly by the edge, bypassing the Worker**, whenever a request matches a real file (`/`, `/assets/*.js`, `/assets/*.css`, `/favicon.svg`). The Worker only runs for paths with no matching asset (the SPA fallback) and the `/api/*` routes.
 
-That means worker-level header wrapping alone leaves the actual documents a browser fetches — including the `index.html` that `securityheaders.com` scans — without a CSP. The fix is `run_worker_first = true` under `[assets]` in `wrangler.toml`: it forces every request through the Worker, which then serves assets via `env.ASSETS.fetch()` and wraps the response. The trade-off is that each asset request becomes a Worker invocation rather than free edge serving — negligible at this app's traffic. If that ever matters, scope `run_worker_first` to an array of HTML globs instead of `true`.
+That means worker-level header wrapping alone leaves the actual documents a browser fetches — including the `index.html` that `securityheaders.com` scans — without a CSP. The fix is `run_worker_first = true` under `[assets]` in `wrangler.toml`: it forces every request through the Worker, which then serves assets via `env.ASSETS.fetch()` and wraps the response. The trade-off is twofold:
 
-This was chosen over a `public/_headers` file to keep a single, unit-tested source of truth that also covers the `/api/*` JSON responses (where `nosniff` matters).
+- **Cost:** each asset request becomes a Worker invocation rather than free edge serving — negligible at this app's traffic. If that ever matters, scope `run_worker_first` to an array of HTML globs instead of `true`.
+- **Availability:** every request now depends on the Worker, so an unhandled throw in routing or header-wrapping would blank the whole site (assets included), not just an API route. `src/worker.ts` guards against this with a `try/catch` that falls back to serving the requested asset directly — a bug degrades to "one response without security headers" rather than "site down".
+
+This was chosen over a `public/_headers` file to keep a single, unit-tested source of truth that also covers the `/api/*` JSON responses (where `nosniff` matters). Full decision rationale: [`decisions/2026-05-29-security-response-headers.md`](./decisions/2026-05-29-security-response-headers.md).
 
 ## The Content-Security-Policy
 
-The policy is grounded in the resources the app actually loads in the browser:
+The policy is grounded in the resources the app actually loads in the browser. The helper's `CONTENT_SECURITY_POLICY` constant is the source of truth; the directives below are a narration of it:
 
-- `script-src` — own Vite bundle (`'self'`) plus the Cloudflare Insights beacon. No `'unsafe-inline'`: the production build emits no inline scripts.
+- `default-src 'self'` — the fallback for any fetch directive not named explicitly.
+- `script-src` — `'self'` (own Vite bundle) plus the Cloudflare Insights beacon. No `'unsafe-inline'`: the production build emits no inline scripts.
 - `style-src` — `'self' 'unsafe-inline'` (Radix/Tailwind inject inline `style` attributes) plus `https://fonts.googleapis.com` for the Google Fonts stylesheet `@import` in `src/index.css`.
-- `font-src` — `https://fonts.gstatic.com` (EB Garamond, JetBrains Mono).
+- `font-src` — `'self' https://fonts.gstatic.com` (EB Garamond, JetBrains Mono).
 - `img-src` — `'self' data: blob:` plus `https://imagedelivery.net` (Cloudflare Images). `blob:`/`data:` cover the favicon and the html5-qrcode canvas frames.
 - `connect-src` — `'self'`, the Supabase project over `https://*.supabase.co` **and** `wss://*.supabase.co` (supabase-js opens a realtime websocket), and the Cloudflare Insights beacon endpoint.
 - `frame-ancestors 'none'`, `base-uri 'self'`, `object-src 'none'`, `form-action 'self'` — lock down the dangerous directives.
@@ -58,7 +62,6 @@ Then load the page in a browser and confirm there are **no CSP violations** in t
 
 - magic-link sign-in (the auth round-trip → `connect-src` Supabase)
 - open a specimen with a real illustration (→ `img-src` `imagedelivery.net`)
-- start a QR scan (→ `Permissions-Policy camera=(self)` actually opens the camera)
-- a full discovery (scan → generate → cabinet)
+- scan a real QR code and confirm a specimen is produced — a full discovery (scan → decode → generate → cabinet). This exercises `Permissions-Policy camera=(self)` *and* the decode path; "the camera opens" alone does not prove decode works. Ideally test on a real mobile device.
 
 The public grade can only be confirmed after deploy via `securityheaders.com` (it blocks automated fetches).

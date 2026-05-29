@@ -32,7 +32,17 @@ async function route(request: Request, env: Env): Promise<Response> {
 export default {
   // Every response — API routes and static assets alike — is wrapped with the
   // shared security headers (CSP + hardening) so the policy lives in one place.
+  //
+  // Because run_worker_first routes every request (including static assets)
+  // through this handler, an unhandled throw in route() or the wrapper would
+  // otherwise blank the whole site. The fallback serves the requested asset
+  // directly so a routing/wrapper bug degrades to "no security headers on one
+  // response" rather than "site down".
   async fetch(request: Request, env: Env): Promise<Response> {
-    return withSecurityHeaders(await route(request, env))
+    try {
+      return withSecurityHeaders(await route(request, env))
+    } catch {
+      return withSecurityHeaders(await env.ASSETS.fetch(request))
+    }
   },
 }

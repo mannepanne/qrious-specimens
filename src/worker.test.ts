@@ -69,4 +69,17 @@ describe('worker entrypoint', () => {
     expect(handleAdminDeleteUser).toHaveBeenCalledOnce()
     expect(res.headers.get('Referrer-Policy')).toBe('strict-origin-when-cross-origin')
   })
+
+  it('falls back to serving the asset (with headers) when a route throws', async () => {
+    handleGenerateCreature.mockRejectedValue(new Error('boom'))
+    const env = makeEnv(new Response('<!doctype html>', { headers: { 'Content-Type': 'text/html' } }))
+    const res = await worker.fetch(
+      new Request('https://qrious.hultberg.org/api/generate-creature', { method: 'POST' }),
+      env,
+    )
+    // The whole site must not blank on a routing bug: the request degrades to
+    // the asset binding, still carrying the security headers.
+    expect(res.headers.get('Content-Security-Policy')).toContain("default-src 'self'")
+    expect(await res.text()).toBe('<!doctype html>')
+  })
 })
