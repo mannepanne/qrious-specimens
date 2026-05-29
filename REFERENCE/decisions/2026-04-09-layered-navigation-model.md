@@ -1,10 +1,12 @@
 # ADR: Layered navigation model — tab, overlay, and subpage
 
 **Date:** 2026-04-09
-**Status:** Active
-**Supersedes:** N/A
+**Status:** Superseded
+**Superseded by:** [2026-04-12-url-routing-react-router.md](./2026-04-12-url-routing-react-router.md)
 
 ---
+
+> **Superseded.** This model was replaced by React Router three days later (PR #11). Public Catalogue, Gazette, and species pages turned out to need bookmarkable, shareable URLs, which the in-memory model could not provide. The auth-at-the-destination principle and the decision to keep the scanner/excavation as full-screen overlays both survive in the successor; the `{ tab, overlay, subpage }` state model and the "no URL router" choice do not. See [2026-04-12-url-routing-react-router.md](./2026-04-12-url-routing-react-router.md). The content below is retained as the historical record.
 
 ## Decision
 
