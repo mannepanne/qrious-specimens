@@ -1,8 +1,13 @@
 # ADR: Content Security Policy must be enforced before Phase 4 merges
 
 **Date:** 2026-04-09
-**Status:** Active
+**Status:** Superseded
 **Supersedes:** N/A
+**Superseded by:** [2026-05-29-security-response-headers.md](./2026-05-29-security-response-headers.md)
+
+---
+
+> **Superseded (2026-05-29).** The phase-gated rollout described below never executed: all nine phases shipped and the app launched with no CSP. The *mechanism* this ADR specified (Worker wrapper + `run_worker_first` + shared helper) was correct and is what was eventually built. What changed: CSP shipped **enforcing directly** rather than report-only-first (no report collection endpoint exists, so report-only gives no signal), the helper lives at `workers/shared/securityHeaders.ts` (not `src/worker/securityHeaders.ts`), and the image origin is `imagedelivery.net` (not the R2 baseline below — see the Cloudflare Images ADR). See the superseding ADR for the decision as shipped.
 
 ---
 

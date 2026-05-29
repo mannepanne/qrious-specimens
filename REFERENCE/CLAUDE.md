@@ -34,6 +34,11 @@ What's caught at block / ask tier, what's deliberately not caught, how the inlin
 
 What the hook approves and why, where it sits in the call path alongside `safety-harness.sh`, what's deliberately out of scope (symlinks, exotic filenames), how to extend, and the rollback path if the upstream defect is fixed. Decision rationale at [`decisions/2026-04-26-scratch-write-pretooluse-hook.md`](./decisions/2026-04-26-scratch-write-pretooluse-hook.md).
 
+### [security-headers.md](./security-headers.md)
+**When to read:** Changing the CSP or any security response header, debugging a CSP violation, or touching `wrangler.toml` asset/`run_worker_first` config or the edge HSTS setting.
+
+The full header set and where each is set, why HSTS is edge-owned (not in code), why `run_worker_first` is load-bearing, the CSP directive-by-directive rationale, and the production-build verification recipe. Decision rationale at [`decisions/2026-05-29-security-response-headers.md`](./decisions/2026-05-29-security-response-headers.md).
+
 ### [creature-engine.md](./creature-engine.md)
 **When to read:** Working on the scan flow, DNA generation, rendering, cabinet, or rarity system.
 

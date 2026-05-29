@@ -10,6 +10,11 @@ directory = "./dist"
 binding = "ASSETS"
 html_handling = "auto-trailing-slash"
 not_found_handling = "single-page-application"
+# Run the Worker before serving static assets so every response — including
+# index.html, JS, and CSS — flows through the security-header wrapper in
+# src/worker.ts. Without this, matched assets are served directly by the edge
+# and bypass the Worker, leaving the documents browsers fetch without a CSP.
+run_worker_first = true
 
 [observability]
 enabled = true
