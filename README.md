@@ -25,6 +25,8 @@ The theme is Victorian natural history — field journals, expedition logs, spec
 
 The same QR code always produces the same creature — anywhere in the world, any time.
 
+For the full story of how the app is built and *why* — the DNA engine, the discovery pipeline, the privacy model, with diagrams — see [ARCHITECTURE.md](./ARCHITECTURE.md).
+
 ---
 
 ## Features
@@ -34,7 +36,7 @@ The same QR code always produces the same creature — anywhere in the world, an
 - **The Gazette** — a community activity feed; see what others are discovering
 - **Explorer rank** — a progression system (Unranked → Bronze → Silver → Gold → Platinum)
 - **Badges** — ten achievement types across three tiers
-- **Four render styles** — AI-generated Victorian engraving, or three client-side SVG styles (ink sketch, volumetric, sci-fi)
+- **Two illustrations per specimen** — a commissioned AI-generated Victorian engraving, plus a deterministic client-side ink-on-parchment SVG sketch (instant, and the fallback when no AI image exists)
 
 ---
 

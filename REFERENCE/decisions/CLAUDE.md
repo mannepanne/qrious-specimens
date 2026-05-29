@@ -145,7 +145,8 @@ grep -r "authentication" REFERENCE/decisions/
 - [2026-04-20 — JWKS JWT verification (with HS256 fallback)](./2026-04-20-jwks-jwt-verification.md) — Worker verifies Supabase ES256/RS256 tokens via JWKS with per-isolate cache and kid-miss refetch; HS256 retained for legacy projects; resolves TD-007
 - [2026-04-20 — Cloudflare Images over R2](./2026-04-20-cloudflare-images-over-r2.md) — Specimen illustrations stored in CF Images; R2 bucket retired; supersedes earlier "stick with R2" decision
 - [2026-04-19 — Retain contact messages on GDPR delete](./2026-04-19-retain-contact-messages-on-gdpr-delete.md) — Contact messages kept after erasure requests; GDPR Art. 17(3) legal basis, provability of acting on user requests
-- [2026-04-09 — Layered navigation model](./2026-04-09-layered-navigation-model.md) — Tab/overlay/subpage state, why no URL router, auth gate per destination
+- [2026-04-12 — URL-based routing with React Router](./2026-04-12-url-routing-react-router.md) — Replaces the hand-rolled `{ tab, overlay, subpage }` state with React Router; every page gets a bookmarkable, shareable URL because the public Catalogue/Gazette/species surfaces from Phases 5–6 made linkability a requirement. Scanner + excavation stay as overlays (transient, camera-bound); auth guard lives once in the `AppShell` layout route; detail pages take a location-state fast path with a DB fallback for direct URL access. Supersedes the 2026-04-09 layered navigation model.
+- [2026-04-09 — Layered navigation model](./2026-04-09-layered-navigation-model.md) — *(Superseded by 2026-04-12)* Tab/overlay/subpage in-memory state, no URL router; auth-at-destination and full-screen overlays survive in the successor, the rest does not
 - [2026-04-09 — CSP before Phase 4](./2026-04-09-csp-before-phase-4.md) — *(Superseded by 2026-05-29)* CSP delivery via Cloudflare Worker, report-only in Phase 3, enforce before Phase 4 merges — the phase rollout never executed
 
 ---
