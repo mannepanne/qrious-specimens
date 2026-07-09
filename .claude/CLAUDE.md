@@ -106,8 +106,8 @@ This template ships with three review skills gated by a single project-level fla
 
 **Skills:**
 - `/review-pr` — triages each PR (~30s) then runs a light/standard/team review (1–5 min). Default choice for most PRs.
-- `/review-pr-team` — forces a full multi-perspective team review (2–7 min). For critical changes when you want to skip triage.
-- `/review-spec` — reviews a feature specification before you write any code (2–7 min). Catches wrong assumptions early.
+- `/review-pr-team` — forces a full four-perspective review (2–4 min). For critical changes when you want to skip triage.
+- `/review-spec` — reviews a feature specification before you write any code (2–4 min). Catches wrong assumptions early.
 
 **Config flag:** `prReviewMode` in [`.claude/project-config.json`](./project-config.json). Three values: `enabled`, `disabled`, `prompt-on-first-use` (the template default). A gitignored `.claude/project-config.local.json` may override the committed value on a per-clone basis.
 
@@ -207,7 +207,7 @@ I value clean git history, but not at the expense of losing work or slowing down
 - Consider squashing messy commits into logical units (but ask first if unsure)
 - Test that the code actually works after our changes
 
-**Pull request reviews:** use `/review-pr` for all PRs; `/review-pr-team` to force full multi-perspective review. See the automated PR review system section above.
+**Pull request reviews:** use `/review-pr` for all PRs; `/review-pr-team` to force full four-perspective review. See the automated PR review system section above.
 
 **Branch strategy:**
 - Keep main clean and deployable
