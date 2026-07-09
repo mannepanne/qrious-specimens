@@ -165,6 +165,11 @@ service-account*.json
 # Scheduled-task lock file (ephemeral runtime state)
 .claude/scheduled_tasks.lock
 
+# Throwaway worktrees created by reviewer agents spawned with isolation: "worktree".
+# Registered linked worktrees are auto-excluded by git, but one orphaned by a killed
+# agent is not — and would otherwise be swept up by `git add -A`.
+.claude/worktrees/
+
 # Project-specific
 # Downloaded reference material from original app builder — imported to Supabase/R2 in Phase 1
 downloads-claude-ship/
