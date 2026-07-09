@@ -115,7 +115,7 @@ How-it-works documentation for implemented features:
 3. Implement with tests (run `bun run test` + `bun run typecheck`)
 4. Create PR for review:
    - **`/review-pr`** — Smart dispatcher: triages the change and routes to light / standard / team (1–5 min end-to-end; auto-escalates high-blast-radius paths like data layer, auth, CI, secrets to team tier).
-   - **`/review-pr-team`** — Force team review, skip triage (2–7 min). Use when you already know the change is critical.
+   - **`/review-pr-team`** — Force full four-perspective review, skip triage (2–4 min). Use when you already know the change is critical.
 
 ## Deployment
 
